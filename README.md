@@ -257,7 +257,7 @@ in CI.
    section to `CHANGELOG.md` (a test checks that all three agree).
 2. Optionally check the archives locally: `python3 tools/build_release.py --tag vX.Y.Z` (output in
    `dist/`).
-3. Tag and push: `git tag -a vX.Y.Z -m "parro-api-client X.Y.Z" && git push github vX.Y.Z`.
+3. Tag and push: `git tag -a vX.Y.Z -m "parro-api-client X.Y.Z" && git push origin vX.Y.Z`.
 4. The release workflow creates a **draft** release with the archives, `SHA256SUMS` and the changelog
    section as notes. Review it on GitHub and press *Publish*.
 

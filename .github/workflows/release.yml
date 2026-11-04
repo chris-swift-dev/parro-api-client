@@ -4,7 +4,7 @@ name: Release
 # parro.__version__, builds the source archives with checksums, and creates a *draft* GitHub release
 # with the CHANGELOG.md section as notes. Review the draft on GitHub, then publish it there.
 #
-#   git tag -a v0.1.0 -m "parro-api-client 0.1.0" && git push github v0.1.0
+#   git tag -a v0.1.0 -m "parro-api-client 0.1.0" && git push origin v0.1.0
 
 on:
   push:
