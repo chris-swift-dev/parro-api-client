@@ -1,0 +1,4 @@
+# parro/, parro_cli.py and parro_mcp.py are standard library only. These two are optional:
+# they let the attachment tool read PDFs (pypdf works too) and downscale photos.
+pymupdf
+pillow

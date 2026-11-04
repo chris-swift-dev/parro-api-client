@@ -1,0 +1,54 @@
+# Dev tooling only. The client itself needs nothing beyond the Python 3.10+ standard library;
+# PyMuPDF / pypdf / Pillow are optional extras for reading attachments.
+
+[project]
+name = "parro-api-client"
+version = "0.1.0"
+description = "Read-only Parro API client: a standalone CLI and an MCP server sharing one core"
+readme = "README.md"
+license = "MIT"  # the code; the OpenAPI spec and the docs are CC BY 4.0 (see LICENSE)
+license-files = ["LICENSE-CODE", "LICENSE"]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/chris-swift-dev/parro-api-client"
+Documentation = "https://chris-swift-dev.github.io/parro-api-client/"
+
+[project.optional-dependencies]
+attachments = ["pymupdf", "pypdf", "pillow"]
+dev = ["pytest", "ruff", "mypy", "openapi-schema-validator"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["legacy", "tools", "node_modules", "site"]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I import order, B bugbear, UP pyupgrade,
+# N naming, SIM simplifications, RUF ruff-specific.
+select = ["E", "W", "F", "I", "B", "UP", "N", "SIM", "RUF"]
+# The plan names the exceptions (NotLoggedIn, LoginHalted, ...); no "Error" suffix needed.
+ignore = ["N818"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["parro", "parro_cli.py", "parro_mcp.py", "tests"]
+exclude = ["^legacy/"]
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+# Optional libraries without type information.
+module = ["fitz", "pypdf", "PIL", "PIL.*", "openapi_schema_validator", "openapi_schema_validator.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Tests use pytest fixtures and loose JSON; keep them typed but less strict.
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false

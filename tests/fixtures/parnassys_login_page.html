@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head><script type="text/javascript" src="./wicket/resource/org.apache.wicket.resource.JQueryResourceReference/jquery/jquery-3.7.1-ver-962A4A135B116C30221466C5E4F0E7A1.js" nonce="REDACTED"></script>
+<script type="text/javascript" src="./wicket/resource/nl.parnassys.web.components.panel.ShowPasswordIcon/showpassword-ver-D123A5798DAE924DD80E508C6B19B9F9.js" nonce="REDACTED"></script>
+<script type="text/javascript" src="./wicket/resource/org.apache.wicket.ajax.AbstractDefaultAjaxBehavior/res/js/wicket-ajax-jquery-ver-EF5CE716023AC851E8B721946431BE44.js" nonce="REDACTED"></script>
+<script type="text/javascript" src="./wicket/resource/nl.parnassys.web.components.panel.SignInPanel/signinpanel-ver-C5D16C76EC28B1436FD175146B3520EB.js" nonce="REDACTED"></script>
+<link rel="lt IE 9" type="text/css" href="./wicket/resource/design.DesignResourceReferenceMarker/stylesheets/IE_error-ver-F9B28B15FAD8D385A8479617735E6257.css" nonce="REDACTED" />
+
+<meta charset="utf-8" />
+<meta name="author" content="Topicus" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inloggen - ParnasSys</title>
+<link rel="shortcut icon" type="image/x-icon" href="https://assets.parnassys.net/v2/logo/small/parnassys.svg">
+<link rel="stylesheet" type="text/css" href="https://assets.parnassys.net/v2/fonts/font.css" nonce="REDACTED" />
+<link rel="stylesheet" type="text/css" href="https://assets.parnassys.net/v2/css/borders.css" nonce="REDACTED" />
+<link rel="stylesheet" type="text/css" href="https://assets.parnassys.net/v2/css/colors-light.css" nonce="REDACTED" />
+<link rel="stylesheet" type="text/css" href="https://assets.parnassys.net/v2/css/spacing.css" nonce="REDACTED" />
+<link rel="stylesheet" type="text/css" href="https://assets.parnassys.net/v2/css/typography.css" nonce="REDACTED" />
+<link rel="stylesheet" type="text/css" href="./wicket/resource/design.DesignResourceReferenceMarker/stylesheets/signin-ver-08812F2F65E85A0CD4AD0D38C7B280AE.css" nonce="REDACTED" />
+<script type="text/javascript" nonce="REDACTED">
+/*<![CDATA[*/
+Wicket.Event.add(window, "domready", function(event) { 
+$('#id1').showPasswordIcon({passwordFieldId: 'signin-password'});;
+Wicket.Event.add('id2', 'click', function(event) { null;});;
+Wicket.Event.add('loginForm', 'keypress', function(event) { if (event.target.tagName.toLowerCase() !== 'input' || event.which != 13) return;var b = document.getElementById('id2');if (window.getComputedStyle(b).visibility === 'hidden') return;event.stopPropagation();event.preventDefault();if (b != null && b.onclick != null && typeof (b.onclick) != 'undefined') {var r = Wicket.bind(b.onclick, b)();if (r != false) b.click();} else {b.click();}return false;;});;
+Wicket.Event.publish(Wicket.Event.Topic.AJAX_HANDLERS_BOUND);
+;});
+/*]]>*/
+</script>
+</head>
+
+<body>
+	<section class="authenticator">
+		
+	<main class="sign-in sign-in--yellow">
+		<img class="sign-in__bg" src="https://assets.parnassys.net/v2/svg/sign-in-bg-yellow.svg" alt="" aria-hidden="true"/>
+
+		<div class="sign-in__container">
+			<div class="sign-in__warnings">
+				
+				
+			</div>
+
+			<div class="sign-in__card">
+				<header class="sign-in__header">
+					<img class="sign-in__logo" src="https://assets.parnassys.net/v2/logo/parro.svg" alt="ParnasSys"/>
+				</header>
+
+				
+	
+		<div class="sign-in__body sign-in__body--with-footer">
+			<h1 class="sign-in__title">Log in met je ParnasSys-account</h1>
+
+			
+      <form class="sign-in__form" method="post" novalidate="novalidate" id="loginForm" action="./?-1.-signIn-mainPanel-signInFormPanel-signInForm&amp;auth=REDACTED-SESSION-TOKEN"><div id="loginForm_hf_0" hidden="" class="hidden-fields"></div>
+        <div class="form-field">
+          <label class="form-field__label" for="signin-email"
+            >E-mailadres</label
+          >
+          <div class="form-field__control">
+            <input data-testid="e-mailadres" class="form-field__input required" type="text" maxlength="80" placeholder="Voer hier je e-mailadres in" autocomplete="username" autocapitalize="none" autofocus="autofocus" value="" name="emailadres" id="signin-email"/>
+          </div>
+          <div class="sign-in__messages sign-in__messages--field is-hidden">
+  
+</div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="signin-password"
+            >Wachtwoord</label
+          >
+          <div class="form-field__control">
+            <input data-testid="wachtwoord" class="form-field__input form-field__input--password required" type="password" maxlength="172" placeholder="Voer hier je wachtwoord in" autocomplete="current-password" autocapitalize="none" value="" name="wachtwoord" id="signin-password"/>
+            <button data-testid="wachtwoord-tonen" type="button" class="form-field__toggle" aria-label="Wachtwoord tonen" aria-pressed="false" aria-controls="signin-password" id="id1">
+	<img class="form-field__toggle-icon" alt="" aria-hidden="true" src="assets/images/ft-show.svg"/>
+</button>
+          </div>
+          <div class="sign-in__messages sign-in__messages--field is-hidden">
+  
+</div>
+          <a data-testid="wachtwoord-vergeten" class="sign-in__link sign-in__forgot-password" href="./wachtwoordreset?op=0&amp;auth=REDACTED-SESSION-TOKEN">Wachtwoord vergeten?</a>
+        </div>
+
+        <ul class="sign-in__messages is-hidden" id="caps_warning">
+          <li><span>Caps lock staat aan</span></li>
+        </ul>
+
+        <div class="sign-in__messages is-hidden">
+  
+</div>
+
+        <a data-testid="inloggen" class="btn btn--primary" id="id2" href="#" onclick="var f = document.getElementById(&#039;loginForm&#039;);document.getElementById(&#039;loginForm_hf_0&#039;).innerHTML += &#039;&lt;input type=&quot;hidden&quot; name=&quot;aanmelden&quot; value=&quot;x&quot; /&gt;&#039;;Wicket.Event.requestSubmit(f);return false;">Inloggen</a>
+      </form>
+    
+
+			<div class="sign-in__divider" role="separator">of doorgaan via</div>
+
+			<div class="sign-in__providers">
+				<a data-testid="microsoft-schoolportaal" class="provider" href="https://inloggen.parnassys.net/idp/azure?auth=REDACTED-SESSION-TOKEN">
+					<img class="provider__icon" src="./assets/images/microsoft.svg" alt="" aria-hidden="true"/>
+					<span>Microsoft Schoolportaal</span>
+				</a>
+				<a data-testid="google-workspace" class="provider" href="https://inloggen.parnassys.net/idp/google?auth=REDACTED-SESSION-TOKEN">
+					<img class="provider__icon" src="./assets/images/google.svg" alt="" aria-hidden="true"/>
+					<span>Google Workspace for Education</span>
+				</a>
+			</div>
+
+			
+		</div>
+
+		<footer class="sign-in__footer">
+			Ga naar ons kennisportaal voor
+			<a class="sign-in__footer-link" href="https://parnassysouders.zendesk.com/hc/nl/sections/15203386947090-Inloggen-en-Account" target="_blank" title="Ga naar het kennisportaal">ouders en verzorgers</a>
+			of
+			<a class="sign-in__footer-link" href="https://parnassys.zendesk.com/hc/nl/categories/4410598246418-Inloggen-en-account" target="_blank" title="Ga naar het kennisportaal">medewerkers</a>
+			voor hulp bij inloggen.
+		</footer>
+	
+
+			</div>
+
+			<p class="sign-in__byline">
+				<span>Parro</span> is onderdeel van
+				<img class="sign-in__byline-logo" src="https://assets.parnassys.net/v2/logo/parnassys.svg" alt="ParnasSys"/>
+			</p>
+		</div>
+	</main>
+
+		<div class="login--messages"></div>
+	</section>
+</body>
+</html>

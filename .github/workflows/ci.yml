@@ -1,0 +1,61 @@
+name: Client checks
+
+# Lint, type-check and test the Python client. Also called by release.yml before a release.
+# samples/, legacy/ and the full spec are not in the repository, so the tests that need them skip.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, types and tests (Python 3.14)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements-test.txt
+
+      - name: Install tooling
+        run: pip install -r requirements-test.txt
+
+      - name: Ruff
+        run: |
+          ruff check .
+          ruff format --check parro tests parro_cli.py parro_mcp.py
+
+      - name: Mypy
+        run: mypy
+
+      - name: Pytest
+        run: pytest
+
+      - name: Release archives build
+        run: python3 tools/build_release.py
+
+  oldest-python:
+    name: Tests on Python 3.10, standard library only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
+
+      # Only pytest: proves the client runs without the optional PDF and image libraries.
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Pytest
+        run: pytest

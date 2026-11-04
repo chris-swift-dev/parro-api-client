@@ -14,17 +14,11 @@ tokens.json
 samples/
 openapi/parro.openapi.json
 
-# >>> TEMPORARY: public "spec + Swagger UI only" phase >>>
-# Remove this block when the API client work continues.
-# Kept on purpose: tools/ and requirements-dev.txt, because CI needs them to validate
-# and build the site.
-# When removing it, also merge .github/README.md into README.md and delete it: GitHub shows
-# .github/README.md in preference to the root README.md.
-/parro_mcp.py
-/requirements.txt
-/DEPLOY.md
-/README.md
-/docs/
-# <<< TEMPORARY <<<
+# The original MCP server, kept locally only to compare behaviour (docs/PLAN-api-client.md §0b).
+# Never commit it: its repository states no license.
+/legacy/
+
+# Release archives built by tools/build_release.py.
+dist/
 
 getToken.sh
