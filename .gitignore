@@ -1,0 +1,28 @@
+node_modules/
+_site/
+.venv/
+__pycache__/
+*.pyc
+.env
+tokens.json
+
+# Raw browser captures contain your password and live tokens. Never commit them.
+*.har
+
+# Redacted but real-world data. The Pages site only needs openapi/parro.public.openapi.json,
+# and CI skips the full-spec steps when these are absent.
+samples/
+openapi/parro.openapi.json
+
+# >>> TEMPORARY: public "spec + Swagger UI only" phase >>>
+# Remove this block when the API client work continues.
+# Kept on purpose: tools/ and requirements-dev.txt, because CI needs them to validate
+# and build the site.
+# When removing it, also merge .github/README.md into README.md and delete it: GitHub shows
+# .github/README.md in preference to the root README.md.
+/parro_mcp.py
+/requirements.txt
+/DEPLOY.md
+/README.md
+/docs/
+# <<< TEMPORARY <<<

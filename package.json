@@ -1,0 +1,16 @@
+{
+  "name": "parro-api-docs",
+  "private": true,
+  "description": "Tooling for the Parro OpenAPI spec and its Swagger UI on GitHub Pages",
+  "license": "CC-BY-4.0",
+  "scripts": {
+    "spec": "python3 tools/build_spec.py && python3 tools/build_spec.py --public --out openapi/parro.public.openapi.json",
+    "lint": "redocly lint --config redocly.yaml openapi/parro.public.openapi.json",
+    "site": "bash tools/build_site.sh _site",
+    "preview": "bash tools/build_site.sh _site && python3 -m http.server 8000 --directory _site"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.73.0",
+    "swagger-ui-dist": "5.34.1"
+  }
+}

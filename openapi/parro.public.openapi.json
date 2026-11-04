@@ -1,0 +1,3968 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Parro REST API (unofficial, read-only)",
+    "version": "224",
+    "description": "Read-only description of the REST API behind **talk.parro.com**, the Dutch parent–school\ncommunication app by Topicus (ParnasSys). The API is a Topicus *geon* API.\nThis spec was derived from the web client's traffic: a captured browser session and sanitized response\nsamples. Response schemas list **only fields seen in those samples**. Treat every object as\nopen: geon adds fields between contract versions. Operations tagged **Unverified** appear in the\nweb app's code but were never called.\n\n## Conventions\n* **Media type**: `Accept: application/vnd.topicus.geon+json;version=224`. The official client also\n  sends the same value as `Content-Type`, even on GET. Responses sometimes omit `;version=…`.\n* **Client headers**: `parro-app-version: web:2.27.0` and `parro-authorization-role: GUARDIAN:<guardianId>`.\n  Derive the role from `GET /account/me`, which is called *without* the role header:\n  the id is the `rel: self` link id of the first entry in `identity.guardians`.\n* **Polymorphism**: every object carries a `dtype` (e.g. `event.RAnnouncementEventPrimer`). Several\n  endpoints select the returned type with a `dtype` query parameter.\n* **Ids** are 64-bit integers, found in `links[rel=self].id`. `href` values point at item resources\n  (`/child/{id}`, `/group/{id}`, …) that are not described here.\n* **Collections** come as `{\"items\": [...]}`. They are paged with `Range: items=<from>-<to>` and answer\n  `206 Partial Content` with `Content-Range: items 0-1/2`, **even without a `Range` header**\n  (the server's default page size is unknown). Add `topicus-Range-Count: Exact` to get an exact total.\n* **Dates** are ISO-8601 with an offset. Fractional seconds vary from none to 3 digits.\n\n## Authentication\nOAuth2 against the ParnasSys IdP (`https://inloggen.parnassys.net`, see the **Auth** operations).\nThe public client `MQygAaSBUcAgPU2WInKt` is pinned to the redirect URI `https://talk.parro.com/oauth2`.\nThere is no dynamic client registration or device grant, and loopback redirects are rejected.\n* **Authorization code + PKCE (S256)**: browser login. Copy the `code` from the redirect URL quickly,\n  because the web app also tries to redeem it and a code works only once.\n* **Password grant**: `grant_type=password`, enabled for this client.\n* Scope `openid offline_access` gives a long-lived refresh token. The web client asks only for `openid`,\n  and its refresh token then expires after about 8 hours.\n* The IdP **locks the account after a few failed logins**. Never retry a rejected password automatically.\n\n## Attachments\nAttachment entries carry a CloudFront `url`. It is **unsigned and needs no authentication**: anyone holding\nit can download the file, so treat these URLs as secrets. Never send the Parro `Authorization` header to the CDN.\nDocument entries also carry `expiresAt`, exactly one year after the announcement in the sample. Whether the CDN\nenforces it is unknown.\nAnnouncements keep attachments in `attachments[]`; calendar items in `calendarItem.attachments[]`.\nChoose the parser by `contentType`, not by the entry's `dtype`: a photo's SOURCE entry can be a\n`RAttachmentDocumentEntry`.\n\n## Trying it out\nThe API's CORS policy only allows the origin `https://talk.parro.com`, so **\"Try it out\" in a Swagger UI\non any other origin is blocked by the browser**. Use the generated curl command instead, with\n**bearerToken** set to an access token obtained through the **Auth** operations.\n\n## About this build\nPublic build: response and property examples taken from samples are left out.\n",
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "x-parro-app-version": "web:2.27.0"
+  },
+  "servers": [
+    {
+      "url": "https://rest-v2.parro.com/rest/v2",
+      "description": "Production"
+    },
+    {
+      "url": "https://{host}/rest/v2",
+      "description": "Other environment (e.g. acceptance; host not documented)",
+      "variables": {
+        "host": {
+          "default": "rest-v2.parro.com"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "ParnasSys IdP (OAuth2 / OpenID Connect)."
+    },
+    {
+      "name": "Account",
+      "description": "Account, school, children, unread counts."
+    },
+    {
+      "name": "Groups",
+      "description": "Classes and school-wide groups."
+    },
+    {
+      "name": "Events",
+      "description": "Announcements (mededelingen) and calendar items, incl. attachments."
+    },
+    {
+      "name": "Chat",
+      "description": "Conversations with teachers."
+    },
+    {
+      "name": "Misc",
+      "description": "System news and settings."
+    },
+    {
+      "name": "Unverified",
+      "description": "Present in the web app's code, never called."
+    }
+  ],
+  "security": [
+    {
+      "bearerToken": []
+    },
+    {
+      "parnassysOAuth": [
+        "openid"
+      ]
+    }
+  ],
+  "paths": {
+    "/account/me": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "operationId": "getAccountMe",
+        "summary": "The logged-in account, its identity, school and guardian ids",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        },
+        "description": "Call **without** `parro-authorization-role`; the role is derived from this response."
+      }
+    },
+    "/accountsettings": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "operationId": "getAccountSettings",
+        "summary": "Notification, digest, translation and chat preferences",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        }
+      }
+    },
+    "/organisation/{id}": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "operationId": "getOrganisation",
+        "summary": "The school (organisation)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "From `/account/me` → `organisation`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganisationPrimer"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        }
+      }
+    },
+    "/child": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "operationId": "listChildren",
+        "summary": "Children linked to the account",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "$ref": "#/components/parameters/Range"
+          },
+          {
+            "$ref": "#/components/parameters/RangeCount"
+          }
+        ],
+        "responses": {
+          "206": {
+            "description": "A page of the collection (observed even without `Range`).",
+            "headers": {
+              "Content-Range": {
+                "$ref": "#/components/headers/ContentRange"
+              }
+            },
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChildPrimer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Same body as 206. Not observed for paged lists, but clients should accept it.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChildPrimer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        }
+      }
+    },
+    "/identity/unreadcounts": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "operationId": "getUnreadCounts",
+        "summary": "Unread counts per category, per guardian identity",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "$ref": "#/components/parameters/Range"
+          },
+          {
+            "$ref": "#/components/parameters/RangeCount"
+          }
+        ],
+        "responses": {
+          "206": {
+            "description": "A page of the collection (observed even without `Range`).",
+            "headers": {
+              "Content-Range": {
+                "$ref": "#/components/headers/ContentRange"
+              }
+            },
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UnreadCount"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Same body as 206. Not observed for paged lists, but clients should accept it.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UnreadCount"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        }
+      }
+    },
+    "/group": {
+      "get": {
+        "tags": [
+          "Groups"
+        ],
+        "operationId": "listGroups",
+        "summary": "Classes and school-wide groups",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "$ref": "#/components/parameters/Range"
+          },
+          {
+            "$ref": "#/components/parameters/RangeCount"
+          },
+          {
+            "name": "dtype",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "identity.RHomeGroup"
+              ]
+            },
+            "description": "Current groups."
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PREVIOUS_ACTIVE"
+              ]
+            },
+            "description": "Previous school year."
+          }
+        ],
+        "responses": {
+          "206": {
+            "description": "A page of the collection (observed even without `Range`).",
+            "headers": {
+              "Content-Range": {
+                "$ref": "#/components/headers/ContentRange"
+              }
+            },
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "$ref": "#/components/schemas/HomeGroup"
+                          },
+                          {
+                            "$ref": "#/components/schemas/GroupPrimer"
+                          }
+                        ],
+                        "discriminator": {
+                          "propertyName": "dtype",
+                          "mapping": {
+                            "identity.RHomeGroup": "#/components/schemas/HomeGroup",
+                            "identity.RGroupPrimer": "#/components/schemas/GroupPrimer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Same body as 206. Not observed for paged lists, but clients should accept it.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "$ref": "#/components/schemas/HomeGroup"
+                          },
+                          {
+                            "$ref": "#/components/schemas/GroupPrimer"
+                          }
+                        ],
+                        "discriminator": {
+                          "propertyName": "dtype",
+                          "mapping": {
+                            "identity.RHomeGroup": "#/components/schemas/HomeGroup",
+                            "identity.RGroupPrimer": "#/components/schemas/GroupPrimer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        },
+        "description": "Pass **either** `dtype=identity.RHomeGroup` (current school year, returns `RHomeGroup` with `lastAnnouncement`) **or** `scope=PREVIOUS_ACTIVE` (last school year, returns `RGroupPrimer`). The group ids feed `GET /event?group=`."
+      }
+    },
+    "/event": {
+      "get": {
+        "tags": [
+          "Events"
+        ],
+        "operationId": "listEvents",
+        "summary": "Announcements or calendar items of one group",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "$ref": "#/components/parameters/Range"
+          },
+          {
+            "$ref": "#/components/parameters/RangeCount"
+          },
+          {
+            "name": "dtype",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "event.RAnnouncementEventPrimer",
+                "event.RCalendarItemEventPrimer"
+              ]
+            },
+            "description": "Which event type to list."
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Group id from `GET /group`."
+          }
+        ],
+        "responses": {
+          "206": {
+            "description": "A page of the collection (observed even without `Range`).",
+            "headers": {
+              "Content-Range": {
+                "$ref": "#/components/headers/ContentRange"
+              }
+            },
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "$ref": "#/components/schemas/AnnouncementEventPrimer"
+                          },
+                          {
+                            "$ref": "#/components/schemas/CalendarItemEventPrimer"
+                          }
+                        ],
+                        "discriminator": {
+                          "propertyName": "dtype",
+                          "mapping": {
+                            "event.RAnnouncementEventPrimer": "#/components/schemas/AnnouncementEventPrimer",
+                            "event.RCalendarItemEventPrimer": "#/components/schemas/CalendarItemEventPrimer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Same body as 206. Not observed for paged lists, but clients should accept it.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "$ref": "#/components/schemas/AnnouncementEventPrimer"
+                          },
+                          {
+                            "$ref": "#/components/schemas/CalendarItemEventPrimer"
+                          }
+                        ],
+                        "discriminator": {
+                          "propertyName": "dtype",
+                          "mapping": {
+                            "event.RAnnouncementEventPrimer": "#/components/schemas/AnnouncementEventPrimer",
+                            "event.RCalendarItemEventPrimer": "#/components/schemas/CalendarItemEventPrimer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        },
+        "description": "The main feed. Query each group separately and merge by `sortDate`."
+      }
+    },
+    "/event/{id}": {
+      "get": {
+        "tags": [
+          "Events"
+        ],
+        "operationId": "getEvent",
+        "summary": "One announcement or calendar item",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Event id (`links[rel=self].id` from `GET /event`)."
+          },
+          {
+            "name": "dtype",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "event.RAnnouncementEventPrimer",
+                "event.RCalendarItemEvent"
+              ]
+            },
+            "description": "Concrete event type."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/AnnouncementEventPrimer"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CalendarItemEvent"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "dtype",
+                    "mapping": {
+                      "event.RAnnouncementEventPrimer": "#/components/schemas/AnnouncementEventPrimer",
+                      "event.RCalendarItemEvent": "#/components/schemas/CalendarItemEvent"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Missing or abstract `dtype`.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeonError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        },
+        "description": "`dtype` is required. Without it the API answers `406 EVENT_BAD_TYPE` (abstract supertype `RAbstractEvent`). **Pitfall:** `dtype=event.RAnnouncementEvent` answers **401**, not 406. Use `event.RAnnouncementEventPrimer` for announcements. A client that treats every 401 as an expired token will loop through logins."
+      }
+    },
+    "/systemnews": {
+      "get": {
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "listSystemNews",
+        "summary": "Product news from Parro itself",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "$ref": "#/components/parameters/Range"
+          },
+          {
+            "$ref": "#/components/parameters/RangeCount"
+          }
+        ],
+        "responses": {
+          "206": {
+            "description": "A page of the collection (observed even without `Range`).",
+            "headers": {
+              "Content-Range": {
+                "$ref": "#/components/headers/ContentRange"
+              }
+            },
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SystemNewsEvent"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Same body as 206. Not observed for paged lists, but clients should accept it.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SystemNewsEvent"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        }
+      }
+    },
+    "/absence/setting": {
+      "get": {
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "getAbsenceSetting",
+        "summary": "Absence-reporting settings",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "$ref": "#/components/parameters/Range"
+          },
+          {
+            "$ref": "#/components/parameters/RangeCount"
+          }
+        ],
+        "responses": {
+          "206": {
+            "description": "A page of the collection (observed even without `Range`).",
+            "headers": {
+              "Content-Range": {
+                "$ref": "#/components/headers/ContentRange"
+              }
+            },
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GeonObject"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Same body as 206. Not observed for paged lists, but clients should accept it.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GeonObject"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        },
+        "description": "Returned `{\"items\": []}` in the only sample, so the item type is unknown."
+      }
+    },
+    "/chatroom": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "listChatrooms",
+        "summary": "Chat conversations",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "$ref": "#/components/parameters/Range"
+          },
+          {
+            "$ref": "#/components/parameters/RangeCount"
+          }
+        ],
+        "responses": {
+          "206": {
+            "description": "A page of the collection (observed even without `Range`).",
+            "headers": {
+              "Content-Range": {
+                "$ref": "#/components/headers/ContentRange"
+              }
+            },
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChatRoomPrimer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Same body as 206. Not observed for paged lists, but clients should accept it.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChatRoomPrimer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        }
+      }
+    },
+    "/chatroom/{id}/chatmessage": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "listChatMessages",
+        "summary": "Messages in one chat conversation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "$ref": "#/components/parameters/Range"
+          },
+          {
+            "$ref": "#/components/parameters/RangeCount"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Chatroom id from `GET /chatroom`."
+          }
+        ],
+        "responses": {
+          "206": {
+            "description": "A page of the collection (observed even without `Range`).",
+            "headers": {
+              "Content-Range": {
+                "$ref": "#/components/headers/ContentRange"
+              }
+            },
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChatTextMessage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Same body as 206. Not observed for paged lists, but clients should accept it.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChatTextMessage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        },
+        "description": "Only `chat.RChatTextMessage` has been observed; other message types (e.g. with files) probably exist."
+      }
+    },
+    "/absence": {
+      "get": {
+        "tags": [
+          "Unverified"
+        ],
+        "operationId": "unverified_absence",
+        "summary": "Absence reports (unverified)",
+        "x-parro-verified": false,
+        "description": "Path found in the web app's code; never called. Parameters and response unknown.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unknown shape.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/calendaritem/{id}": {
+      "get": {
+        "tags": [
+          "Unverified"
+        ],
+        "operationId": "unverified_calendaritem_id",
+        "summary": "A calendar item (unverified)",
+        "x-parro-verified": false,
+        "description": "Path found in the web app's code; never called. Parameters and response unknown.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unknown shape.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/media-export": {
+      "get": {
+        "tags": [
+          "Unverified"
+        ],
+        "operationId": "unverified_media_export",
+        "summary": "Media export (unverified)",
+        "x-parro-verified": false,
+        "description": "Path found in the web app's code; never called. Parameters and response unknown.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unknown shape.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "tags": [
+          "Unverified"
+        ],
+        "operationId": "unverified_conversations",
+        "summary": "Conversations (unverified)",
+        "x-parro-verified": false,
+        "description": "Path found in the web app's code; never called. Parameters and response unknown.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unknown shape.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/timeslot": {
+      "get": {
+        "tags": [
+          "Unverified"
+        ],
+        "operationId": "unverified_timeslot",
+        "summary": "Timeslots for calendar items (unverified)",
+        "x-parro-verified": false,
+        "description": "Path found in the web app's code; never called. Parameters and response unknown.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unknown shape.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/privacy": {
+      "get": {
+        "tags": [
+          "Unverified"
+        ],
+        "operationId": "unverified_privacy",
+        "summary": "Privacy settings (unverified)",
+        "x-parro-verified": false,
+        "description": "Path found in the web app's code; never called. Parameters and response unknown.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unknown shape.",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/oauth2/authorize": {
+      "servers": [
+        {
+          "url": "https://inloggen.parnassys.net/idp",
+          "description": "ParnasSys IdP"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "authorize",
+        "security": [],
+        "summary": "Start a browser login (authorization code + PKCE)",
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "example": "MQygAaSBUcAgPU2WInKt",
+              "type": "string"
+            },
+            "description": "Public client of talk.parro.com."
+          },
+          {
+            "name": "response_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "code"
+              ],
+              "type": "string"
+            },
+            "description": ""
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "format": "uri",
+              "example": "https://talk.parro.com/oauth2",
+              "type": "string"
+            },
+            "description": "Must be exactly the registered URI; loopback URIs are rejected (`invalid_client`)."
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "example": "openid offline_access",
+              "type": "string"
+            },
+            "description": "Add `offline_access` for a long-lived refresh token."
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Random value, echoed back."
+          },
+          {
+            "name": "code_challenge",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "base64url(SHA-256(code_verifier))."
+          },
+          {
+            "name": "code_challenge_method",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "S256",
+                "plain"
+              ],
+              "type": "string"
+            },
+            "description": "Use `S256`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The ParnasSys login page (HTML)."
+          },
+          "302": {
+            "description": "After login: redirect to `redirect_uri?code=…&state=…`.",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "format": "uri",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request, e.g. `invalid_client — Callback url does not match one of [registered]` for an unregistered `redirect_uri`."
+          }
+        }
+      }
+    },
+    "/oauth2/token": {
+      "servers": [
+        {
+          "url": "https://inloggen.parnassys.net/idp",
+          "description": "ParnasSys IdP"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "token",
+        "security": [],
+        "summary": "Obtain or refresh tokens",
+        "description": "**Two request shapes.**\n\n* `authorization_code` and `refresh_token` send their parameters in the **query string** with an **empty body** and `Content-Type: application/x-www-form-urlencoded`, as the web client does.\n* `password` sends a normal form-encoded **body** (`grant_type, client_id, username, password, scope`).\n\nA wrong password answers `400 invalid_grant` and counts toward the account lockout. That same error also comes back for accounts the IdP will not put through the password grant. Clients then fall back to the login form, once.",
+        "parameters": [
+          {
+            "name": "grant_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "authorization_code",
+                "refresh_token"
+              ],
+              "type": "string"
+            },
+            "description": "Query-string shape only."
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "example": "MQygAaSBUcAgPU2WInKt",
+              "type": "string"
+            },
+            "description": ""
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "authorization_code: the code from the redirect."
+          },
+          {
+            "name": "code_verifier",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "authorization_code: the PKCE verifier."
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "format": "uri",
+              "type": "string"
+            },
+            "description": "authorization_code: same value as in /authorize."
+          },
+          {
+            "name": "refresh_token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "refresh_token grant."
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grant_type": {
+                    "enum": [
+                      "password"
+                    ],
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "format": "password",
+                    "type": "string"
+                  },
+                  "scope": {
+                    "example": "openid offline_access",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "RFC 6749 §5.2 error, e.g. `invalid_grant`. Not sampled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/revoke": {
+      "servers": [
+        {
+          "url": "https://inloggen.parnassys.net/idp",
+          "description": "ParnasSys IdP"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "revoke",
+        "security": [],
+        "summary": "Revoke a refresh or access token (RFC 7009)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token",
+                  "client_id"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "token_type_hint": {
+                    "enum": [
+                      "refresh_token",
+                      "access_token"
+                    ],
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revoked (empty body)."
+          },
+          "400": {
+            "description": "RFC 6749 error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth2/logout": {
+      "servers": [
+        {
+          "url": "https://inloggen.parnassys.net/idp",
+          "description": "ParnasSys IdP"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "endSession",
+        "security": [],
+        "x-parro-verified": false,
+        "summary": "OIDC RP-initiated logout (unverified)",
+        "description": "Advertised as `end_session_endpoint` in the discovery document; never called. Parameters follow OpenID Connect RP-Initiated Logout 1.0.",
+        "parameters": [
+          {
+            "name": "id_token_hint",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": ""
+          },
+          {
+            "name": "post_logout_redirect_uri",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "format": "uri",
+              "type": "string"
+            },
+            "description": ""
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logout page (unverified)."
+          },
+          "302": {
+            "description": "Redirect after logout (unverified)."
+          },
+          "4XX": {
+            "description": "Client error (unverified)."
+          }
+        }
+      }
+    },
+    "/.well-known/openid-configuration": {
+      "servers": [
+        {
+          "url": "https://inloggen.parnassys.net",
+          "description": "IdP issuer"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "operationId": "discovery",
+        "security": [],
+        "summary": "OpenID Connect discovery document",
+        "description": "Location follows OIDC Discovery from `issuer`. Note: it also advertises `introspection_endpoint`, which needs client authentication and is not described.",
+        "responses": {
+          "200": {
+            "description": "Discovery document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenIDConfiguration"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Paste an access token. This is the only scheme usable from Swagger UI."
+      },
+      "parnassysOAuth": {
+        "type": "oauth2",
+        "description": "PKCE (S256) is required for the code flow. The redirect URI is pinned to https://talk.parro.com/oauth2, so the code flow cannot complete inside Swagger UI.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://inloggen.parnassys.net/idp/oauth2/authorize",
+            "tokenUrl": "https://inloggen.parnassys.net/idp/oauth2/token",
+            "scopes": {
+              "openid": "OpenID Connect",
+              "offline_access": "Long-lived refresh token"
+            }
+          },
+          "password": {
+            "tokenUrl": "https://inloggen.parnassys.net/idp/oauth2/token",
+            "scopes": {
+              "openid": "OpenID Connect",
+              "offline_access": "Long-lived refresh token"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "AppVersion": {
+        "name": "parro-app-version",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "example": "web:2.27.0"
+        },
+        "description": "Client version. Every official client sends it; it is unknown whether the server enforces it."
+      },
+      "Role": {
+        "name": "parro-authorization-role",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Z]+:[0-9]+$",
+          "example": "GUARDIAN:1000000000"
+        },
+        "description": "`<ACCOUNTTYPE>:<id>` derived from `GET /account/me`. The web client sends it on every call except `/account/me`."
+      },
+      "Range": {
+        "name": "Range",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^items=[0-9]+-[0-9]+$",
+          "example": "items=0-49"
+        },
+        "description": "Zero-based, inclusive item range."
+      },
+      "RangeCount": {
+        "name": "topicus-Range-Count",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "Exact"
+          ]
+        },
+        "description": "Ask for an exact total in `Content-Range`."
+      }
+    },
+    "headers": {
+      "ContentRange": {
+        "schema": {
+          "type": "string",
+          "pattern": "^items [0-9]+-[0-9]+/[0-9]+$",
+          "example": "items 0-1/2"
+        },
+        "description": "Returned range and total."
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing, expired or invalid token. Empty body, no Content-Type. **Also returned for `GET /event/{id}?dtype=event.RAnnouncementEvent`.**"
+      },
+      "GeonErrorResponse": {
+        "description": "Error.",
+        "content": {
+          "application/vnd.topicus.geon+json;version=224": {
+            "schema": {
+              "$ref": "#/components/schemas/GeonError"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Account": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "auth.RAccount"
+            ],
+            "example": "auth.RAccount",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "username": {
+            "type": "string"
+          },
+          "externalUsername": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "organisation": {
+            "$ref": "#/components/schemas/OrganisationPrimer"
+          },
+          "lastAccountSynchronize": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "accountType": {
+            "type": "string",
+            "description": "Observed values: `GUARDIAN`. Not a closed list."
+          },
+          "identity": {
+            "$ref": "#/components/schemas/Identity"
+          },
+          "avgId": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          },
+          "accountPermissions": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          },
+          "portalAccess": {
+            "type": "boolean"
+          },
+          "state": {
+            "type": "string",
+            "description": "Observed values: `ACTIVE`. Not a closed list."
+          },
+          "numberOfExternalIdentities": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfActiveExternalIdentities": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `auth.RAccount`. Inferred from 1 object(s) in: `getAccountMe.200.json`."
+      },
+      "AccountSettings": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "auth.RAccountSettings"
+            ],
+            "example": "auth.RAccountSettings",
+            "description": "Geon type discriminator."
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "email": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "digestPreference": {
+            "type": "string",
+            "description": "Observed values: `DAILY`. Not a closed list."
+          },
+          "translationPreference": {
+            "$ref": "#/components/schemas/TranslationPreferenceSettings"
+          },
+          "digestHour": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "chatPreference": {
+            "$ref": "#/components/schemas/ChatPreference"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `auth.RAccountSettings`. Inferred from 1 object(s) in: `getAccountSettings.200.json`."
+      },
+      "AnnouncementAttachment": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "attachment.RAnnouncementAttachment"
+            ],
+            "example": "attachment.RAnnouncementAttachment",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attachmentType": {
+            "type": "string",
+            "description": "Observed values: `PDF`. Not a closed list."
+          },
+          "uploadId": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttachmentDocumentEntry"
+            }
+          },
+          "index": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `attachment.RAnnouncementAttachment`. Inferred from 2 object(s) in: `getEvent_announcement.200.json`, `listEvents_announcements.200.json`."
+      },
+      "AnnouncementEventPreview": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "event.RAnnouncementEventPreview"
+            ],
+            "example": "event.RAnnouncementEventPreview",
+            "description": "Geon type discriminator."
+          },
+          "title": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `event.RAnnouncementEventPreview`. Inferred from 3 object(s) in: `listGroups.200.json`."
+      },
+      "AnnouncementEventPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "event.RAnnouncementEventPrimer"
+            ],
+            "example": "event.RAnnouncementEventPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sortDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "cancelled": {
+            "type": "boolean"
+          },
+          "liked": {
+            "type": "boolean"
+          },
+          "realisationReason": {
+            "type": "string",
+            "description": "Observed values: `RECIPIENT`. Not a closed list."
+          },
+          "readCount": {
+            "$ref": "#/components/schemas/EventReadCount"
+          },
+          "title": {
+            "type": "string"
+          },
+          "contents": {
+            "type": "string"
+          },
+          "likeable": {
+            "type": "boolean"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnnouncementAttachment"
+            }
+          },
+          "owner": {
+            "$ref": "#/components/schemas/IdentityPrimer"
+          },
+          "lastEditedBy": {
+            "$ref": "#/components/schemas/IdentityPrimer"
+          },
+          "draft": {
+            "type": "boolean"
+          },
+          "pinned": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `event.RAnnouncementEventPrimer`. Inferred from 3 object(s) in: `getEvent_announcement.200.json`, `listEvents_announcements.200.json`."
+      },
+      "AttachmentDocumentEntry": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "attachment.RAttachmentDocumentEntry"
+            ],
+            "example": "attachment.RAttachmentDocumentEntry",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "description": "Observed values: `SOURCE`. Not a closed list."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `attachment.RAttachmentDocumentEntry`. Inferred from 3 object(s) in: `getEvent_announcement.200.json`, `getEvent_attachment.200.json`, `listEvents_announcements.200.json`."
+      },
+      "AttachmentImageEntry": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "attachment.RAttachmentImageEntry"
+            ],
+            "example": "attachment.RAttachmentImageEntry",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "description": "Observed values: `THUMBNAIL`. Not a closed list."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "height": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "width": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `attachment.RAttachmentImageEntry`. Inferred from 1 object(s) in: `getEvent_attachment.200.json`."
+      },
+      "Avatar": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RAvatar"
+            ],
+            "example": "identity.RAvatar",
+            "description": "Geon type discriminator."
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roleId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "firstname": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "cachedAvatarUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RAvatar`. Inferred from 7 object(s) in: `getEvent.200.json`, `getEvent_attachment.200.json`, `listEvents_calendar-items.200.json`, `listGroups.200.json`."
+      },
+      "CalendarItem": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "calendar.RCalendarItem"
+            ],
+            "example": "calendar.RCalendarItem",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "description": "Observed values: `VOLUNTEER`, `SCHOOLWIDE_ACTIVITY`. Not a closed list."
+          },
+          "title": {
+            "type": "string"
+          },
+          "rsvpRequired": {
+            "type": "boolean"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dayDates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "imported": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "description": "Observed values: `OPEN`. Not a closed list."
+          },
+          "description": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "pending": {
+            "type": "boolean"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/TeacherPrimer"
+          },
+          "lastEditedBy": {
+            "$ref": "#/components/schemas/TeacherPrimer"
+          },
+          "numberOfResources": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfTimeslots": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfOpenTimeslots": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfUncommittedChildren": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "timeslotInterval": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "slack": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reminderInterval": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalRespondents": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarItemVolunteerResource"
+            }
+          },
+          "respondents": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarItemAttachment"
+            }
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `calendar.RCalendarItem`. Inferred from 2 object(s) in: `getEvent.200.json`, `getEvent_attachment.200.json`."
+      },
+      "CalendarItemAttachment": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "attachment.RCalendarItemAttachment"
+            ],
+            "example": "attachment.RCalendarItemAttachment",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attachmentType": {
+            "type": "string",
+            "description": "Observed values: `IMAGE`. Not a closed list."
+          },
+          "uploadId": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/AttachmentDocumentEntry"
+                },
+                {
+                  "$ref": "#/components/schemas/AttachmentImageEntry"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "dtype",
+                "mapping": {
+                  "attachment.RAttachmentDocumentEntry": "#/components/schemas/AttachmentDocumentEntry",
+                  "attachment.RAttachmentImageEntry": "#/components/schemas/AttachmentImageEntry"
+                }
+              }
+            }
+          },
+          "index": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `attachment.RCalendarItemAttachment`. Inferred from 1 object(s) in: `getEvent_attachment.200.json`."
+      },
+      "CalendarItemEvent": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "event.RCalendarItemEvent"
+            ],
+            "example": "event.RCalendarItemEvent",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastEditedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sortDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "cancelled": {
+            "type": "boolean"
+          },
+          "liked": {
+            "type": "boolean"
+          },
+          "readCount": {
+            "$ref": "#/components/schemas/EventReadCount"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarItemEventChild"
+            }
+          },
+          "contributed": {
+            "type": "boolean"
+          },
+          "dayNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupPrimer"
+            }
+          },
+          "numberOfDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "progress": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "calendarItem": {
+            "$ref": "#/components/schemas/CalendarItem"
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupRecipient"
+            }
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `event.RCalendarItemEvent`. Inferred from 2 object(s) in: `getEvent.200.json`, `getEvent_attachment.200.json`."
+      },
+      "CalendarItemEventChild": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "event.RCalendarItemEventChild"
+            ],
+            "example": "event.RCalendarItemEventChild",
+            "description": "Geon type discriminator."
+          },
+          "child": {
+            "$ref": "#/components/schemas/Avatar"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `event.RCalendarItemEventChild`. Inferred from 5 object(s) in: `getEvent.200.json`, `getEvent_attachment.200.json`, `listEvents_calendar-items.200.json`."
+      },
+      "CalendarItemEventPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "event.RCalendarItemEventPrimer"
+            ],
+            "example": "event.RCalendarItemEventPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sortDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "cancelled": {
+            "type": "boolean"
+          },
+          "liked": {
+            "type": "boolean"
+          },
+          "readCount": {
+            "$ref": "#/components/schemas/EventReadCount"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarItemEventChild"
+            }
+          },
+          "contributed": {
+            "type": "boolean"
+          },
+          "dayNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupPrimer"
+            }
+          },
+          "numberOfDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "calendarItem": {
+            "$ref": "#/components/schemas/CalendarItemPrimer"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `event.RCalendarItemEventPrimer`. Inferred from 1 object(s) in: `listEvents_calendar-items.200.json`."
+      },
+      "CalendarItemPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "calendar.RCalendarItemPrimer"
+            ],
+            "example": "calendar.RCalendarItemPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "description": "Observed values: `ACTIVITY`. Not a closed list."
+          },
+          "title": {
+            "type": "string"
+          },
+          "rsvpRequired": {
+            "type": "boolean"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dayDates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "imported": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "description": "Observed values: `OPEN`. Not a closed list."
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `calendar.RCalendarItemPrimer`. Inferred from 1 object(s) in: `listEvents_calendar-items.200.json`."
+      },
+      "CalendarItemVolunteerResource": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "calendar.RCalendarItemVolunteerResource"
+            ],
+            "example": "calendar.RCalendarItemVolunteerResource",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "title": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "amountCommitted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "commitedByMe": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "type": {
+            "type": "string",
+            "description": "Observed values: `VOLUNTEER`. Not a closed list."
+          },
+          "commitments": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `calendar.RCalendarItemVolunteerResource`. Inferred from 1 object(s) in: `getEvent.200.json`."
+      },
+      "ChatPreference": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RChatPreference"
+            ],
+            "example": "identity.RChatPreference",
+            "description": "Geon type discriminator."
+          },
+          "sendMessagesWithShiftEnter": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RChatPreference`. Inferred from 1 object(s) in: `getAccountSettings.200.json`."
+      },
+      "ChatRoomPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "chat.RChatRoomPrimer"
+            ],
+            "example": "chat.RChatRoomPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sortDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "muted": {
+            "type": "boolean"
+          },
+          "todo": {
+            "type": "boolean"
+          },
+          "unreadCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "admin": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "description": "Observed values: `CALENDAR`. Not a closed list."
+          },
+          "title": {
+            "type": "string"
+          },
+          "numberOfMembers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hasGuardians": {
+            "type": "boolean"
+          },
+          "memberNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "childNames": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          },
+          "repliesEnabled": {
+            "type": "boolean"
+          },
+          "dnd": {
+            "type": "boolean"
+          },
+          "lastMessage": {
+            "$ref": "#/components/schemas/ChatTextMessage"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `chat.RChatRoomPrimer`. Inferred from 2 object(s) in: `listChatrooms.200.json`."
+      },
+      "ChatTextMessage": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "chat.RChatTextMessage"
+            ],
+            "example": "chat.RChatTextMessage",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/IdentityPrimer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          },
+          "allRead": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `chat.RChatTextMessage`. Inferred from 3 object(s) in: `listChatMessages.200.json`, `listChatrooms.200.json`."
+      },
+      "ChildPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RChildPrimer"
+            ],
+            "example": "identity.RChildPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstname": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "cachedAvatarUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "role": {
+            "type": "string",
+            "description": "Observed values: `CHILD`. Not a closed list."
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "enrolledSince": {
+            "type": "string",
+            "format": "date"
+          },
+          "numberOfGuardians": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "guardianNames": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RChildPrimer`. Inferred from 2 object(s) in: `listChildren.200.json`."
+      },
+      "EventReadCount": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "event.REventReadCount"
+            ],
+            "example": "event.REventReadCount",
+            "description": "Geon type discriminator."
+          },
+          "read": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "liked": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `event.REventReadCount`. Inferred from 6 object(s) in: `getEvent.200.json`, `getEvent_announcement.200.json`, `getEvent_attachment.200.json`, `listEvents_announcements.200.json`, `listEvents_calendar-items.200.json`."
+      },
+      "GeonError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "exception": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "applicationError": {
+            "type": "string",
+            "description": "Observed values: `EVENT_BAD_TYPE`. Not a closed list."
+          },
+          "errorDetails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "description": "Geon error body, e.g. `406` with `applicationError: EVENT_BAD_TYPE` when `/event/{id}` is called without a usable `dtype`."
+      },
+      "GeonLink": {
+        "type": "object",
+        "required": [
+          "rel"
+        ],
+        "properties": {
+          "rel": {
+            "type": "string",
+            "example": "self"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "example": 1000000000
+          },
+          "type": {
+            "type": "string",
+            "example": "identity.RChildPrimer"
+          },
+          "href": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://rest-v2.parro.com/rest/v2/child/1000000000"
+          }
+        }
+      },
+      "GeonObject": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "The common geon envelope, used where the concrete type is unknown.",
+        "properties": {
+          "dtype": {
+            "type": "string"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "GeonPermission": {
+        "type": "object",
+        "properties": {
+          "full": {
+            "type": "string",
+            "example": "attachment.RAttachment:READ:INSTANCE(11000000000)"
+          },
+          "type": {
+            "type": "string",
+            "example": "attachment.RAttachment"
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "READ"
+            }
+          },
+          "instances": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "example": "INSTANCE(11000000000)"
+            }
+          }
+        }
+      },
+      "GroupPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RGroupPrimer"
+            ],
+            "example": "identity.RGroupPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schooljaar": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stamgroep": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "description": "Observed values: `NORMAL`, `SCHOOLWIDE`, `COLLEAGUES`. Not a closed list."
+          },
+          "unreadCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "memberMuted": {
+            "type": "boolean"
+          },
+          "memberAbsenceNotificationsMuted": {
+            "type": "boolean"
+          },
+          "numberOfChildren": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfGuardians": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfTeachers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "childAvatars": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RGroupPrimer`. Inferred from 16 object(s) in: `getEvent.200.json`, `getEvent_attachment.200.json`, `listEvents_calendar-items.200.json`, `listGroups_previous.200.json`."
+      },
+      "GroupRecipient": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "event.RGroupRecipient"
+            ],
+            "example": "event.RGroupRecipient",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "group": {
+            "$ref": "#/components/schemas/GroupPrimer"
+          },
+          "target": {
+            "type": "string",
+            "description": "Observed values: `GUARDIAN`. Not a closed list."
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `event.RGroupRecipient`. Inferred from 3 object(s) in: `getEvent.200.json`, `getEvent_attachment.200.json`."
+      },
+      "GuardianPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RGuardianPrimer"
+            ],
+            "example": "identity.RGuardianPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstname": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "description": "Observed values: `GUARDIAN`. Not a closed list."
+          },
+          "accountActive": {
+            "type": "boolean"
+          },
+          "numberOfExternalIdentities": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfActiveExternalIdentities": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "childNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RGuardianPrimer`. Inferred from 2 object(s) in: `getAccountMe.200.json`, `getUnreadCounts.200.json`."
+      },
+      "HomeGroup": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RHomeGroup"
+            ],
+            "example": "identity.RHomeGroup",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schooljaar": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "stamgroep": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "description": "Observed values: `SCHOOLWIDE`, `NORMAL`. Not a closed list."
+          },
+          "unreadCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "memberMuted": {
+            "type": "boolean"
+          },
+          "memberAbsenceNotificationsMuted": {
+            "type": "boolean"
+          },
+          "numberOfChildren": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfGuardians": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfTeachers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "childAvatars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Avatar"
+            }
+          },
+          "lastAnnouncement": {
+            "$ref": "#/components/schemas/AnnouncementEventPreview"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RHomeGroup`. Inferred from 3 object(s) in: `listGroups.200.json`."
+      },
+      "Identity": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RIdentity"
+            ],
+            "example": "identity.RIdentity",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstname": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "description": "Observed values: `GUARDIAN`. Not a closed list."
+          },
+          "email": {
+            "type": "string"
+          },
+          "guardians": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuardianPrimer"
+            }
+          },
+          "children": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          },
+          "teachers": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RIdentity`. Inferred from 1 object(s) in: `getAccountMe.200.json`."
+      },
+      "IdentityPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RIdentityPrimer"
+            ],
+            "example": "identity.RIdentityPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstname": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "description": "Observed values: `TEACHER`, `GUARDIAN`. Not a closed list."
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RIdentityPrimer`. Inferred from 9 object(s) in: `getEvent_announcement.200.json`, `listChatMessages.200.json`, `listChatrooms.200.json`, `listEvents_announcements.200.json`."
+      },
+      "OAuthError": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "invalid_grant"
+          },
+          "error_description": {
+            "type": "string"
+          }
+        },
+        "description": "RFC 6749 §5.2. Not sampled; modelled on the standard (`error`, `error_description`)."
+      },
+      "OAuthTokenResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "Observed values: `REDACTED`. Not a closed list."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Observed values: `REDACTED`. Not a closed list."
+          },
+          "scope": {
+            "type": "string"
+          },
+          "id_token": {
+            "type": "string",
+            "description": "Observed values: `REDACTED`. Not a closed list."
+          },
+          "token_type": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "description": "RFC 6749 §5.1 token response (sample values redacted)."
+      },
+      "OpenIDConfiguration": {
+        "type": "object",
+        "properties": {
+          "authorization_endpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "token_endpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "introspection_endpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "revocation_endpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "issuer": {
+            "type": "string",
+            "format": "uri"
+          },
+          "jwks_uri": {
+            "type": "string",
+            "format": "uri"
+          },
+          "scopes_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "response_types_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "response_modes_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "grant_types_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "code_challenge_methods_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "token_endpoint_auth_methods_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "introspection_endpoint_auth_methods_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "revocation_endpoint_auth_methods_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "request_object_signing_alg_values_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ui_locales_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "request_parameter_supported": {
+            "type": "boolean"
+          },
+          "request_uri_parameter_supported": {
+            "type": "boolean"
+          },
+          "authorization_response_iss_parameter_supported": {
+            "type": "boolean"
+          },
+          "subject_types_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "userinfo_endpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "end_session_endpoint": {
+            "type": "string",
+            "format": "uri"
+          },
+          "id_token_signing_alg_values_supported": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Observed values: `RS256`. Not a closed list."
+            }
+          },
+          "userinfo_signing_alg_values_supported": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "Observed values: `RS256`. Not a closed list."
+            }
+          },
+          "display_values_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claim_types_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claims_supported": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claims_parameter_supported": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true
+      },
+      "OrganisationPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "auth.ROrganisationPrimer"
+            ],
+            "example": "auth.ROrganisationPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "system": {
+            "type": "boolean"
+          },
+          "pricingPlan": {
+            "type": "string",
+            "description": "Observed values: `STANDARD`. Not a closed list."
+          },
+          "pricingPlanStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "city": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `auth.ROrganisationPrimer`. Inferred from 2 object(s) in: `getAccountMe.200.json`, `getOrganisation.200.json`."
+      },
+      "SystemNewsEvent": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "systemnews.RSystemNewsEvent"
+            ],
+            "example": "systemnews.RSystemNewsEvent",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "scheduleDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "title": {
+            "type": "string"
+          },
+          "contents": {
+            "type": "string"
+          },
+          "pricingPlanAudience": {
+            "type": "string",
+            "description": "Observed values: `STANDARD`. Not a closed list."
+          },
+          "audience": {
+            "type": "string",
+            "description": "Observed values: `GUARDIANS`, `EVERYONE`. Not a closed list."
+          },
+          "attachments": {
+            "type": "array",
+            "items": {},
+            "description": "Always empty in the samples; item type unknown."
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `systemnews.RSystemNewsEvent`. Inferred from 6 object(s) in: `listSystemNews.200.json`."
+      },
+      "TeacherPrimer": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RTeacherPrimer"
+            ],
+            "example": "identity.RTeacherPrimer",
+            "description": "Geon type discriminator."
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonLink"
+            },
+            "description": "Hypermedia links; the `rel: self` entry carries the object's id."
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeonPermission"
+            },
+            "description": "What the caller may do with this object."
+          },
+          "additionalObjects": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Side-loaded objects; empty in every sample."
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "firstname": {
+            "type": "string"
+          },
+          "surname": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "description": "Observed values: `TEACHER`. Not a closed list."
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "accountActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RTeacherPrimer`. Inferred from 4 object(s) in: `getEvent.200.json`, `getEvent_attachment.200.json`."
+      },
+      "TranslationPreferenceSettings": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RTranslationPreferenceSettings"
+            ],
+            "example": "identity.RTranslationPreferenceSettings",
+            "description": "Geon type discriminator."
+          },
+          "enabled": {
+            "type": "string",
+            "description": "Observed values: `DISABLED`. Not a closed list."
+          },
+          "preferredLanguage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RTranslationPreferenceSettings`. Inferred from 1 object(s) in: `getAccountSettings.200.json`."
+      },
+      "UnreadCount": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "identity.RUnreadCount"
+            ],
+            "example": "identity.RUnreadCount",
+            "description": "Geon type discriminator."
+          },
+          "numberOfUnreadAnnouncements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfUnreadCalendarItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfUnreadSystemNewsItems": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfUnreadChatRooms": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "numberOfUnreadPortalNotifications": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "guardian": {
+            "$ref": "#/components/schemas/GuardianPrimer"
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `identity.RUnreadCount`. Inferred from 1 object(s) in: `getUnreadCounts.200.json`."
+      }
+    }
+  }
+}
