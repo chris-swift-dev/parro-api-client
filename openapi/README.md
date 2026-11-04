@@ -1,8 +1,8 @@
 # Parro OpenAPI spec
 
 `parro.openapi.json`: OpenAPI 3.0.3, contract version 224. Import it into
-https://editor.swagger.io (File → Import file). Note: "Try it out" is blocked by the API's
-CORS policy, so use the generated curl commands with a bearer token instead.
+https://editor.swagger.io (File → Import file). "Try it out" works with a pasted bearer
+token. Logging in through Swagger UI's OAuth2 dialog does not work (see the warning in the spec).
 
 ## Rebuilding
 

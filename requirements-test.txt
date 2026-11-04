@@ -1,0 +1,8 @@
+# Dev only: what CI needs to lint, type-check and test the client (parro/ itself needs nothing).
+# pypdf and pillow are optional at runtime; installed here so the attachment tests run fully.
+-r requirements-dev.txt
+pytest==9.2.0
+ruff==0.17.3
+mypy==2.4.1
+pypdf==6.21.4
+pillow==13.0.0
