@@ -9,8 +9,11 @@ Writes to dist/:
     SHA256SUMS                                     checksums of both archives
     release-notes.md                               the CHANGELOG.md section of this version
 
-Archives are reproducible: set SOURCE_DATE_EPOCH (the release workflow uses the commit time) and the
-same sources give byte-identical files. Standard library only.
+Archive *contents* are reproducible: with SOURCE_DATE_EPOCH set (the release workflow uses the commit
+time), the same sources give the same files, dates and modes, and the same uncompressed tar. The
+compressed bytes, and so SHA256SUMS, repeat only with the same zlib build: GitHub's runner and a
+local Python can compress differently. To check a release, compare unpacked contents, not
+checksums. Standard library only.
 """
 
 import argparse
