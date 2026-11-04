@@ -26,3 +26,5 @@ openapi/parro.openapi.json
 /README.md
 /docs/
 # <<< TEMPORARY <<<
+
+getToken.sh

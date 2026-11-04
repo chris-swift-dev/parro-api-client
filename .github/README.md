@@ -37,9 +37,10 @@ sanitized samples, which are not part of this repository, so this published spec
 ## Using the spec
 
 - **Swagger Editor / other tools:** import `openapi/parro.public.openapi.json`.
-- **"Try it out" won't work from the browser.** The API only allows browser calls from
-  `https://talk.parro.com` (CORS). Copy the generated `curl` command and run it in a terminal
-  with your own access token.
+- **"Try it out"** works once you paste an access token into **Authorize → bearerToken**.
+- **Logging in through Swagger UI does not work.** Don't use the OAuth2 scheme there: the code
+  flow can't complete, and failed password attempts count toward the account lockout. Get the
+  token outside the browser.
 - **Local preview:** `npm ci --ignore-scripts && npm run preview`, then open http://localhost:8000.
 
 ## Be careful with your account

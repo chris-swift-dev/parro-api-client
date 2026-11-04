@@ -218,6 +218,9 @@ samples. Response schemas list **only fields seen in those samples**. Treat ever
 open: geon adds fields between contract versions. Operations tagged **Unverified** appear in the
 web app's code but were never called.
 
+Inspired by [fobatai/parro-mcp](https://github.com/fobatai/parro-mcp), a read-only MCP server for Parro
+whose working login and API calls were the starting point for this specification.
+
 ## Conventions
 * **Media type**: `Accept: application/vnd.topicus.geon+json;version=224`. The official client also
   sends the same value as `Content-Type`, even on GET. Responses sometimes omit `;version=…`.
@@ -254,9 +257,18 @@ Choose the parser by `contentType`, not by the entry's `dtype`: a photo's SOURCE
 `RAttachmentDocumentEntry`.
 
 ## Trying it out
-The API's CORS policy only allows the origin `https://talk.parro.com`, so **"Try it out" in a Swagger UI
-on any other origin is blocked by the browser**. Use the generated curl command instead, with
-**bearerToken** set to an access token obtained through the **Auth** operations.
+Paste an access token into **Authorize → bearerToken**. "Try it out" then works for the API operations,
+including from a Swagger UI hosted on GitHub Pages: the API accepts cross-origin requests. The generated
+curl commands include the token as well.
+
+> ⚠️ **Logging in does not work from Swagger UI.** Leave the **parnassysOAuth** scheme and the **Auth**
+> operations alone in the browser, and get the token outside it (see `/oauth2/token`):
+> * *Authorization code*: the redirect URI is pinned to `https://talk.parro.com/oauth2`, so Swagger UI never
+>   receives the code.
+> * *Password*: the IdP answers `invalid_grant` for accounts it will not put through the password grant
+>   (seen in practice), and cross-origin calls to the IdP are untested. **Every rejected attempt can count
+>   toward the account lockout**, including the "Request body" variant, whose response the page may not
+>   even be allowed to read.
 """
 
 ERR_DESC = ("Geon error body, e.g. `406` with `applicationError: EVENT_BAD_TYPE` when `/event/{id}` "
@@ -468,13 +480,17 @@ def build(samples_dir, public=False):
         "tags": ["Auth"], "operationId": "token", "security": [],
         "summary": "Obtain or refresh tokens",
         "description": (
+            "⚠️ **Not usable from Swagger UI.** Call it from a terminal or a client, and see the warning in the "
+            "introduction.\n\n"
             "**Two request shapes.**\n\n"
             "* `authorization_code` and `refresh_token` send their parameters in the **query string** with an "
             "**empty body** and `Content-Type: application/x-www-form-urlencoded`, as the web client does.\n"
             "* `password` sends a normal form-encoded **body** (`grant_type, client_id, username, password, scope`).\n\n"
             "A wrong password answers `400 invalid_grant` and counts toward the account lockout. That same "
             "error also comes back for accounts the IdP will not put through the password grant. Clients "
-            "then fall back to the login form, once."),
+            "then fall back to the HTML login form, once: `GET /oauth2/authorize` (PKCE, follow redirects, keep "
+            "cookies) → POST `aanmelden=x&emailadres=…&wachtwoord=…` to the `signInForm` action without following "
+            "the redirect → take `code` from `Location` → `authorization_code` exchange as above."),
         "parameters": [
             q("grant_type", s(enum=["authorization_code", "refresh_token"]), "Query-string shape only."),
             q("client_id", s(example="MQygAaSBUcAgPU2WInKt"), ""),
@@ -581,11 +597,15 @@ def build(samples_dir, public=False):
         "components": {
             "securitySchemes": {
                 "bearerToken": {"type": "http", "scheme": "bearer",
-                                "description": "Paste an access token. This is the only scheme usable from Swagger UI."},
+                                "description": "Paste an access token. This is the only scheme usable from Swagger UI; "
+                                               "\"Try it out\" works with it."},
                 "parnassysOAuth": {"type": "oauth2",
-                                   "description": "PKCE (S256) is required for the code flow. The redirect URI is pinned "
-                                                  "to https://talk.parro.com/oauth2, so the code flow cannot complete "
-                                                  "inside Swagger UI.",
+                                   "description": "⚠️ **Documentation only: do not use it from Swagger UI.** The code flow "
+                                                  "cannot complete there, because the redirect URI is pinned to "
+                                                  "https://talk.parro.com/oauth2 and PKCE (S256) is required. The password "
+                                                  "flow is refused (`invalid_grant`) for some accounts, and each failed "
+                                                  "attempt can count toward the IdP's account lockout. Obtain a token outside "
+                                                  "the browser and use **bearerToken**.",
                                    "flows": {
                                        "authorizationCode": {
                                            "authorizationUrl": "https://inloggen.parnassys.net/idp/oauth2/authorize",
