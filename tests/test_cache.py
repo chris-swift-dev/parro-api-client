@@ -115,8 +115,28 @@ def test_calendar_details_are_reused_while_the_list_shows_the_same_version(tmp_p
     first = operations.list_calendar(client, details=True)
     assert detail_requests(api) == 7  # the seven upcoming items
     second = operations.list_calendar(client, details=True)
-    assert detail_requests(api) == 7, "all seven came from the cache"
+    assert detail_requests(api) == 8, "six from the cache; the trip that asks for helpers is fresh"
     assert second == first
+
+
+def test_items_that_ask_for_helpers_are_never_cached(tmp_path):
+    """The number of parents who signed up changes, maybe without a new lastModifiedAt."""
+    api = fakes.FakeParroApi(load_sample)
+    client = make_client(tmp_path, api)
+    operations.list_calendar(client, details=True)
+
+    def one_more_driver(name: str) -> Any:
+        payload = load_sample(name)
+        if name == "getEvent_calendar-7000000301.200.json":
+            payload = copy.deepcopy(payload)
+            payload["calendarItem"]["resources"][0]["amountCommitted"] = 2
+        return payload
+
+    api.load_sample = one_more_driver
+    agenda = operations.list_calendar(client, details=True)
+    trip = next(item for item in agenda["items"] if item["id"] == 7000000301)
+    assert trip["details"]["helpers"][0]["signed_up"] == 2
+    assert not (tmp_path / "data" / "cache" / "events" / "7000000301.json").exists()
 
 
 def test_a_newer_last_modified_at_fetches_the_details_again(tmp_path):
@@ -126,15 +146,15 @@ def test_a_newer_last_modified_at_fetches_the_details_again(tmp_path):
 
     def edited(name: str) -> Any:
         payload = load_sample(name)
-        if name == "listEvents_calendar-4000000003.200.json":
+        if name == "listEvents_calendar-4000000001.200.json":
             payload = copy.deepcopy(payload)
-            museum_trip = next(i for i in payload["items"] if i["links"][0]["id"] == 7000000301)
-            museum_trip["lastModifiedAt"] = "2026-11-05T09:00:00.000+01:00"
+            st_martin = next(i for i in payload["items"] if i["links"][0]["id"] == 7000000101)
+            st_martin["lastModifiedAt"] = "2026-11-05T09:00:00.000+01:00"
         return payload
 
     api.load_sample = edited
     operations.list_calendar(client, details=True)
-    assert detail_requests(api) == 8, "only the edited item (the museum trip) is fetched again"
+    assert detail_requests(api) == 7 + 2, "the edited item and the trip asking for helpers"
 
 
 def test_lists_are_never_cached(tmp_path):
@@ -159,7 +179,8 @@ def test_files_are_private_and_hold_no_download_links(tmp_path):
     operations.list_calendar(client, details=True)
     cache_dir = tmp_path / "data" / "cache"
     stored = [path for path in cache_dir.rglob("*") if path.is_file()]
-    assert len(stored) == 3 + 7  # attachment: bytes, meta, text; seven calendar details
+    assert len(stored) == 3 + 6  # attachment: bytes, meta, text; six calendar details (the
+    # seventh asks for helpers and is never cached)
     if os.name == "posix":
         for path in stored:
             assert stat.S_IMODE(path.stat().st_mode) == 0o600, path
@@ -238,10 +259,10 @@ def run(capsys, *argv: str) -> tuple[int, Any]:
 def test_cache_info_and_clear_commands(environment, capsys):
     run(capsys, "calendar", "--details")
     exit_code, info = run(capsys, "cache", "info")
-    assert exit_code == 0 and info["files"] == 7 and info["enabled"] is True
+    assert exit_code == 0 and info["files"] == 6 and info["enabled"] is True  # 7 items, 1 helpers
     assert info["directory"] == str(environment / "data" / "cache")
     exit_code, cleared = run(capsys, "cache", "clear")
-    assert exit_code == 0 and cleared["removed_files"] == 7
+    assert exit_code == 0 and cleared["removed_files"] == 6
     assert run(capsys, "cache", "info")[1]["files"] == 0
 
 

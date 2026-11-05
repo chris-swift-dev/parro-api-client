@@ -14,7 +14,7 @@
 ## Coming up
 - Mon 2 Nov 2026, all day, 10 days until Fri 13 Nov 2026  Projectweken: de ruimte · Groep 3 - juf Eva · #7000000202
 - Wed 11 Nov 2026, 17:30-19:00  Sint-Maartenviering · Basisschool De Linde · #7000000101
-- Thu 12 Nov 2026, all day  Excursie Natuurmuseum · Groep 6 - meester Tom · RSVP needed · #7000000301
+- Thu 12 Nov 2026, all day  Excursie Natuurmuseum · Groep 6 - meester Tom · RSVP needed · helpers wanted · #7000000301
 - Tue 17 Nov 2026, 15:00-19:00  Oudergesprekken groep 3 · Groep 3 - juf Eva · RSVP needed · ● new · #7000000201
 - Mon 21 Dec 2026, all day, 5 days until Fri 25 Dec 2026  Kerstvakantie · Basisschool De Linde · #7000000102
 → parro_cli.py calendar --details

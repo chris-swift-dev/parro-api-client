@@ -195,6 +195,16 @@ class FakeParroApi:
         }
         if path in single:
             return self._one(single[path], request.url)
+        if path == "/child" and query.get("dtype") == "identity.RPrivacySettingChild":
+            return self._collection("listChildren_privacy.200.json", request)
+        if path.startswith("/child/") and path.endswith("/privacy"):
+            name = f"getChildPrivacy_{path.split('/')[2]}.200.json"
+            return self._one(name, request.url) if self._has(name) else self._not_found(request)
+        if path.startswith("/calendaritem/"):
+            item = self.load_sample("getCalendarItem.200.json")
+            if path.rsplit("/", 1)[-1] == str(item["links"][0]["id"]):
+                return self._one("getCalendarItem.200.json", request.url)
+            return self._not_found(request)
         if path in collections:
             return self._collection(collections[path], request)
         if path.startswith("/organisation/"):
@@ -216,6 +226,9 @@ class FakeParroApi:
             if is_calendar_item and query.get("dtype") != "event.RCalendarItemEvent":
                 return HttpResponse(406, {"content-type": GEON_TYPE}, b"{}", request.url)
             return self._single_event(event_id, query.get("dtype"), request.url)
+        return self._not_found(request)
+
+    def _not_found(self, request: HttpRequest) -> HttpResponse:
         return HttpResponse(404, {}, b'{"code": 404}', request.url)
 
     def _event_list(self, query: dict[str, str], request: HttpRequest) -> HttpResponse:

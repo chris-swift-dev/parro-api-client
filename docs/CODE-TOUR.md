@@ -97,7 +97,9 @@ and photo downscaling needs Pillow. All three are optional.
 under `PARRO_DATA_DIR/cache`. `attachments.download_or_reuse()` and `extract_or_reuse()` use it with
 `AttachmentFile.cache_key()` (attachment id + upload id + size: the same key always means the same
 bytes). `operations.calendar_details()` stores each item's details with its `lastModifiedAt` and uses
-them only while the list shows the same value. Lists are never cached.
+them only while the list shows the same value; items that ask for helpers are always fetched, since
+sign-ups may not change that value. Lists are never cached, and neither are the two secret links
+(calendar subscription, privacy page).
 
 ## 9. The archive
 

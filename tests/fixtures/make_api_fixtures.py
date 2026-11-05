@@ -512,12 +512,13 @@ PARENT_EVENINGS = calendar_item(
     ["2026-11-17T00:00:00+01:00"],
     read=False,
 )
+# The trip asks for parents who can drive: a VOLUNTEER item with one helper slot (see the detail).
 MUSEUM_TRIP = calendar_item(
     7000000301,
     "Excursie Natuurmuseum",
     "2026-11-12T00:00:00+01:00",
     "2026-11-12T00:00:00+01:00",
-    "ACTIVITY",
+    "VOLUNTEER",
     True,
     [group_primer(GROUP_6)],
     ["2026-11-12T00:00:00+01:00"],
@@ -631,12 +632,23 @@ TEACHER_TOM = geon(
     active=True,
     accountActive=True,
 )
+DRIVERS_WANTED = geon(
+    "calendar.RCalendarItemVolunteerResource",
+    7000000361,
+    lastModifiedAt="2026-10-28T13:00:00.000+01:00",
+    title="Rijden naar het museum",
+    amount=2,
+    amountCommitted=1,
+    commitedByMe=0,  # sic: the API's spelling
+    type="VOLUNTEER",
+    commitments=[],
+)
 MUSEUM_TRIP_DETAIL = calendar_item(
     7000000301,
     "Excursie Natuurmuseum",
     "2026-11-12T00:00:00+01:00",
     "2026-11-12T00:00:00+01:00",
-    "ACTIVITY",
+    "VOLUNTEER",
     True,
     [group_primer(GROUP_6)],
     ["2026-11-12T00:00:00+01:00"],
@@ -646,7 +658,7 @@ MUSEUM_TRIP_DETAIL = calendar_item(
         "pending": False,
         "owner": TEACHER_TOM,
         "lastEditedBy": TEACHER_TOM,
-        "numberOfResources": 0,
+        "numberOfResources": 1,
         "numberOfTimeslots": 0,
         "numberOfOpenTimeslots": 0,
         "numberOfUncommittedChildren": 0,
@@ -654,7 +666,7 @@ MUSEUM_TRIP_DETAIL = calendar_item(
         "slack": 0,
         "reminderInterval": 0,
         "totalRespondents": 0,
-        "resources": [],
+        "resources": [DRIVERS_WANTED],
         "respondents": [],
         "attachments": [
             photo(6000000401, "Route.jpg", dtype="attachment.RCalendarItemAttachment"),
@@ -847,10 +859,38 @@ def account() -> dict[str, Any]:
     )
 
 
-def children() -> list[dict[str, Any]]:
+CHILDREN = ((MILA_ID, "Mila", "2022-08-29"), (DAAN_ID, "Daan", "2024-08-26"))
+
+# The state of each child's privacy choices (GET /child?dtype=identity.RPrivacySettingChild).
+# Mila's were last changed by her mother; Daan's by the school, and parents cannot change them now.
+PRIVACY_SETTINGS = {
+    MILA_ID: geon(
+        "privacy.RPrivacyCentreSetting",
+        3100000001,
+        lastModifiedAt="2026-09-14T20:12:05.000+02:00",
+        editableForGuardians=True,
+        editableInPeriod=False,
+        lastEditedBy="Sanne de Vries",
+        state="OPEN",
+    ),
+    DAAN_ID: geon(
+        "privacy.RPrivacyCentreSetting",
+        3100000002,
+        lastModifiedAt="2025-09-02T08:30:00.000+02:00",
+        editableForGuardians=False,
+        editableInPeriod=False,
+        lastEditedBy="Lotte Bakker",
+        state="OPEN",
+    ),
+}
+
+
+def children(privacy: bool = False) -> list[dict[str, Any]]:
+    """The children as RChildPrimer, or (privacy) as RPrivacySettingChild with their setting."""
+    dtype = "identity.RPrivacySettingChild" if privacy else "identity.RChildPrimer"
     return [
         geon(
-            "identity.RChildPrimer",
+            dtype,
             child_id,
             lastModifiedAt="2026-10-30T09:58:21.777+01:00",
             firstname=first,
@@ -861,12 +901,27 @@ def children() -> list[dict[str, Any]]:
             enrolledSince=since,
             numberOfGuardians=2,
             guardianNames=[],
+            **({"setting": PRIVACY_SETTINGS[child_id]} if privacy else {}),
         )
-        for child_id, first, since in (
-            (MILA_ID, "Mila", "2022-08-29"),
-            (DAAN_ID, "Daan", "2024-08-26"),
-        )
+        for child_id, first, since in CHILDREN
     ]
+
+
+def privacy_link(child_id: int) -> dict[str, Any]:
+    """GET /child/{id}/privacy. The real link is signed and secret; this one is invented."""
+    return geon(
+        "identity.RPrivacySettings",
+        None,
+        url=f"https://start.parnassys.net/bao/privacy?signedpermission=EXAMPLE-{child_id}",
+        defined=True,
+    )
+
+
+def calendar_item_only(event: dict[str, Any]) -> dict[str, Any]:
+    """GET /calendaritem/{id}: the calendarItem of the full event, without lastEditedBy."""
+    item: dict[str, Any] = copy.deepcopy(event["calendarItem"])
+    item.pop("lastEditedBy", None)
+    return item
 
 
 def details_without_extras(primer: dict[str, Any]) -> dict[str, Any]:
@@ -909,6 +964,11 @@ def files() -> dict[str, Any]:
         ),
         "getOrganisation.200.json": SCHOOL,
         "listChildren.200.json": {"items": children()},
+        "listChildren_privacy.200.json": {"items": children(privacy=True)},
+        **{
+            f"getChildPrivacy_{child_id}.200.json": privacy_link(child_id)
+            for child_id, _, _ in CHILDREN
+        },
         "getUnreadCounts.200.json": {
             "items": [
                 geon(
@@ -927,6 +987,7 @@ def files() -> dict[str, Any]:
         "listGroups_previous.200.json": {"items": PREVIOUS_GROUPS},
         "getEvent_announcement.200.json": NEWSLETTER,
         "getEvent_calendar-7000000301.200.json": MUSEUM_TRIP_DETAIL,
+        "getCalendarItem.200.json": calendar_item_only(MUSEUM_TRIP_DETAIL),
         "getEvent_calendar-7000000101.200.json": ST_MARTIN_DETAIL,
         "getEvent_calendar-7000000102.200.json": CHRISTMAS_DETAIL,
         "getEvent_calendar-7000000201.200.json": PARENT_EVENINGS_DETAIL,

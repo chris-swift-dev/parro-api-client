@@ -25,6 +25,7 @@ from .attachments import extract_html_text, tidy_whitespace
 from .errors import ConfigurationError
 from .geon import parse_timestamp
 from .settings import OutputFormat
+from .summaries import wants_helpers
 
 Audience = Literal["cli", "mcp"]
 
@@ -406,6 +407,7 @@ def is_photo(attachment: dict[str, Any]) -> bool:
 # -------------------------------------------------------------------------------- calendar
 
 LOCATION_MARK = "📍"
+HELPER_MARK = "🙋"
 
 
 def render_agenda(result: dict[str, Any], options: RenderOptions) -> str:
@@ -430,6 +432,7 @@ def agenda_entry(item: dict[str, Any], options: RenderOptions) -> str:
     markers = [
         short_list(group_names(item)),
         "RSVP needed" if calendar_item.get("rsvpRequired") else "",
+        helper_status(item),
         f"{UNREAD_MARK} new" if item.get("read") is False else "",
         object_id(item.get("id")),
     ]
@@ -471,8 +474,36 @@ def time_span(item: dict[str, Any]) -> str:
     return f"{format_time(start)}-{format_time(end)}"
 
 
+def helper_status(item: dict[str, Any]) -> str:
+    """'helpers wanted', 'helpers: full' or 'you signed up to help' ('' if no help is asked).
+
+    The list only says that an item asks for helpers; with `--details` the slots tell more.
+    """
+    if not wants_helpers(item.get("calendarItem") or {}):
+        return ""
+    slots = (item.get("details") or {}).get("helpers") or []
+    if any(slot.get("you_signed_up") for slot in slots):
+        return "you signed up to help"
+    counted = [slot for slot in slots if slot.get("wanted") is not None]
+    if counted and all((slot.get("signed_up") or 0) >= slot["wanted"] for slot in counted):
+        return "helpers: full"
+    return "helpers wanted"
+
+
+def helper_slot_text(slot: dict[str, Any]) -> str:
+    """'Rijden naar het museum: 1 of 2 signed up, including you'."""
+    signed_up = slot.get("signed_up") or 0
+    count = (
+        f"{signed_up} of {slot['wanted']} signed up"
+        if slot.get("wanted") is not None
+        else f"{signed_up} signed up"
+    )
+    you = ", including you" if slot.get("you_signed_up") else ""
+    return f"{slot.get('title') or 'Helpers'}: {count}{you}"
+
+
 def detail_lines(item: dict[str, Any], options: RenderOptions) -> list[str]:
-    """Location, description and attachments, when `--details` fetched them."""
+    """Location, description, helper slots and attachments, when `--details` fetched them."""
     details = item.get("details") or {}
     lines = []
     if details.get("location"):
@@ -480,6 +511,8 @@ def detail_lines(item: dict[str, Any], options: RenderOptions) -> list[str]:
     if details.get("description"):
         text = str(details["description"]).strip()
         lines += (text if options.full_text else preview(text)).split("\n")
+    for slot in details.get("helpers") or []:
+        lines.append(f"{HELPER_MARK} {helper_slot_text(slot)}")
     for attachment in details.get("attachments") or []:
         lines.append(attachment_line(attachment))
     if details.get("attachments"):
@@ -668,6 +701,7 @@ def render_archived_calendar_item(
         f"- Groups: {', '.join(group_names(item)) or '-'}",
         f"- Location: {details['location']}" if details.get("location") else "",
         "- Reply needed in Parro (RSVP)" if calendar_item.get("rsvpRequired") else "",
+        *archived_helper_lines(item, details),
         "- Cancelled" if item.get("cancelled") else "",
         f"- Parro id: {object_id(item.get('id'))}",
     ]
@@ -677,6 +711,14 @@ def render_archived_calendar_item(
         str(details.get("description") or "").strip(),
         saved_file_lines(files),
     )
+
+
+def archived_helper_lines(item: dict[str, Any], details: dict[str, Any]) -> list[str]:
+    """'- Helpers wanted: Rijden naar het museum: 1 of 2 signed up (at the last sync)'."""
+    slots = details.get("helpers") or []
+    if not slots:
+        return ["- Helpers wanted"] if wants_helpers(item.get("calendarItem") or {}) else []
+    return [f"- Helpers wanted: {helper_slot_text(slot)} (at the last sync)" for slot in slots]
 
 
 # -------------------------------------------------------------------------------- overview
@@ -741,6 +783,45 @@ def render_calendar_link(result: dict[str, Any], options: RenderOptions) -> str:
         result.get("calendar_link", ""),
         f"{WARNING_MARK} {result.get('warning', '')}",
         steps,
+    )
+
+
+def render_privacy(result: dict[str, Any], options: RenderOptions) -> str:
+    """Per child, the state of the privacy choices; or, with --link, the page to set them."""
+    if "privacy_link" in result:
+        return document(
+            f"# Privacy page for child {object_id(result.get('child_id'))}",
+            result["privacy_link"],
+            f"{WARNING_MARK} {result.get('warning', '')}",
+        )
+    children = result.get("children", [])
+    lines = [f"- {privacy_line(child)}" for child in children]
+    more = hint(
+        options,
+        "privacy --link CHILD_ID  (the page where you set them)",
+        "parro_privacy(child_id=ID, link=true)",
+    )
+    body = "\n".join([*lines, more]) if lines else "No children found."
+    return document(f"# Privacy choices ({len(children)})", body)
+
+
+def privacy_line(child: dict[str, Any]) -> str:
+    """'Mila · parents can change them · last changed Mon 14 Sep 2026 by … · #id'."""
+    can_change = child.get("parents_can_change")
+    who = {True: "parents can change them", False: "parents cannot change them now"}
+    changed = parse_timestamp(child.get("last_changed"))
+    when = f"last changed {format_day(changed)}" if changed else ""
+    if when and child.get("last_changed_by"):
+        when += f" by {child['last_changed_by']}"
+    state = str(child.get("state") or "")
+    return join_parts(
+        [
+            child.get("name") or "(no name)",
+            who.get(can_change, "") if isinstance(can_change, bool) else "",
+            when,
+            f"state: {state.lower()}" if state and state != "OPEN" else "",
+            object_id(child.get("id")),
+        ]
     )
 
 
@@ -827,6 +908,7 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "cache": render_cache,
     "overview": render_overview,
     "calendar_link": render_calendar_link,
+    "privacy": render_privacy,
     "ics_export": render_ics_export,
     "sync": render_sync,
 }

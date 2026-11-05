@@ -19,6 +19,8 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from .geon import parse_timestamp
+from .rendering import helper_slot_text
+from .summaries import wants_helpers
 
 PRODUCT_ID = "-//parro-api-client//Parro agenda export//EN"
 UID_DOMAIN = "parro-api-client"
@@ -101,12 +103,15 @@ def time_lines(item: dict[str, Any], start: datetime) -> list[str]:
 
 
 def description(item: dict[str, Any]) -> str:
-    """The item's description, plus what the app shows next to it (groups, RSVP, id)."""
+    """The item's description, plus what the app shows next to it (RSVP, helpers, id)."""
     details = item.get("details") or {}
     calendar_item = item.get("calendarItem") or {}
     parts = [str(details.get("description") or "").strip()]
     if calendar_item.get("rsvpRequired"):
         parts.append("Reply needed in Parro.")
+    if wants_helpers(calendar_item):
+        slots = [helper_slot_text(slot) + "." for slot in details.get("helpers") or []]
+        parts.append("\n".join(["Helpers wanted, sign up in Parro.", *slots]))
     parts.append(f"Parro calendar item #{item.get('id')}")
     return "\n\n".join(part for part in parts if part)
 

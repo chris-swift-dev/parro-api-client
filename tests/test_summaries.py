@@ -117,7 +117,7 @@ def test_calendar_summary_counts_what_it_shows_and_lists_each_item_once():
     assert result["items"][0]["group"] == "A", "the first group it was found through"
     everything = summaries.summarize_calendar_feed(feed, limit=10)
     assert everything["count"] == 2, "the duplicate is merged"
-    assert everything["items"][1]["calendarItem"]["type"] == "ACTIVITY"
+    assert everything["items"][1]["calendarItem"]["type"] == "VOLUNTEER"
     assert_no_geon_bookkeeping(result)
 
 
@@ -128,6 +128,21 @@ def test_calendar_details_summary():
     assert details["location"] == "Natuurmuseum Voorbeeldstad"
     assert details["description"].startswith("We vertrekken")
     assert details["attachments"][0]["filename"] == "Route.jpg"
+    assert details["helpers"] == [
+        {"title": "Rijden naar het museum", "wanted": 2, "signed_up": 1, "you_signed_up": False}
+    ]
+
+
+def test_helpers_from_the_calendar_item_endpoint_and_items_without_them():
+    item = load_sample("getCalendarItem.200.json")  # GET /calendaritem/{id}: the bare item
+    assert summaries.wants_helpers(item)
+    assert summaries.summarize_helpers(item)[0]["wanted"] == 2
+    christmas = load_sample("getEvent_calendar-7000000102.200.json")
+    assert "helpers" not in summaries.summarize_calendar_details(christmas)
+    assert not summaries.wants_helpers(christmas["calendarItem"])
+    # Seen live (2026-11-05): school-wide helper requests have their own type.
+    assert summaries.wants_helpers({"type": "SCHOOLWIDE_VOLUNTEER"})
+    assert not summaries.wants_helpers({"type": "SCHOOLWIDE_ACTIVITY"})
 
 
 def test_chat_summaries():

@@ -252,17 +252,48 @@ def choose_period(agenda: dict[str, Any], now: datetime, past: bool, limit: int)
 
 
 def calendar_details(client: ParroClient, item: dict[str, Any]) -> dict[str, Any]:
-    """Details of one calendar item: from the cache while the list shows the same version."""
+    """Details of one calendar item: from the cache while the list shows the same version.
+
+    Items that ask for helpers are always fetched: the number of parents who signed up changes,
+    and it is not known whether that changes the item's version.
+    """
     event_id = require_id(item.get("id"), "calendar item id")
-    version = (
-        f"{item.get('lastModifiedAt')}|{(item.get('calendarItem') or {}).get('lastModifiedAt')}"
-    )
+    calendar_item = item.get("calendarItem") or {}
+    if summaries.wants_helpers(calendar_item):
+        return summaries.summarize_calendar_details(client.get_calendar_item(event_id))
+    version = f"{item.get('lastModifiedAt')}|{calendar_item.get('lastModifiedAt')}"
     cached = client.cache.get_json("events", f"{event_id}.json")
     if isinstance(cached, dict) and cached.get("version") == version:
         return dict(cached.get("details") or {})
     details = summaries.summarize_calendar_details(client.get_calendar_item(event_id))
     client.cache.put_json("events", f"{event_id}.json", {"version": version, "details": details})
     return details
+
+
+# ------------------------------------------------------------------------------ privacy
+
+PRIVACY_LINK_WARNING = (
+    "This link is signed and opens the page without logging in: anyone who has it can see and "
+    "change your child's privacy choices. Open it yourself; do not share or publish it."
+)
+
+
+def privacy(client: ParroClient, raw: bool = False) -> Any:
+    """Per child: can parents change the privacy choices now, and when were they last changed."""
+    response = client.list_children_privacy()
+    return response.payload if raw else summaries.summarize_privacy(response)
+
+
+def privacy_link(client: ParroClient, child_id: Any) -> dict[str, Any]:
+    """The signed link to the page where one child's privacy choices are set (a secret)."""
+    child = require_id(child_id, "child id")
+    link = client.get_privacy_link(child)
+    if link is None:
+        raise ParroError(
+            f"Parro returned no privacy page for child {child}. `privacy` lists the children "
+            "and their ids."
+        )
+    return {"child_id": child, "privacy_link": link, "warning": PRIVACY_LINK_WARNING}
 
 
 # ------------------------------------------------------------------------ calendar link
@@ -631,6 +662,8 @@ def sync_calendar_item(
         f"{entry.event.get('lastModifiedAt')}|{calendar_item.get('lastModifiedAt')}"
         f"|photos={options.photos}"
     )
+    if summaries.wants_helpers(calendar_item):
+        version += "|helpers"  # 0.4.0 added the helper slots: rewrite such items once
     if target.is_current("calendar", event_id, version):
         target.keep("calendar", event_id)
         return

@@ -41,6 +41,7 @@ CURRENT_GROUPS_DTYPE = "identity.RHomeGroup"
 PREVIOUS_GROUPS_SCOPE = "PREVIOUS_ACTIVE"
 # The groups request of the official client asks for 50; enough for any family.
 GROUPS_PAGE_SIZE = 50
+PRIVACY_CHILD_DTYPE = "identity.RPrivacySettingChild"
 
 EventKind = Literal["announcement", "calendar"]
 
@@ -258,6 +259,21 @@ class ParroClient:
             link for link in strings or [] if isinstance(link, str) and link.startswith("http")
         ]
         return links[0] if links else None
+
+    def list_children_privacy(self) -> ApiResponse:
+        """GET /child, privacy variant: per child, the state of the privacy choices (spec)."""
+        params = {"currentSchoolYear": "true", "dtype": PRIVACY_CHILD_DTYPE}
+        return self.get("/child", params, count_total=True)
+
+    def get_privacy_link(self, child_id: int) -> str | None:
+        """GET /child/{id}/privacy: the signed link to the page where the choices are set.
+
+        Like the calendar link it is a secret (it opens the page without a login), so it is never
+        logged, cached or archived.
+        """
+        payload = self.get(f"/child/{int(child_id)}/privacy").payload
+        link = payload.get("url") if isinstance(payload, dict) else None
+        return link if isinstance(link, str) and link.startswith("https://") else None
 
     def get_absence_settings(self) -> ApiResponse:
         return self.get("/absence/setting")

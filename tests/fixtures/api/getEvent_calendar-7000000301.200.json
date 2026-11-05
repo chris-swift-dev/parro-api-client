@@ -112,7 +112,7 @@
     ],
     "additionalObjects": {},
     "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
-    "type": "ACTIVITY",
+    "type": "VOLUNTEER",
     "title": "Excursie Natuurmuseum",
     "rsvpRequired": true,
     "startDate": "2026-11-12T00:00:00+01:00",
@@ -185,7 +185,7 @@
       "active": true,
       "accountActive": true
     },
-    "numberOfResources": 0,
+    "numberOfResources": 1,
     "numberOfTimeslots": 0,
     "numberOfOpenTimeslots": 0,
     "numberOfUncommittedChildren": 0,
@@ -193,7 +193,39 @@
     "slack": 0,
     "reminderInterval": 0,
     "totalRespondents": 0,
-    "resources": [],
+    "resources": [
+      {
+        "dtype": "calendar.RCalendarItemVolunteerResource",
+        "links": [
+          {
+            "id": 7000000361,
+            "rel": "self",
+            "type": "calendar.RCalendarItemVolunteerResource",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemvolunteerresource/7000000361"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemVolunteerResource:READ:INSTANCE(7000000361)",
+            "type": "calendar.RCalendarItemVolunteerResource",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000361)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "title": "Rijden naar het museum",
+        "amount": 2,
+        "amountCommitted": 1,
+        "commitedByMe": 0,
+        "type": "VOLUNTEER",
+        "commitments": []
+      }
+    ],
     "respondents": [],
     "attachments": [
       {

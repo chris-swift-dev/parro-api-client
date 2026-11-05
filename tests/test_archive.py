@@ -261,3 +261,21 @@ def test_names():
     assert len(slugify("x" * 200)) == 50
     assert file_stem("2026-10-22T11:25:58+02:00", "Nieuwsbrief", 5) == "2026-10-22-nieuwsbrief-5"
     assert file_stem("", "Chat", 8) == "chat-8"
+
+
+def test_helper_slots_are_archived_and_older_archives_are_updated_once(tmp_path):
+    sync(tmp_path, make_api())
+    trip = tmp_path / "archive" / "calendar" / "2026-11-12-excursie-natuurmuseum-7000000301.md"
+    text = trip.read_text(encoding="utf-8")
+    assert "- Helpers wanted: Rijden naar het museum: 1 of 2 signed up (at the last sync)" in text
+
+    # An archive made before 0.4.0 has the trip without helpers, under a version without the
+    # "|helpers" mark: the next run rewrites that one item, and only that one.
+    state_file = tmp_path / "archive" / ".sync-state.json"
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    entry = state["entries"]["calendar:7000000301"]
+    entry["version"] = entry["version"].replace("|helpers", "")
+    state_file.write_text(json.dumps(state), encoding="utf-8")
+    result = sync(tmp_path, make_api())
+    assert result["calendar"]["written"] == 1 and result["calendar"]["unchanged"] == 8
+    assert sync(tmp_path, make_api())["calendar"]["written"] == 0

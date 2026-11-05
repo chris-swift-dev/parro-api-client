@@ -1,0 +1,128 @@
+{
+  "items": [
+    {
+      "dtype": "identity.RPrivacySettingChild",
+      "links": [
+        {
+          "id": 3000000001,
+          "rel": "self",
+          "type": "identity.RPrivacySettingChild",
+          "href": "https://rest-v2.parro.com/rest/v2/privacysettingchild/3000000001"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RPrivacySettingChild:READ:INSTANCE(3000000001)",
+          "type": "identity.RPrivacySettingChild",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(3000000001)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-30T09:58:21.777+01:00",
+      "firstname": "Mila",
+      "surname": "de Vries",
+      "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE",
+      "role": "CHILD",
+      "archived": false,
+      "enrolledSince": "2022-08-29",
+      "numberOfGuardians": 2,
+      "guardianNames": [],
+      "setting": {
+        "dtype": "privacy.RPrivacyCentreSetting",
+        "links": [
+          {
+            "id": 3100000001,
+            "rel": "self",
+            "type": "privacy.RPrivacyCentreSetting",
+            "href": "https://rest-v2.parro.com/rest/v2/privacycentresetting/3100000001"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "privacy.RPrivacyCentreSetting:READ:INSTANCE(3100000001)",
+            "type": "privacy.RPrivacyCentreSetting",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(3100000001)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-09-14T20:12:05.000+02:00",
+        "editableForGuardians": true,
+        "editableInPeriod": false,
+        "lastEditedBy": "Sanne de Vries",
+        "state": "OPEN"
+      }
+    },
+    {
+      "dtype": "identity.RPrivacySettingChild",
+      "links": [
+        {
+          "id": 3000000002,
+          "rel": "self",
+          "type": "identity.RPrivacySettingChild",
+          "href": "https://rest-v2.parro.com/rest/v2/privacysettingchild/3000000002"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RPrivacySettingChild:READ:INSTANCE(3000000002)",
+          "type": "identity.RPrivacySettingChild",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(3000000002)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-30T09:58:21.777+01:00",
+      "firstname": "Daan",
+      "surname": "de Vries",
+      "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE",
+      "role": "CHILD",
+      "archived": false,
+      "enrolledSince": "2024-08-26",
+      "numberOfGuardians": 2,
+      "guardianNames": [],
+      "setting": {
+        "dtype": "privacy.RPrivacyCentreSetting",
+        "links": [
+          {
+            "id": 3100000002,
+            "rel": "self",
+            "type": "privacy.RPrivacyCentreSetting",
+            "href": "https://rest-v2.parro.com/rest/v2/privacycentresetting/3100000002"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "privacy.RPrivacyCentreSetting:READ:INSTANCE(3100000002)",
+            "type": "privacy.RPrivacyCentreSetting",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(3100000002)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2025-09-02T08:30:00.000+02:00",
+        "editableForGuardians": false,
+        "editableInPeriod": false,
+        "lastEditedBy": "Lotte Bakker",
+        "state": "OPEN"
+      }
+    }
+  ]
+}

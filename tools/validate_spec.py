@@ -5,7 +5,9 @@
 2. Every embedded response example (= every sample) against its response schema
    (openapi-schema-validator, OAS 3.0 dialect, refs resolved within the spec).
 3. A scan for things that must never be in the spec: e-mail addresses other than
-   example.com, tokens, real-looking CloudFront paths.
+   example.com, tokens, real-looking CloudFront paths, and (tools/privacy_scan.py) names that are
+   not placeholders and signed links that are not redacted, in the spec's examples and in every
+   file in samples/ (also the samples the spec does not use).
 
 Dev-only dependencies:  pip install openapi-spec-validator openapi-schema-validator
 Usage:  python3 tools/validate_spec.py [openapi/parro.openapi.json]
@@ -14,6 +16,7 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 
 from openapi_spec_validator import validate as validate_spec
 from openapi_schema_validator import OAS30Validator, oas30_format_checker
@@ -59,6 +62,14 @@ def placeholder(h):
 for m in set(re.findall(r"cloudfront\.net/\w+/([0-9a-f]{32})/1-([0-9a-f]{32})", text)):
     if not all(placeholder(h) for h in m):
         leaks.append("real-looking CloudFront path " + "/".join(m))
-print("3. Privacy scan: " + ("OK" if not leaks else "FOUND " + "; ".join(sorted(leaks))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from privacy_scan import scan_paths, scan_text  # noqa: E402
+
+leaks += scan_text(text, os.path.basename(path))
+samples_dir = os.path.join(ROOT, "samples")
+if os.path.isdir(samples_dir):
+    leaks += scan_paths([Path(samples_dir)])
+report = "OK" if not leaks else "FOUND\n   " + "\n   ".join(sorted(set(leaks)))
+print("3. Privacy scan: " + report)
 
 sys.exit(1 if failures or leaks else 0)
