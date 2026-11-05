@@ -403,7 +403,17 @@ def build(samples_dir, public=False):
         "/event": {"get": op(
             "listEvents", "Events", "Announcements or calendar items of one group", event_list_item,
             ["listEvents_announcements.200.json", "listEvents_calendar-items.200.json"], coll=True,
-            desc="The main feed. Query each group separately and merge by `sortDate`.",
+            desc="The main feed. Query each group separately and merge by `sortDate`.\n\n"
+                 "**Order: newest first.** For calendar items that means the *furthest future* first: "
+                 "in a live check (2026-11-05) a whole-school group's first 50 of 100 items lay 6 to 9 "
+                 "months ahead, so the coming weeks were on page 2. Page with `Range` until the dates "
+                 "reach today.\n\n"
+                 "**Duplicates:** an announcement sent to several groups is returned once per group "
+                 "(same id; 2 of 71 events in that check). Merge by id.\n\n"
+                 "**Multi-day calendar items come once per day**: each day is its own entry with its "
+                 "own event id, `dayNumber` (1..`numberOfDays`) and `sortDate`, all sharing one "
+                 "`calendarItem` (same id, `startDate`, `endDate`, `dayDates`). In that check one 40-day "
+                 "item gave 40 entries. Merge by `calendarItem` id.",
             params=[q("dtype", {"type": "string", "enum": ["event.RAnnouncementEventPrimer",
                                                            "event.RCalendarItemEventPrimer"]},
                       "Which event type to list.", required=True),
@@ -422,6 +432,26 @@ def build(samples_dir, public=False):
                       "Concrete event type.", required=True)],
             extra={"406": {"description": "Missing or abstract `dtype`.",
                            "content": content(ref("GeonError"), ["getEvent.406.json"])}})},
+        "/calendar/sync": {"get": op(
+            "getCalendarSync", "Events", "Personal iCalendar link for subscribing to the agenda",
+            ref("Strings"), ["getCalendarSync.200.json"],
+            desc="Returns the account's personal **agenda subscription link** in `strings[0]`: "
+                 "`https://calendar.parro.com/ical/<calendarId>/<token>?noCache=<uuid>`. Calendar apps "
+                 "(Google, Apple, Outlook) subscribe to it and update by themselves; this is what the "
+                 "app's \"sync the agenda\" option copies.\n\n"
+                 "⚠️ **The link is a secret**: anyone who has it can read the calendar, without logging "
+                 "in. Do not share or log it.\n\n"
+                 "Checked live (2026-11-05):\n"
+                 "* `calendarId` is none of the account, identity, guardian or organisation ids.\n"
+                 "* The token stays the same across calls; only `noCache` changes. The link works without "
+                 "`noCache` (same content, same ETag).\n"
+                 "* `GET` on the link needs no authentication and answers `200 text/calendar` "
+                 "(iCalendar with VTIMEZONE, `REFRESH-INTERVAL` and `X-PUBLISHED-TTL` of 1 hour). It "
+                 "holds the school year's items, each multi-day item once.\n\n"
+                 "Not verified: ParnasSys lists agenda syncing as a feature of the paid *Parro "
+                 "Ouderapp*, so with *Parro Basis* this call may fail or return no link. The CORS "
+                 "preflight also allows `POST`, `PUT` and `DELETE` on this path (perhaps to renew or "
+                 "revoke the link); they were never called and are not described here.")},
         "/systemnews": {"get": op(
             "listSystemNews", "Misc", "Product news from Parro itself", ref("SystemNewsEvent"),
             ["listSystemNews.200.json"], coll=True)},
@@ -436,7 +466,8 @@ def build(samples_dir, public=False):
             "listChatMessages", "Chat", "Messages in one chat conversation", ref("ChatTextMessage"),
             ["listChatMessages.200.json"], coll=True,
             desc="Only `chat.RChatTextMessage` has been observed; other message types (e.g. with files) "
-                 "probably exist.",
+                 "probably exist.\n\n**Order: newest first** (live check 2026-11-05: `Range: items=0-29` "
+                 "returned the newest 30 of 89 messages). Reverse them for reading order.",
             params=[dict(id_param, description="Chatroom id from `GET /chatroom`.")])},
     }
 

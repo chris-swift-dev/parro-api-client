@@ -3,7 +3,7 @@
 
 [project]
 name = "parro-api-client"
-version = "0.1.0"
+version = "0.2.0"
 description = "Read-only Parro API client: a standalone CLI and an MCP server sharing one core"
 readme = "README.md"
 license = "MIT"  # the code; the OpenAPI spec and the docs are CC BY 4.0 (see LICENSE)

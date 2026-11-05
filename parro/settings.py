@@ -19,6 +19,9 @@ from .errors import ConfigurationError
 
 LoginMethod = Literal["login-form", "password-grant", "auto"]
 LOGIN_METHODS: tuple[LoginMethod, ...] = ("login-form", "password-grant", "auto")
+# How the CLI prints results. auto: markdown at a terminal, JSON when piped (PLAN-readable-output).
+OutputFormat = Literal["auto", "json", "markdown"]
+OUTPUT_FORMATS: tuple[OutputFormat, ...] = ("auto", "json", "markdown")
 
 # Defaults follow the spec (openapi/parro.openapi.json, info.description → Conventions).
 DEFAULT_API_BASE_URI = "https://rest-v2.parro.com"
@@ -31,7 +34,22 @@ DEFAULT_REDIRECT_URI = "https://talk.parro.com/oauth2"
 # offline_access gives a long-lived refresh token; the web app asks only for openid (8 hours).
 DEFAULT_SCOPE = "openid offline_access"
 # Same path as the original MCP server, so existing logins keep working.
-DEFAULT_TOKEN_FILE = Path.home() / ".parro-mcp" / "tokens.json"
+DEFAULT_CACHE_MAX_MB = 500
+
+
+def default_token_file() -> Path:
+    """~/.parro-mcp/tokens.json: the original server's path, so existing logins keep working.
+
+    Resolved when Settings are made (not when this module is imported), so HOME is respected.
+    """
+    return Path.home() / ".parro-mcp" / "tokens.json"
+
+
+def default_data_dir() -> Path:
+    """~/.parro/data: the cache (and later the archive) live here (PLAN-readable-output §3b)."""
+    return Path.home() / ".parro" / "data"
+
+
 DEFAULT_LOGIN_METHOD: LoginMethod = "login-form"
 DEFAULT_HTTP_TIMEOUT_SECONDS = 30.0
 DEFAULT_MAX_DOWNLOAD_BYTES = 60 * 1024 * 1024
@@ -45,7 +63,7 @@ class Settings:
     username: str | None = None
     password_from_env: str | None = dataclasses.field(default=None, repr=False)
     password_file: Path | None = None
-    token_file: Path = DEFAULT_TOKEN_FILE
+    token_file: Path = dataclasses.field(default_factory=default_token_file)
     role_override: str | None = None
     bootstrap_access_token: str | None = dataclasses.field(default=None, repr=False)
     api_base_uri: str = DEFAULT_API_BASE_URI
@@ -59,6 +77,10 @@ class Settings:
     http_timeout_seconds: float = DEFAULT_HTTP_TIMEOUT_SECONDS
     max_download_bytes: int = DEFAULT_MAX_DOWNLOAD_BYTES
     max_image_pixels: int = DEFAULT_MAX_IMAGE_PIXELS
+    output_format: OutputFormat = "auto"
+    data_dir: Path = dataclasses.field(default_factory=default_data_dir)
+    cache_enabled: bool = True
+    cache_max_bytes: int = DEFAULT_CACHE_MAX_MB * 1_000_000
 
     @classmethod
     def from_environment(cls, environment: Mapping[str, str] | None = None) -> "Settings":
@@ -76,7 +98,7 @@ class Settings:
             username=optional_text("PARRO_USERNAME"),
             password_from_env=env.get("PARRO_PASSWORD") or None,
             password_file=Path(password_file).expanduser() if password_file else None,
-            token_file=Path(text("PARRO_TOKEN_FILE", str(DEFAULT_TOKEN_FILE))).expanduser(),
+            token_file=Path(text("PARRO_TOKEN_FILE", str(default_token_file()))).expanduser(),
             role_override=optional_text("PARRO_ROLE"),
             bootstrap_access_token=optional_text("PARRO_ACCESS_TOKEN"),
             api_base_uri=text("PARRO_BASE_URI", DEFAULT_API_BASE_URI).rstrip("/"),
@@ -92,6 +114,12 @@ class Settings:
                 parse_number(env, "PARRO_MAX_DOWNLOAD", DEFAULT_MAX_DOWNLOAD_BYTES)
             ),
             max_image_pixels=int(parse_number(env, "PARRO_MAX_IMAGE_PX", DEFAULT_MAX_IMAGE_PIXELS)),
+            output_format=parse_output_format(text("PARRO_FORMAT", "auto")),
+            data_dir=Path(text("PARRO_DATA_DIR", str(default_data_dir()))).expanduser(),
+            cache_enabled=parse_switch(env, "PARRO_CACHE", default=True),
+            # Megabytes as people count them (1 MB = 1,000,000 bytes), like the sizes shown.
+            cache_max_bytes=int(parse_number(env, "PARRO_CACHE_MAX_MB", DEFAULT_CACHE_MAX_MB))
+            * 1_000_000,
         )
 
     def with_overrides(self, **changes: object) -> "Settings":
@@ -99,6 +127,8 @@ class Settings:
         given = {name: value for name, value in changes.items() if value is not None}
         if "login_method" in given:
             given["login_method"] = parse_login_method(str(given["login_method"]))
+        if "output_format" in given:
+            given["output_format"] = parse_output_format(str(given["output_format"]))
         return dataclasses.replace(self, **given)  # type: ignore[arg-type]
 
     @property
@@ -154,6 +184,27 @@ def parse_login_method(value: str) -> LoginMethod:
         allowed = ", ".join(LOGIN_METHODS)
         raise ConfigurationError(f"Unknown login method {value!r}. Choose one of: {allowed}.")
     return cleaned  # mypy narrows the str to LoginMethod through the `in` check above
+
+
+def parse_output_format(value: str) -> OutputFormat:
+    """Validate an output format from PARRO_FORMAT or --format."""
+    cleaned = value.strip().lower()
+    if cleaned not in OUTPUT_FORMATS:
+        allowed = ", ".join(OUTPUT_FORMATS)
+        raise ConfigurationError(f"Unknown output format {value!r}. Choose one of: {allowed}.")
+    return cleaned  # narrowed to OutputFormat by the `in` check above
+
+
+def parse_switch(environment: Mapping[str, str], name: str, default: bool) -> bool:
+    """on/off, true/false, yes/no, 1/0 from the environment."""
+    raw_value = environment.get(name, "").strip().lower()
+    if not raw_value:
+        return default
+    if raw_value in ("on", "true", "yes", "1"):
+        return True
+    if raw_value in ("off", "false", "no", "0"):
+        return False
+    raise ConfigurationError(f"{name} must be on or off, got {raw_value!r}.")
 
 
 def parse_number(environment: Mapping[str, str], name: str, default: float) -> float:

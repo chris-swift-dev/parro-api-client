@@ -5,7 +5,7 @@ through the modules. The MCP tool `parro_announcements` takes the same path from
 
 ```
 parro_cli.py / parro_mcp.py      entry points: parse arguments, print the result
-        │
+        │                    └── parro/rendering.py   markdown views of the same result
 parro/operations.py              one function per command, shared by both entry points
         │            │
 parro/api_client.py  parro/summaries.py     fetch raw JSON  │  shape it for people
@@ -13,6 +13,7 @@ parro/api_client.py  parro/summaries.py     fetch raw JSON  │  shape it for pe
 parro/authenticator.py   parro/geon.py      valid token     │  geon helpers (ids, totals, stripping)
         │
 parro/login_methods.py  parro/token_store.py  parro/pkce.py   OAuth steps │ tokens.json │ PKCE
+        │                parro/cache.py          attachments and calendar details on disk
         │
 parro/http.py                    the only place a request leaves the process
 ```
@@ -28,12 +29,17 @@ for the command, here `operations.list_announcements(client, group_id=None, limi
 `TOOL_FUNCTIONS` and calls the same `operations` function. That is why CLI output and MCP output are
 always identical.
 
+What gets printed depends on the format. `rendering.choose_format()` decides between JSON and
+markdown (CLI: `--format`, `PARRO_FORMAT`, else markdown at a terminal; MCP: the `format`
+argument). For markdown, `rendering.render(view, result)` turns the very same result into text:
+`COMMAND_VIEWS` (CLI) and `TOOL_VIEWS` (MCP) name the view for each command.
+
 ## 2. The operation
 
 `operations.list_announcements()` asks the client for the feed of every current group
 (`ParroClient.collect_feed()`), then hands the events to
-`summaries.summarize_announcement_feed()`, which sorts them newest first, applies the unread filter
-*before* the limit, and builds compact dicts.
+`summaries.summarize_announcement_feed()`, which sorts them newest first, merges announcements that came in through
+several groups, applies the unread filter *before* the limit, and builds compact dicts.
 
 ## 3. The API client
 
@@ -85,12 +91,23 @@ transport for the fakes in `tests/fakes.py`, so no test touches the network.
 content type. Downloads from the CDN go without any Parro header. PDF text needs PyMuPDF or pypdf,
 and photo downscaling needs Pillow. All three are optional.
 
+## 8. The cache
+
+`ParroClient.cache` (`parro/cache.py`) keeps attachment files with their text, and calendar details,
+under `PARRO_DATA_DIR/cache`. `attachments.download_or_reuse()` and `extract_or_reuse()` use it with
+`AttachmentFile.cache_key()` (attachment id + upload id + size: the same key always means the same
+bytes). `operations.calendar_details()` stores each item's details with its `lastModifiedAt` and uses
+them only while the list shows the same value. Lists are never cached.
+
 ## Where to look when…
 
 | …you want to | look at |
 | --- | --- |
-| add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` in `parro_cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` in `parro_mcp.py` |
+| add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro_cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` in `parro_mcp.py` |
+| change how something looks | `parro/rendering.py`, then `UPDATE_SNAPSHOTS=1 .venv/bin/pytest tests/test_rendering.py` and read the diff in `tests/snapshots/` |
 | call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`) |
 | change output fields | `parro/summaries.py` (keep existing field names: clients depend on them) |
 | understand a login failure | `parro/authenticator.py`, `parro/login_methods.py`, `tests/test_login_safety.py` |
-| check what the API really does | `openapi/parro.openapi.json` and `samples/` |
+| check what the API really does | `openapi/parro.openapi.json` and `samples/` (private) |
+| add test data | `tests/fixtures/make_api_fixtures.py` (invented data only), then run it |
+| change the .ics export | `parro/icalendar.py` and `tests/test_calendar_export.py` |

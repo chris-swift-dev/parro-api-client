@@ -1,0 +1,293 @@
+{
+  "dtype": "event.RCalendarItemEvent",
+  "links": [
+    {
+      "id": 7000000301,
+      "rel": "self",
+      "type": "event.RCalendarItemEvent",
+      "href": "https://rest-v2.parro.com/rest/v2/calendaritemevent/7000000301"
+    }
+  ],
+  "permissions": [
+    {
+      "full": "event.RCalendarItemEvent:READ:INSTANCE(7000000301)",
+      "type": "event.RCalendarItemEvent",
+      "operations": [
+        "READ"
+      ],
+      "instances": [
+        "INSTANCE(7000000301)"
+      ]
+    }
+  ],
+  "additionalObjects": {},
+  "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+  "createdAt": "2026-10-20T09:00:00.000+02:00",
+  "sortDate": "2026-11-12T00:00:00+01:00",
+  "deleted": false,
+  "read": true,
+  "archived": false,
+  "cancelled": false,
+  "liked": false,
+  "readCount": {
+    "dtype": "event.REventReadCount",
+    "read": 12,
+    "total": 45
+  },
+  "children": [
+    {
+      "dtype": "event.RCalendarItemEventChild",
+      "child": {
+        "dtype": "identity.RAvatar",
+        "id": 3000000002,
+        "roleId": 3000000002,
+        "firstname": "Daan",
+        "surname": "de Vries",
+        "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+      }
+    }
+  ],
+  "contributed": false,
+  "dayNumber": 1,
+  "groups": [
+    {
+      "dtype": "identity.RGroupPrimer",
+      "links": [
+        {
+          "id": 4000000003,
+          "rel": "self",
+          "type": "identity.RGroupPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000003"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RGroupPrimer:READ:INSTANCE(4000000003)",
+          "type": "identity.RGroupPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(4000000003)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+      "name": "Groep 6 - meester Tom",
+      "schooljaar": 2026,
+      "stamgroep": true,
+      "type": "NORMAL",
+      "unreadCount": 0,
+      "memberMuted": false,
+      "memberAbsenceNotificationsMuted": false,
+      "numberOfChildren": 29,
+      "numberOfGuardians": 50,
+      "numberOfTeachers": 2,
+      "childAvatars": []
+    }
+  ],
+  "numberOfDays": 1,
+  "calendarItem": {
+    "dtype": "calendar.RCalendarItem",
+    "links": [
+      {
+        "id": 7000000351,
+        "rel": "self",
+        "type": "calendar.RCalendarItem",
+        "href": "https://rest-v2.parro.com/rest/v2/calendaritem/7000000351"
+      }
+    ],
+    "permissions": [
+      {
+        "full": "calendar.RCalendarItem:READ:INSTANCE(7000000351)",
+        "type": "calendar.RCalendarItem",
+        "operations": [
+          "READ"
+        ],
+        "instances": [
+          "INSTANCE(7000000351)"
+        ]
+      }
+    ],
+    "additionalObjects": {},
+    "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+    "type": "ACTIVITY",
+    "title": "Excursie Natuurmuseum",
+    "rsvpRequired": true,
+    "startDate": "2026-11-12T00:00:00+01:00",
+    "endDate": "2026-11-12T00:00:00+01:00",
+    "dayDates": [
+      "2026-11-12T00:00:00+01:00"
+    ],
+    "imported": false,
+    "status": "OPEN",
+    "description": "We vertrekken om 8.45 uur met de auto. Neem een lunchpakket mee.",
+    "location": "Natuurmuseum Voorbeeldstad",
+    "pending": false,
+    "owner": {
+      "dtype": "identity.RTeacherPrimer",
+      "links": [
+        {
+          "id": 2100000002,
+          "rel": "self",
+          "type": "identity.RTeacherPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/teacherprimer/2100000002"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RTeacherPrimer:READ:INSTANCE(2100000002)",
+          "type": "identity.RTeacherPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(2100000002)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2021-10-28T10:18:43.076+02:00",
+      "firstname": "Tom",
+      "surname": "Smit",
+      "role": "TEACHER",
+      "active": true,
+      "accountActive": true
+    },
+    "lastEditedBy": {
+      "dtype": "identity.RTeacherPrimer",
+      "links": [
+        {
+          "id": 2100000002,
+          "rel": "self",
+          "type": "identity.RTeacherPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/teacherprimer/2100000002"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RTeacherPrimer:READ:INSTANCE(2100000002)",
+          "type": "identity.RTeacherPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(2100000002)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2021-10-28T10:18:43.076+02:00",
+      "firstname": "Tom",
+      "surname": "Smit",
+      "role": "TEACHER",
+      "active": true,
+      "accountActive": true
+    },
+    "numberOfResources": 0,
+    "numberOfTimeslots": 0,
+    "numberOfOpenTimeslots": 0,
+    "numberOfUncommittedChildren": 0,
+    "timeslotInterval": 0,
+    "slack": 0,
+    "reminderInterval": 0,
+    "totalRespondents": 0,
+    "resources": [],
+    "respondents": [],
+    "attachments": [
+      {
+        "dtype": "attachment.RCalendarItemAttachment",
+        "links": [
+          {
+            "id": 6000000401,
+            "rel": "self",
+            "type": "attachment.RCalendarItemAttachment",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemattachment/6000000401"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "attachment.RCalendarItemAttachment:READ:INSTANCE(6000000401)",
+            "type": "attachment.RCalendarItemAttachment",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(6000000401)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-31T18:00:00.000+01:00",
+        "attachmentType": "IMAGE",
+        "uploadId": "00000000-0000-4000-8000-006000000401",
+        "entries": [
+          {
+            "dtype": "attachment.RAttachmentDocumentEntry",
+            "links": [
+              {
+                "id": 6000000402,
+                "rel": "self",
+                "type": "attachment.RAttachmentDocumentEntry",
+                "href": "https://rest-v2.parro.com/rest/v2/attachmentdocumententry/6000000402"
+              }
+            ],
+            "permissions": [
+              {
+                "full": "attachment.RAttachmentDocumentEntry:READ:INSTANCE(6000000402)",
+                "type": "attachment.RAttachmentDocumentEntry",
+                "operations": [
+                  "READ"
+                ],
+                "instances": [
+                  "INSTANCE(6000000402)"
+                ]
+              }
+            ],
+            "additionalObjects": {},
+            "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+            "type": "SOURCE",
+            "url": "https://d111111abcdef8.cloudfront.net/image/00000000000000000000000165a0bd91/1-00000000000000000000000165a0bd91.jpeg",
+            "size": 1333337,
+            "contentType": "image/jpeg",
+            "filename": "Route.jpg",
+            "expiresAt": "2027-10-01T10:00:00.000+02:00"
+          },
+          {
+            "dtype": "attachment.RAttachmentImageEntry",
+            "links": [
+              {
+                "id": 6000000403,
+                "rel": "self",
+                "type": "attachment.RAttachmentImageEntry",
+                "href": "https://rest-v2.parro.com/rest/v2/attachmentimageentry/6000000403"
+              }
+            ],
+            "permissions": [
+              {
+                "full": "attachment.RAttachmentImageEntry:READ:INSTANCE(6000000403)",
+                "type": "attachment.RAttachmentImageEntry",
+                "operations": [
+                  "READ"
+                ],
+                "instances": [
+                  "INSTANCE(6000000403)"
+                ]
+              }
+            ],
+            "additionalObjects": {},
+            "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+            "type": "THUMBNAIL",
+            "url": "https://d111111abcdef8.cloudfront.net/thumbnail/00000000000000000000000165a0bd91/1-00000000000000000000000165a0bd91.jpeg",
+            "size": 96614,
+            "contentType": "image/jpg",
+            "height": 400,
+            "width": 300
+          }
+        ],
+        "index": 0
+      }
+    ]
+  }
+}

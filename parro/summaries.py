@@ -5,12 +5,13 @@ output are kept stable (they match the original MCP server's output), because sc
 clients may depend on them.
 """
 
+from datetime import datetime
 from typing import Any
 
 from .api_client import ApiResponse, FeedEvent
 from .attachments import can_extract_text, describe_attachment, find_attachments
 from .authenticator import LoginStatus
-from .geon import full_name, get_object_id, strip_geon_metadata
+from .geon import full_name, get_object_id, parse_timestamp, strip_geon_metadata
 
 READ_ATTACHMENT_HINT = "Use parro_attachment with this announcement id to read the attachment text."
 
@@ -165,12 +166,18 @@ def summarize_attachment_list(event: dict[str, Any]) -> list[dict[str, Any]]:
     return summaries
 
 
-def summarize_announcement(event: dict[str, Any], group_name: str | None = None) -> dict[str, Any]:
+def summarize_announcement(
+    event: dict[str, Any], group_name: str | None = None, group_names: list[str] | None = None
+) -> dict[str, Any]:
+    """One announcement. `group_names` is set when it came in through several groups."""
     summary = {
         "id": get_object_id(event),
         "date": event.get("sortDate") or event.get("createdAt"),
         "title": event.get("title"),
         "from": group_name,
+        "groups": group_names if group_names and len(group_names) > 1 else None,
+        "author": full_name(event.get("owner")) or None,
+        "pinned": True if event.get("pinned") else None,
         "read": event.get("read"),
         "liked": event.get("liked"),
         "contents": event.get("contents"),
@@ -183,10 +190,13 @@ def summarize_announcement(event: dict[str, Any], group_name: str | None = None)
 
 
 def summarize_announcement_detail(event: dict[str, Any]) -> dict[str, Any]:
+    """One announcement in full: also who read and liked it (counts only)."""
     summary = summarize_announcement(event)
-    author = full_name(event.get("owner"))
-    if author:
-        summary["author"] = author
+    counts = event.get("readCount")
+    if isinstance(counts, dict):
+        summary["readCount"] = drop_missing(
+            {key: counts.get(key) for key in ("read", "total", "liked")}
+        )
     return summary
 
 
@@ -194,14 +204,35 @@ def newest_first(feed: list[FeedEvent]) -> list[FeedEvent]:
     return sorted(feed, key=lambda item: item.event.get("sortDate") or "", reverse=True)
 
 
+def merge_duplicates(feed: list[FeedEvent]) -> list[tuple[FeedEvent, list[str]]]:
+    """One entry per event id, with the names of every group it came in through.
+
+    The feed is fetched per group, so an announcement sent to two groups arrives twice. The first
+    occurrence is kept (the order stays as given).
+    """
+    merged: dict[Any, tuple[FeedEvent, list[str]]] = {}
+    for item in feed:
+        key = get_object_id(item.event) or id(item)
+        _first, names = merged.setdefault(key, (item, []))
+        if item.group_name and item.group_name not in names:
+            names.append(item.group_name)
+    return list(merged.values())
+
+
 def summarize_announcement_feed(
     feed: list[FeedEvent], limit: int, unread_only: bool = False
 ) -> dict[str, Any]:
-    """Merged feed, newest first. With unread_only the filter runs *before* the limit (fix 5)."""
-    ordered = newest_first(feed)
+    """Merged feed, newest first, each announcement once.
+
+    With unread_only the filter runs *before* the limit (fix 5).
+    """
+    entries = merge_duplicates(newest_first(feed))
     if unread_only:
-        ordered = [item for item in ordered if not item.event.get("read")]
-    shown = [summarize_announcement(item.event, item.group_name) for item in ordered[:limit]]
+        entries = [(item, names) for item, names in entries if not item.event.get("read")]
+    shown = [
+        summarize_announcement(item.event, item.group_name, names)
+        for item, names in entries[:limit]
+    ]
     return {"count": len(shown), "announcements": shown}
 
 
@@ -209,12 +240,67 @@ def summarize_announcement_feed(
 
 
 def summarize_calendar_feed(feed: list[FeedEvent], limit: int) -> dict[str, Any]:
-    """Calendar items, soonest first. `count` is the number of items shown."""
+    """Calendar items, soonest first, each item once. `count` is the number of items shown.
+
+    An item for several groups already lists them all in its own `groups` field; `group` is the
+    group it was found through first.
+    """
     ordered = sorted(feed, key=lambda item: item.event.get("sortDate") or "")
+    entries = one_per_calendar_item([item for item, _names in merge_duplicates(ordered)])
     shown = [
-        {**strip_geon_metadata(item.event), "group": item.group_name} for item in ordered[:limit]
+        {**strip_geon_metadata(item.event), "group": item.group_name} for item in entries[:limit]
     ]
     return {"count": len(shown), "items": shown}
+
+
+def one_per_calendar_item(entries: list[FeedEvent]) -> list[FeedEvent]:
+    """Keep one entry per calendar item: the API lists a multi-day item once per day.
+
+    Each day has its own event id and `dayNumber`, but all share the `calendarItem` (seen live
+    2026-11-05: one 40-day item gave 40 entries). The first entry (the earliest day, as the
+    list is sorted) is kept; its calendarItem's start, end and dayDates describe the whole span.
+    """
+    kept: list[FeedEvent] = []
+    seen: set[Any] = set()
+    for entry in entries:
+        key = get_object_id(entry.event.get("calendarItem")) or get_object_id(entry.event)
+        if key is None or key not in seen:
+            kept.append(entry)
+            seen.add(key)
+    return kept
+
+
+def is_over(item: dict[str, Any], now: datetime) -> bool:
+    """True when a calendar item's last day lies before today (in the item's own time zone)."""
+    calendar_item = item.get("calendarItem") or {}
+    days = calendar_item.get("dayDates") or [
+        calendar_item.get("endDate") or calendar_item.get("startDate")
+    ]
+    last_day = parse_timestamp(days[-1])
+    if last_day is None or last_day.tzinfo is None:
+        return False
+    return last_day.date() < now.astimezone(last_day.tzinfo).date()
+
+
+def summarize_calendar_details(event: dict[str, Any]) -> dict[str, Any]:
+    """What the calendar list leaves out: location, description, attachments (spec: getEvent).
+
+    Attachments are listed without their download `url`: these details may be cached, and links
+    are never cached. `attachment <event id>` fetches a fresh link when one is needed.
+    """
+    item = event.get("calendarItem") or {}
+    attachments = [without_url(a) for a in summarize_attachment_list(event)]
+    return drop_missing(
+        {
+            "location": item.get("location") or None,
+            "description": item.get("description") or None,
+            "attachments": attachments or None,
+        }
+    )
+
+
+def without_url(attachment: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in attachment.items() if key != "url"}
 
 
 # ---------------------------------------------------------------------------------- chats

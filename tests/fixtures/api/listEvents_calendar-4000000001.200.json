@@ -1,0 +1,1682 @@
+{
+  "items": [
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 700000010505,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/700000010505"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(700000010505)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(700000010505)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2027-07-23T00:00:00+02:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 5,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000155,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000155"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000155)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000155)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Zomervakantie",
+        "rsvpRequired": false,
+        "startDate": "2027-07-17T00:00:00+02:00",
+        "endDate": "2027-08-29T00:00:00+02:00",
+        "dayDates": [
+          "2027-07-19T00:00:00+02:00",
+          "2027-07-20T00:00:00+02:00",
+          "2027-07-21T00:00:00+02:00",
+          "2027-07-22T00:00:00+02:00",
+          "2027-07-23T00:00:00+02:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 700000010504,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/700000010504"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(700000010504)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(700000010504)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2027-07-22T00:00:00+02:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 4,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000155,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000155"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000155)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000155)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Zomervakantie",
+        "rsvpRequired": false,
+        "startDate": "2027-07-17T00:00:00+02:00",
+        "endDate": "2027-08-29T00:00:00+02:00",
+        "dayDates": [
+          "2027-07-19T00:00:00+02:00",
+          "2027-07-20T00:00:00+02:00",
+          "2027-07-21T00:00:00+02:00",
+          "2027-07-22T00:00:00+02:00",
+          "2027-07-23T00:00:00+02:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 700000010503,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/700000010503"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(700000010503)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(700000010503)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2027-07-21T00:00:00+02:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 3,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000155,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000155"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000155)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000155)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Zomervakantie",
+        "rsvpRequired": false,
+        "startDate": "2027-07-17T00:00:00+02:00",
+        "endDate": "2027-08-29T00:00:00+02:00",
+        "dayDates": [
+          "2027-07-19T00:00:00+02:00",
+          "2027-07-20T00:00:00+02:00",
+          "2027-07-21T00:00:00+02:00",
+          "2027-07-22T00:00:00+02:00",
+          "2027-07-23T00:00:00+02:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 700000010502,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/700000010502"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(700000010502)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(700000010502)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2027-07-20T00:00:00+02:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 2,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000155,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000155"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000155)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000155)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Zomervakantie",
+        "rsvpRequired": false,
+        "startDate": "2027-07-17T00:00:00+02:00",
+        "endDate": "2027-08-29T00:00:00+02:00",
+        "dayDates": [
+          "2027-07-19T00:00:00+02:00",
+          "2027-07-20T00:00:00+02:00",
+          "2027-07-21T00:00:00+02:00",
+          "2027-07-22T00:00:00+02:00",
+          "2027-07-23T00:00:00+02:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 7000000105,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/7000000105"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(7000000105)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(7000000105)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2027-07-19T00:00:00+02:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 1,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000155,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000155"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000155)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000155)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Zomervakantie",
+        "rsvpRequired": false,
+        "startDate": "2027-07-17T00:00:00+02:00",
+        "endDate": "2027-08-29T00:00:00+02:00",
+        "dayDates": [
+          "2027-07-19T00:00:00+02:00",
+          "2027-07-20T00:00:00+02:00",
+          "2027-07-21T00:00:00+02:00",
+          "2027-07-22T00:00:00+02:00",
+          "2027-07-23T00:00:00+02:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 7000000104,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/7000000104"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(7000000104)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(7000000104)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2027-02-15T00:00:00+01:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 1,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 1,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000154,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000154"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000154)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000154)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "SCHOOLWIDE_ACTIVITY",
+        "title": "Studiedag",
+        "rsvpRequired": false,
+        "startDate": "2027-02-15T00:00:00+01:00",
+        "endDate": "2027-02-15T00:00:00+01:00",
+        "dayDates": [
+          "2027-02-15T00:00:00+01:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 700000010205,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/700000010205"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(700000010205)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(700000010205)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2026-12-25T00:00:00+01:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 5,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000152,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000152"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000152)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000152)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Kerstvakantie",
+        "rsvpRequired": false,
+        "startDate": "2026-12-21T00:00:00+01:00",
+        "endDate": "2027-01-01T00:00:00+01:00",
+        "dayDates": [
+          "2026-12-21T00:00:00+01:00",
+          "2026-12-22T00:00:00+01:00",
+          "2026-12-23T00:00:00+01:00",
+          "2026-12-24T00:00:00+01:00",
+          "2026-12-25T00:00:00+01:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 700000010204,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/700000010204"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(700000010204)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(700000010204)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2026-12-24T00:00:00+01:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 4,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000152,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000152"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000152)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000152)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Kerstvakantie",
+        "rsvpRequired": false,
+        "startDate": "2026-12-21T00:00:00+01:00",
+        "endDate": "2027-01-01T00:00:00+01:00",
+        "dayDates": [
+          "2026-12-21T00:00:00+01:00",
+          "2026-12-22T00:00:00+01:00",
+          "2026-12-23T00:00:00+01:00",
+          "2026-12-24T00:00:00+01:00",
+          "2026-12-25T00:00:00+01:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 700000010203,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/700000010203"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(700000010203)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(700000010203)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2026-12-23T00:00:00+01:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 3,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000152,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000152"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000152)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000152)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Kerstvakantie",
+        "rsvpRequired": false,
+        "startDate": "2026-12-21T00:00:00+01:00",
+        "endDate": "2027-01-01T00:00:00+01:00",
+        "dayDates": [
+          "2026-12-21T00:00:00+01:00",
+          "2026-12-22T00:00:00+01:00",
+          "2026-12-23T00:00:00+01:00",
+          "2026-12-24T00:00:00+01:00",
+          "2026-12-25T00:00:00+01:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 700000010202,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/700000010202"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(700000010202)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(700000010202)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2026-12-22T00:00:00+01:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 2,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000152,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000152"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000152)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000152)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Kerstvakantie",
+        "rsvpRequired": false,
+        "startDate": "2026-12-21T00:00:00+01:00",
+        "endDate": "2027-01-01T00:00:00+01:00",
+        "dayDates": [
+          "2026-12-21T00:00:00+01:00",
+          "2026-12-22T00:00:00+01:00",
+          "2026-12-23T00:00:00+01:00",
+          "2026-12-24T00:00:00+01:00",
+          "2026-12-25T00:00:00+01:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 7000000102,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/7000000102"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(7000000102)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(7000000102)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2026-12-21T00:00:00+01:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 1,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 5,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000152,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000152"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000152)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000152)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "HOLIDAY",
+        "title": "Kerstvakantie",
+        "rsvpRequired": false,
+        "startDate": "2026-12-21T00:00:00+01:00",
+        "endDate": "2027-01-01T00:00:00+01:00",
+        "dayDates": [
+          "2026-12-21T00:00:00+01:00",
+          "2026-12-22T00:00:00+01:00",
+          "2026-12-23T00:00:00+01:00",
+          "2026-12-24T00:00:00+01:00",
+          "2026-12-25T00:00:00+01:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 7000000101,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/7000000101"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(7000000101)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(7000000101)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2026-11-11T17:30:00+01:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 1,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 1,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000151,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000151"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000151)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000151)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "SCHOOLWIDE_ACTIVITY",
+        "title": "Sint-Maartenviering",
+        "rsvpRequired": false,
+        "startDate": "2026-11-11T17:30:00+01:00",
+        "endDate": "2026-11-11T19:00:00+01:00",
+        "dayDates": [
+          "2026-11-11T00:00:00+01:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    },
+    {
+      "dtype": "event.RCalendarItemEventPrimer",
+      "links": [
+        {
+          "id": 7000000103,
+          "rel": "self",
+          "type": "event.RCalendarItemEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemeventprimer/7000000103"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RCalendarItemEventPrimer:READ:INSTANCE(7000000103)",
+          "type": "event.RCalendarItemEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(7000000103)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "createdAt": "2026-10-20T09:00:00.000+02:00",
+      "sortDate": "2026-08-31T00:00:00+02:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "read": 12,
+        "total": 45
+      },
+      "children": [
+        {
+          "dtype": "event.RCalendarItemEventChild",
+          "child": {
+            "dtype": "identity.RAvatar",
+            "id": 3000000002,
+            "roleId": 3000000002,
+            "firstname": "Daan",
+            "surname": "de Vries",
+            "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+          }
+        }
+      ],
+      "contributed": false,
+      "dayNumber": 1,
+      "groups": [
+        {
+          "dtype": "identity.RGroupPrimer",
+          "links": [
+            {
+              "id": 4000000001,
+              "rel": "self",
+              "type": "identity.RGroupPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RGroupPrimer:READ:INSTANCE(4000000001)",
+              "type": "identity.RGroupPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(4000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+          "name": "Basisschool De Linde",
+          "schooljaar": 2026,
+          "stamgroep": false,
+          "type": "SCHOOLWIDE",
+          "unreadCount": 0,
+          "memberMuted": false,
+          "memberAbsenceNotificationsMuted": false,
+          "numberOfChildren": 0,
+          "numberOfGuardians": 412,
+          "numberOfTeachers": 38,
+          "childAvatars": []
+        }
+      ],
+      "numberOfDays": 1,
+      "calendarItem": {
+        "dtype": "calendar.RCalendarItemPrimer",
+        "links": [
+          {
+            "id": 7000000153,
+            "rel": "self",
+            "type": "calendar.RCalendarItemPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/calendaritemprimer/7000000153"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "calendar.RCalendarItemPrimer:READ:INSTANCE(7000000153)",
+            "type": "calendar.RCalendarItemPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(7000000153)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+        "type": "SCHOOLWIDE_ACTIVITY",
+        "title": "Eerste schooldag",
+        "rsvpRequired": false,
+        "startDate": "2026-08-31T00:00:00+02:00",
+        "endDate": "2026-08-31T00:00:00+02:00",
+        "dayDates": [
+          "2026-08-31T00:00:00+02:00"
+        ],
+        "imported": false,
+        "status": "OPEN"
+      }
+    }
+  ]
+}

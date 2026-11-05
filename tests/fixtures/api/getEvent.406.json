@@ -1,0 +1,10 @@
+{
+  "code": 406,
+  "reason": "Not Acceptable",
+  "exception": "nl.topicus.cobra.restcontract.exception.RestWebApplicationException",
+  "message": "HTTP 406 Not Acceptable",
+  "applicationError": "EVENT_BAD_TYPE",
+  "errorDetails": [
+    "nl.topicus.geon.restcontract.model.event.RAbstractEvent"
+  ]
+}

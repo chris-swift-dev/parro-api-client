@@ -1,0 +1,210 @@
+{
+  "items": [
+    {
+      "dtype": "chat.RChatRoomPrimer",
+      "links": [
+        {
+          "id": 8000000001,
+          "rel": "self",
+          "type": "chat.RChatRoomPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/chatroomprimer/8000000001"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatRoomPrimer:READ:INSTANCE(8000000001)",
+          "type": "chat.RChatRoomPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8000000001)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-03T16:28:35.509+01:00",
+      "sortDate": "2026-11-03T16:28:35.509+01:00",
+      "muted": false,
+      "todo": false,
+      "unreadCount": 1,
+      "admin": false,
+      "active": true,
+      "archived": false,
+      "type": "CALENDAR",
+      "title": "Rijden naar het Natuurmuseum",
+      "numberOfMembers": 4,
+      "hasGuardians": true,
+      "memberNames": [
+        "Tom",
+        "Sanne",
+        "Joris",
+        "Fatima"
+      ],
+      "childNames": [],
+      "repliesEnabled": true,
+      "dnd": false,
+      "lastMessage": {
+        "dtype": "chat.RChatTextMessage",
+        "links": [
+          {
+            "id": 8100000003,
+            "rel": "self",
+            "type": "chat.RChatTextMessage",
+            "href": "https://rest-v2.parro.com/rest/v2/chattextmessage/8100000003"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "chat.RChatTextMessage:READ:INSTANCE(8100000003)",
+            "type": "chat.RChatTextMessage",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(8100000003)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-11-03T16:28:35.509+01:00",
+        "identity": {
+          "dtype": "identity.RIdentityPrimer",
+          "links": [
+            {
+              "id": 2100000002,
+              "rel": "self",
+              "type": "identity.RIdentityPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000002"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000002)",
+              "type": "identity.RIdentityPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(2100000002)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+          "firstname": "Tom",
+          "surname": "Smit",
+          "role": "TEACHER"
+        },
+        "createdAt": "2026-11-03T16:28:35.509+01:00",
+        "deleted": false,
+        "text": "Top, dan zijn we compleet. Tot de 12e!",
+        "allRead": false
+      }
+    },
+    {
+      "dtype": "chat.RChatRoomPrimer",
+      "links": [
+        {
+          "id": 8000000002,
+          "rel": "self",
+          "type": "chat.RChatRoomPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/chatroomprimer/8000000002"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatRoomPrimer:READ:INSTANCE(8000000002)",
+          "type": "chat.RChatRoomPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8000000002)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-06-30T12:00:00.000+02:00",
+      "sortDate": "2026-06-30T12:00:00.000+02:00",
+      "muted": false,
+      "todo": false,
+      "unreadCount": 0,
+      "admin": false,
+      "active": false,
+      "archived": true,
+      "type": "CALENDAR",
+      "title": "Hulp bij het zomerfeest",
+      "numberOfMembers": 6,
+      "hasGuardians": true,
+      "memberNames": [
+        "Iris",
+        "Sanne",
+        "Joris",
+        "Fatima",
+        "Kees",
+        "Noor"
+      ],
+      "childNames": [],
+      "repliesEnabled": true,
+      "dnd": false,
+      "lastMessage": {
+        "dtype": "chat.RChatTextMessage",
+        "links": [
+          {
+            "id": 8100000101,
+            "rel": "self",
+            "type": "chat.RChatTextMessage",
+            "href": "https://rest-v2.parro.com/rest/v2/chattextmessage/8100000101"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "chat.RChatTextMessage:READ:INSTANCE(8100000101)",
+            "type": "chat.RChatTextMessage",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(8100000101)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-06-30T12:00:00.000+02:00",
+        "identity": {
+          "dtype": "identity.RIdentityPrimer",
+          "links": [
+            {
+              "id": 2000000001,
+              "rel": "self",
+              "type": "identity.RIdentityPrimer",
+              "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2000000001"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "identity.RIdentityPrimer:READ:INSTANCE(2000000001)",
+              "type": "identity.RIdentityPrimer",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(2000000001)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+          "firstname": "Sanne",
+          "surname": "de Vries",
+          "role": "GUARDIAN"
+        },
+        "createdAt": "2026-06-30T12:00:00.000+02:00",
+        "deleted": false,
+        "text": "Ik neem de limonade mee.",
+        "allRead": false
+      }
+    }
+  ]
+}

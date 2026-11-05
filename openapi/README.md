@@ -28,8 +28,9 @@ python3 -m venv .venv && .venv/bin/pip install openapi-spec-validator openapi-sc
 npm ci --ignore-scripts && npx redocly lint --config redocly.yaml openapi/parro.openapi.json
 ```
 
-Last run (2026-11-04): spec valid; 19/19 examples match their schemas, with format checking on;
-privacy scan clean; Redocly 0 errors, 0 warnings. The spec also renders in Swagger UI 5.
+Last run (2026-11-05): spec valid; 20/20 examples match their schemas, with format checking on;
+privacy scan clean. Redocly runs in the Pages workflow (last local run 2026-11-04: 0 errors, 0
+warnings). The spec also renders in Swagger UI 5.
 
 ## Publishing on GitHub Pages
 

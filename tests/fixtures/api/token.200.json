@@ -1,0 +1,8 @@
+{
+  "access_token": "EXAMPLE-ACCESS-TOKEN",
+  "refresh_token": "EXAMPLE-REFRESH-TOKEN",
+  "scope": "openid offline_access",
+  "id_token": "EXAMPLE-ID-TOKEN",
+  "token_type": "Bearer",
+  "expires_in": 3599
+}

@@ -12,7 +12,7 @@ newsletters, calendar, chats and class info, **including the text inside PDF att
 
 | | |
 | --- | --- |
-| `parro_cli.py` | a command-line client: JSON on stdout (pipe into `jq`), logs on stderr |
+| `parro_cli.py` | a command-line client: readable markdown at a terminal, JSON when piped (`jq`) |
 | `parro_mcp.py` | an MCP server over stdio for Claude and other MCP clients |
 | `parro/` | the library both use: login, API calls, summaries, attachments |
 | `openapi/parro.public.openapi.json` | the OpenAPI 3.0.3 description of the API (contract version 224) |
@@ -28,13 +28,45 @@ through the code.
 ## What it does
 
 The Parro web app is a Flutter app talking to a Topicus "geon" REST API at
-`https://rest-v2.parro.com/rest/v2`. This client speaks that API and adds two things:
+`https://rest-v2.parro.com/rest/v2`. This client speaks that API and adds three things:
 
 1. **It strips the geon boilerplate.** Raw responses bury every field under `permissions` / `links`
    / `dtype` blocks. A three-group list is 2.8 KB of JSON carrying about 300 bytes of information.
    Every command returns a compact summary; use `--raw` (MCP: `raw: true`) for the untouched payload.
 2. **It reads attachments.** School newsletters arrive as PDFs. `attachment` / `parro_attachment`
    downloads them and returns plain text. Photos come back as images (MCP) or can be saved (CLI).
+3. **It shows the data the way the app does.** Announcements once each with author and groups, an
+   agenda grouped by day, conversations in reading order, and an overview of what is new, as
+   readable markdown. Every id stays visible, so the next command is always at hand.
+
+### Readable output
+
+At a terminal the CLI prints markdown; piped into another program it prints JSON. `--format` (or
+`PARRO_FORMAT`) chooses explicitly. MCP tools answer in JSON unless called with `format: "markdown"`.
+Example, made from the invented test data in `tests/fixtures/`:
+
+```
+$ python3 parro_cli.py overview
+# Overview
+
+## Unread
+● 2 announcements, 1 calendar item, 1 chat
+
+## Latest announcements
+- 📌 Studiedag vrijdag 13 november ● new · Lotte Bakker · Mon 2 Nov 2026 12:28 · #5000000102
+- Foto's herfstwandeling · Lotte Bakker · Sat 31 Oct 2026 18:39 · #5000000103
+…
+→ parro_cli.py announcements
+
+## Coming up
+- Wed 11 Nov 2026, 17:30-19:00  Sint-Maartenviering · Basisschool De Linde · #7000000101
+- Thu 12 Nov 2026, all day  Excursie Natuurmuseum · Groep 6 - meester Tom · RSVP needed · #7000000301
+…
+```
+
+`tests/snapshots/` holds the output of every view; it is the quickest way to see what they look
+like. Dates are shown in the time zone the school's data uses, labels are English, and content is
+shown as written.
 
 ## Command line
 
@@ -42,20 +74,26 @@ The Parro web app is a Flutter app talking to a Topicus "geon" REST API at
 python3 parro_cli.py --help
 python3 parro_cli.py login --prompt              # type the password once; tokens then refresh themselves
 python3 parro_cli.py status
+python3 parro_cli.py overview                    # what is new, like the app's home screen
 python3 parro_cli.py announcements --limit 5 --unread-only
 python3 parro_cli.py attachment <announcement-id> --text
-python3 parro_cli.py calendar --limit 10
+python3 parro_cli.py calendar --details          # agenda with location and description
+python3 parro_cli.py calendar-link               # Parro's own link to subscribe from Google/Apple/Outlook
+python3 parro_cli.py calendar --ics parro.ics --details   # or: an .ics file to import
+python3 parro_cli.py announcements --format json | jq '.announcements[].title'
 python3 parro_cli.py get /accountsettings
 python3 parro_cli.py token                       # paste into Swagger UI → Authorize → bearerToken
 ```
 
-Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-finish <url>`, `me`,
-`children`, `groups [--previous]`, `unread`, `system-news`,
-`announcements [--group ID] [--limit N] [--unread-only]`, `announcement <id>`,
-`calendar [--group ID] [--limit N]`,
+Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-finish <url>`,
+`overview`, `me`, `children`, `groups [--previous]`, `unread`, `system-news [--full]`,
+`announcements [--group ID] [--limit N] [--unread-only] [--full]`, `announcement <id>`,
+`calendar [--group ID] [--limit N] [--details] [--past] [--ics FILE]`, `calendar-link`,
 `attachment <event-id> [--attachment-id ID | --all] [--save-to DIR] [--text]`, `chatrooms`,
-`chat-messages <chatroom-id>`, `get <path> [--param k=v ...] [--limit N] [--offset N]`.
-Global options: `--login-method`, `--raw`, `--compact`, `--verbose`.
+`chat-messages <chatroom-id>`, `cache info|clear`,
+`get <path> [--param k=v ...] [--limit N] [--offset N]`.
+Global options: `--format auto|json|markdown`, `--login-method`, `--raw`, `--compact`,
+`--no-cache`, `--verbose`. `--full` shows whole texts instead of a 3-line preview.
 
 Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in · `4` login halted.
 
@@ -73,13 +111,17 @@ Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in ·
 | `parro_announcements` | The main feed. Merges all groups, newest first, full text + attachment list. |
 | `parro_announcement` | One announcement by id, with author. |
 | **`parro_attachment`** | **Downloads an attachment of an announcement or calendar item and returns its text (PDF/docx/txt/csv/html) or the image.** |
-| `parro_calendar` | Calendar items, soonest first. |
+| `parro_calendar` | Calendar items from today on, soonest first; `details: true` adds location and description, `past: true` earlier items. |
 | `parro_chatrooms` / `parro_chat_messages` | Conversations. |
 | `parro_unread` | Unread counts per category. |
 | `parro_get` | Escape hatch: GET any `/rest/v2` path not covered above. |
+| `parro_overview` | What is new: unread counts, latest announcements, coming up, unread chats. |
+| `parro_calendar_link` | The personal link to subscribe to the Parro agenda (keep it secret). |
 
-The tool names and argument schemas are the same as the original server's, so existing MCP
-configurations keep working. `parro_mcp.py` needs the `parro/` folder next to it.
+Every tool takes an optional `format`: `json` (default) or `markdown`, a readable view that keeps
+every id. The first 16 tools have the same names and arguments as the original server, so existing
+MCP configurations keep working; only optional arguments were added (`method`, `details`,
+`format`). `parro_mcp.py` needs the `parro/` folder next to it.
 
 ```bash
 claude mcp add parro -s user -- python3 /path/to/parro-api-client/parro_mcp.py
@@ -185,16 +227,50 @@ So a local tool must borrow the web client's `client_id`, which is pinned to
 | `PARRO_TIMEOUT` | `30` (seconds) |
 | `PARRO_MAX_DOWNLOAD` | `62914560` (60 MB) |
 | `PARRO_MAX_IMAGE_PX` | `1400` |
+| `PARRO_FORMAT` | `auto` (CLI: markdown at a terminal, JSON when piped), `json` or `markdown` |
+| `PARRO_DATA_DIR` | `~/.parro/data` (the cache lives in `cache/` inside it) |
+| `PARRO_CACHE` | `on` (`off` = never read or write the cache; CLI: `--no-cache`) |
+| `PARRO_CACHE_MAX_MB` | `500` |
 
 Switch to the acceptance environment by overriding `PARRO_BASE_URI`, `PARRO_LOGIN_URI` and
 `PARRO_CLIENT_ID`.
+
+## The agenda in your own calendar app
+
+Two ways, depending on what you need:
+
+- **`calendar-link`** prints Parro's own subscription link (`GET /calendar/sync`). Paste it into
+  Google Calendar (*Other calendars → From URL*), Apple Calendar (*New Calendar Subscription*) or
+  Outlook (*Subscribe from web*), and the calendar keeps itself up to date. **The link is a secret**:
+  anyone who has it can read your Parro calendar without logging in. ParnasSys lists agenda syncing
+  as a feature of the paid *Parro Ouderapp*, so not every school may offer it.
+- **`calendar --ics FILE`** writes an iCalendar file of the upcoming items (`--past` for earlier
+  ones, `--details` for locations and descriptions, `-` for standard output). It works without the
+  subscription feature, but it is a snapshot: export again to update. Every event keeps the same
+  UID, so importing a newer file updates events instead of duplicating them.
+
+## Local data: the cache
+
+Downloading the same newsletter again and again is slow, and an AI assistant often reads it several
+times in one conversation. So two things are cached in `PARRO_DATA_DIR/cache`:
+
+- **attachment files and their extracted text**, keyed by attachment id, upload id and size. An
+  upload never changes, so these never go stale;
+- **calendar-item details** (`calendar --details`), used only while the list still shows the same
+  `lastModifiedAt`.
+
+Lists (announcements, agenda, chats, unread counts) are **never** cached: they are cheap, and they
+are how the client learns what is new or read. The cache holds children's photos and school letters,
+so its folders are created with mode 0700 and its files with 0600, and download links are never
+written to it. `parro_cli.py cache info` shows its size; `cache clear` empties it; `--no-cache` or
+`PARRO_CACHE=off` switches it off.
 
 ## The OpenAPI specification
 
 `openapi/parro.public.openapi.json` describes the API as observed from the web client:
 
 - **Account, children, groups, announcements, calendar items, chats, unread counts, system news**:
-  12 verified operations, plus 6 paths that appear in the web app's code but were never called
+  13 verified operations (incl. the agenda subscription link), plus 6 paths that appear in the web app's code but were never called
   (tagged *Unverified*).
 - **Authentication** against the ParnasSys IdP: authorization code + PKCE, password grant,
   refresh, revoke, OIDC discovery.
@@ -238,9 +314,12 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-test.txt
 ```
 
 The tests include login-safety checks (one credential POST per login, none while the latch is set,
-none after a 401, no secrets in logs). Tests that need the git-ignored `samples/`, the full spec, or
-the original server in `legacy/` (contract and behaviour comparisons) are skipped without them, as
-in CI.
+none after a 401, no secrets in logs). They run on an invented family and school in
+`tests/fixtures/api/`, written by `tests/fixtures/make_api_fixtures.py` and checked against the
+public spec. `tests/snapshots/` holds the expected markdown of every view; after an intended layout
+change, run `UPDATE_SNAPSHOTS=1 .venv/bin/pytest tests/test_rendering.py` and review the diff.
+The checks that need git-ignored files (the real `samples/` against the full spec, and the
+comparison with the original server in `legacy/`) skip without them, as in CI.
 
 | Path | Purpose |
 | --- | --- |
@@ -277,6 +356,22 @@ left out here.
 | `parro_mcp.py call parro_unread` / `parro_groups` | OK: same core, live |
 | `token` → Swagger UI **bearerToken** | OK: "Try it out" works with it |
 | `logout` | OK: IdP answered 200 for refresh and access token; token file removed; `me` then exits 3 |
+
+## Live check (2026-11-05, release 0.2.0)
+
+Readable output, the cache and the overview against the real API, with one password check
+(personal data left out):
+
+| Check | Result |
+| --- | --- |
+| `login --prompt` at a terminal | OK, 1 password check; `auto` printed markdown |
+| `overview`, `announcements`, `calendar --details`, `chat-messages` | OK |
+| An announcement sent to several groups | The API returns it once per group (2 of 71 events); the feed lists it once with both groups |
+| Order of chat messages | Newest first (the newest 30 of 89); the conversation view shows them in reading order |
+| Order of calendar items | **Furthest future first**: a group's first 50 of 100 items were 6-9 months ahead. Fixed: the client now pages to today (the overview had missed near-term whole-school events) |
+| Newsletter PDF read twice | Second read from the cache, same text; folders 0700, files 0600, no links stored |
+| `calendar-link` | Returns the subscription link; it answers `200 text/calendar` without login, refreshes hourly, works without `noCache`, and its token is stable |
+| Multi-day calendar items | The API lists them **once per day** (one 40-day item: 40 entries). Fixed: merged by calendar item; afterwards our agenda, our `.ics` and Parro's own feed agree on all 44 upcoming items (title and start day) |
 
 ## Note on the HAR
 

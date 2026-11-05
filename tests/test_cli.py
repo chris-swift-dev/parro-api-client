@@ -61,7 +61,7 @@ COMMANDS_WITH_JSON_OUTPUT = [
     ["system-news", "--limit", "2"],
     ["announcements", "--limit", "2"],
     ["announcements", "--group", "1", "--unread-only"],
-    ["announcement", "11000000000"],
+    ["announcement", "5000000101"],
     ["calendar", "--limit", "1"],
     ["chatrooms"],
     ["chat-messages", "5", "--limit", "1"],
@@ -90,7 +90,7 @@ def test_announcements_output_matches_the_operation(environment, api, capsys):
     _, out, _ = run(api, capsys, "announcements", "--limit", "3")
     data = json.loads(out)
     assert data["count"] == 3
-    assert data["announcements"][0]["from"] == "Basisschool Voorbeeld"
+    assert data["announcements"][0]["from"] == "Basisschool De Linde"
 
 
 def test_token_prints_only_the_token(environment, api, capsys):
@@ -114,7 +114,7 @@ def test_login_with_the_form_and_logout(environment, api, capsys, monkeypatch):
     monkeypatch.setenv("PARRO_PASSWORD", fakes.CORRECT_PASSWORD)
     exit_code, out, _ = run(api, capsys, "login")
     assert exit_code == 0
-    assert json.loads(out)["logged_in_as"]["role_header"] == "GUARDIAN:1000000000"
+    assert json.loads(out)["logged_in_as"]["role_header"] == "GUARDIAN:2000000001"
     assert len(api.idp.credential_posts()) == 1
     exit_code, out, _ = run(api, capsys, "logout")
     assert exit_code == 0 and json.loads(out)["logged_out"] is True
@@ -193,18 +193,18 @@ def test_exit_code_2_for_usage_errors(environment, api, capsys, argv):
 
 
 def test_attachment_text_and_save(environment, api, capsys, tmp_path):
-    api.calendar_event_ids.add(11000000000)
-    event = load_sample("getEvent_attachment.200.json")
+    api.calendar_event_ids.add(fakes.MUSEUM_TRIP_ID)
+    event = load_sample("getEvent_calendar-7000000301.200.json")
     image_url = event["calendarItem"]["attachments"][0]["entries"][0]["url"]
     api.attachment_bodies[image_url] = ("image/jpeg", b"\xff\xd8 jpeg")
     exit_code, out, _ = run(
-        api, capsys, "attachment", "11000000000", "--save-to", str(tmp_path / "out")
+        api, capsys, "attachment", str(fakes.MUSEUM_TRIP_ID), "--save-to", str(tmp_path / "out")
     )
     assert exit_code == 0
     summary = json.loads(out)
-    assert summary["saved_to"].endswith("Screenshot.jpg")
+    assert summary["saved_to"].endswith("Route.jpg")
     assert "base64" not in out, "the CLI never prints image data"
-    exit_code, out, _ = run(api, capsys, "attachment", "11000000000", "--text")
+    exit_code, out, _ = run(api, capsys, "attachment", str(fakes.MUSEUM_TRIP_ID), "--text")
     assert exit_code == 0 and out.startswith("[nothing (an image")
 
 

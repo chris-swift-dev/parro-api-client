@@ -1,0 +1,553 @@
+{
+  "items": [
+    {
+      "dtype": "event.RAnnouncementEventPrimer",
+      "links": [
+        {
+          "id": 5000000102,
+          "rel": "self",
+          "type": "event.RAnnouncementEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/announcementeventprimer/5000000102"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RAnnouncementEventPrimer:READ:INSTANCE(5000000102)",
+          "type": "event.RAnnouncementEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(5000000102)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-02T12:28:51.570+01:00",
+      "createdAt": "2026-11-02T12:28:51.570+01:00",
+      "sortDate": "2026-11-02T12:28:51.570+01:00",
+      "deleted": false,
+      "read": false,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "realisationReason": "RECIPIENT",
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "liked": 4,
+        "read": 31,
+        "total": 45
+      },
+      "title": "Studiedag vrijdag 13 november",
+      "contents": "Beste ouders,\n\nOp vrijdag 13 november hebben alle leerkrachten een studiedag. De kinderen zijn die dag vrij.\nDe BSO is gewoon open.\n\nMet vriendelijke groet,\nLotte Bakker\n",
+      "likeable": true,
+      "attachments": [],
+      "owner": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000003,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000003"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000003)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000003)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Lotte",
+        "surname": "Bakker",
+        "role": "TEACHER"
+      },
+      "lastEditedBy": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000003,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000003"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000003)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000003)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Lotte",
+        "surname": "Bakker",
+        "role": "TEACHER"
+      },
+      "draft": false,
+      "pinned": true
+    },
+    {
+      "dtype": "event.RAnnouncementEventPrimer",
+      "links": [
+        {
+          "id": 5000000103,
+          "rel": "self",
+          "type": "event.RAnnouncementEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/announcementeventprimer/5000000103"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RAnnouncementEventPrimer:READ:INSTANCE(5000000103)",
+          "type": "event.RAnnouncementEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(5000000103)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-31T18:39:56.227+01:00",
+      "createdAt": "2026-10-31T18:39:56.227+01:00",
+      "sortDate": "2026-10-31T18:39:56.227+01:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": true,
+      "realisationReason": "RECIPIENT",
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "liked": 4,
+        "read": 31,
+        "total": 45
+      },
+      "title": "Foto's herfstwandeling",
+      "contents": "Wat een mooie herfstwandeling hebben we gemaakt! Hierbij een paar foto's.",
+      "likeable": true,
+      "attachments": [
+        {
+          "dtype": "attachment.RAnnouncementAttachment",
+          "links": [
+            {
+              "id": 6000000201,
+              "rel": "self",
+              "type": "attachment.RAnnouncementAttachment",
+              "href": "https://rest-v2.parro.com/rest/v2/announcementattachment/6000000201"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "attachment.RAnnouncementAttachment:READ:INSTANCE(6000000201)",
+              "type": "attachment.RAnnouncementAttachment",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(6000000201)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-10-31T18:00:00.000+01:00",
+          "attachmentType": "IMAGE",
+          "uploadId": "00000000-0000-4000-8000-006000000201",
+          "entries": [
+            {
+              "dtype": "attachment.RAttachmentDocumentEntry",
+              "links": [
+                {
+                  "id": 6000000202,
+                  "rel": "self",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "href": "https://rest-v2.parro.com/rest/v2/attachmentdocumententry/6000000202"
+                }
+              ],
+              "permissions": [
+                {
+                  "full": "attachment.RAttachmentDocumentEntry:READ:INSTANCE(6000000202)",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "operations": [
+                    "READ"
+                  ],
+                  "instances": [
+                    "INSTANCE(6000000202)"
+                  ]
+                }
+              ],
+              "additionalObjects": {},
+              "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+              "type": "SOURCE",
+              "url": "https://d111111abcdef8.cloudfront.net/image/00000000000000000000000165a0bcc9/1-00000000000000000000000165a0bcc9.jpeg",
+              "size": 1333337,
+              "contentType": "image/jpeg",
+              "filename": "herfst-1.jpg",
+              "expiresAt": "2027-10-01T10:00:00.000+02:00"
+            }
+          ],
+          "index": 0
+        },
+        {
+          "dtype": "attachment.RAnnouncementAttachment",
+          "links": [
+            {
+              "id": 6000000211,
+              "rel": "self",
+              "type": "attachment.RAnnouncementAttachment",
+              "href": "https://rest-v2.parro.com/rest/v2/announcementattachment/6000000211"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "attachment.RAnnouncementAttachment:READ:INSTANCE(6000000211)",
+              "type": "attachment.RAnnouncementAttachment",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(6000000211)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-10-31T18:00:00.000+01:00",
+          "attachmentType": "IMAGE",
+          "uploadId": "00000000-0000-4000-8000-006000000211",
+          "entries": [
+            {
+              "dtype": "attachment.RAttachmentDocumentEntry",
+              "links": [
+                {
+                  "id": 6000000212,
+                  "rel": "self",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "href": "https://rest-v2.parro.com/rest/v2/attachmentdocumententry/6000000212"
+                }
+              ],
+              "permissions": [
+                {
+                  "full": "attachment.RAttachmentDocumentEntry:READ:INSTANCE(6000000212)",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "operations": [
+                    "READ"
+                  ],
+                  "instances": [
+                    "INSTANCE(6000000212)"
+                  ]
+                }
+              ],
+              "additionalObjects": {},
+              "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+              "type": "SOURCE",
+              "url": "https://d111111abcdef8.cloudfront.net/image/00000000000000000000000165a0bcd3/1-00000000000000000000000165a0bcd3.jpeg",
+              "size": 1333337,
+              "contentType": "image/jpeg",
+              "filename": "herfst-2.jpg",
+              "expiresAt": "2027-10-01T10:00:00.000+02:00"
+            }
+          ],
+          "index": 1
+        },
+        {
+          "dtype": "attachment.RAnnouncementAttachment",
+          "links": [
+            {
+              "id": 6000000221,
+              "rel": "self",
+              "type": "attachment.RAnnouncementAttachment",
+              "href": "https://rest-v2.parro.com/rest/v2/announcementattachment/6000000221"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "attachment.RAnnouncementAttachment:READ:INSTANCE(6000000221)",
+              "type": "attachment.RAnnouncementAttachment",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(6000000221)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-10-31T18:00:00.000+01:00",
+          "attachmentType": "IMAGE",
+          "uploadId": "00000000-0000-4000-8000-006000000221",
+          "entries": [
+            {
+              "dtype": "attachment.RAttachmentDocumentEntry",
+              "links": [
+                {
+                  "id": 6000000222,
+                  "rel": "self",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "href": "https://rest-v2.parro.com/rest/v2/attachmentdocumententry/6000000222"
+                }
+              ],
+              "permissions": [
+                {
+                  "full": "attachment.RAttachmentDocumentEntry:READ:INSTANCE(6000000222)",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "operations": [
+                    "READ"
+                  ],
+                  "instances": [
+                    "INSTANCE(6000000222)"
+                  ]
+                }
+              ],
+              "additionalObjects": {},
+              "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+              "type": "SOURCE",
+              "url": "https://d111111abcdef8.cloudfront.net/image/00000000000000000000000165a0bcdd/1-00000000000000000000000165a0bcdd.jpeg",
+              "size": 1333337,
+              "contentType": "image/jpeg",
+              "filename": "herfst-3.jpg",
+              "expiresAt": "2027-10-01T10:00:00.000+02:00"
+            }
+          ],
+          "index": 2
+        }
+      ],
+      "owner": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000003,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000003"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000003)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000003)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Lotte",
+        "surname": "Bakker",
+        "role": "TEACHER"
+      },
+      "lastEditedBy": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000003,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000003"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000003)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000003)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Lotte",
+        "surname": "Bakker",
+        "role": "TEACHER"
+      },
+      "draft": false,
+      "pinned": false
+    },
+    {
+      "dtype": "event.RAnnouncementEventPrimer",
+      "links": [
+        {
+          "id": 5000000101,
+          "rel": "self",
+          "type": "event.RAnnouncementEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/announcementeventprimer/5000000101"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RAnnouncementEventPrimer:READ:INSTANCE(5000000101)",
+          "type": "event.RAnnouncementEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(5000000101)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-22T11:25:58.012+02:00",
+      "createdAt": "2026-10-22T11:25:58.012+02:00",
+      "sortDate": "2026-10-22T11:25:58.012+02:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "realisationReason": "RECIPIENT",
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "liked": 4,
+        "read": 31,
+        "total": 45
+      },
+      "title": "Nieuwsbrief nr. 3",
+      "contents": "Beste ouders en verzorgers,\n\nIn de bijlage vindt u nieuwsbrief nr. 3 met de agenda tot de kerstvakantie.\n\nMet vriendelijke groet,\nLotte Bakker\nadministratie\n",
+      "likeable": true,
+      "attachments": [
+        {
+          "dtype": "attachment.RAnnouncementAttachment",
+          "links": [
+            {
+              "id": 6000000101,
+              "rel": "self",
+              "type": "attachment.RAnnouncementAttachment",
+              "href": "https://rest-v2.parro.com/rest/v2/announcementattachment/6000000101"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "attachment.RAnnouncementAttachment:READ:INSTANCE(6000000101)",
+              "type": "attachment.RAnnouncementAttachment",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(6000000101)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+          "attachmentType": "PDF",
+          "uploadId": "11111111-2222-4333-8444-555555555555",
+          "entries": [
+            {
+              "dtype": "attachment.RAttachmentDocumentEntry",
+              "links": [
+                {
+                  "id": 6000000102,
+                  "rel": "self",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "href": "https://rest-v2.parro.com/rest/v2/attachmentdocumententry/6000000102"
+                }
+              ],
+              "permissions": [
+                {
+                  "full": "attachment.RAttachmentDocumentEntry:READ:INSTANCE(6000000102)",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "operations": [
+                    "READ"
+                  ],
+                  "instances": [
+                    "INSTANCE(6000000102)"
+                  ]
+                }
+              ],
+              "additionalObjects": {},
+              "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+              "type": "SOURCE",
+              "url": "https://d111111abcdef8.cloudfront.net/application/00000000000000000000000165a0bc65/1-00000000000000000000000165a0bc65.pdf",
+              "size": 1500108,
+              "contentType": "application/pdf",
+              "filename": "Nieuwsbrief-3.pdf",
+              "expiresAt": "2027-10-01T10:00:00.000+02:00"
+            }
+          ],
+          "index": 0
+        }
+      ],
+      "owner": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000003,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000003"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000003)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000003)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Lotte",
+        "surname": "Bakker",
+        "role": "TEACHER"
+      },
+      "lastEditedBy": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000003,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000003"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000003)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000003)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Lotte",
+        "surname": "Bakker",
+        "role": "TEACHER"
+      },
+      "draft": false,
+      "pinned": false
+    }
+  ]
+}

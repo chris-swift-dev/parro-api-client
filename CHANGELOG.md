@@ -4,6 +4,54 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.2.0] - 2026-11-05
+
+Readable output: the CLI and the MCP server can show the data the way the Parro app does, and a
+small cache stops the same newsletter from being downloaded again and again.
+
+### Added
+- **Readable markdown** for every command: an announcement feed with author, groups and a preview,
+  an agenda grouped by day (all-day and multi-day items, RSVP), chat lists and conversations in
+  reading order, attachments, and more. Every id stays visible, with the next command to run.
+  - CLI: `--format auto|json|markdown` (also `PARRO_FORMAT`). `auto`, the default, prints markdown
+    at a terminal and JSON when the output is piped, so scripts keep getting JSON.
+  - MCP: every tool takes an optional `format` (`json` by default, or `markdown`).
+- `overview` command and `parro_overview` tool: unread counts, the latest announcements, what is
+  coming up, and chats with unread messages, like the app's home screen.
+- `calendar --details` (MCP: `details: true`) adds location, description and attachments.
+- `calendar --past` (MCP: `past: true`) lists earlier items, latest first.
+- `calendar-link` command and `parro_calendar_link` tool: Parro's own link to subscribe to the
+  agenda from Google, Apple or Outlook calendar (`GET /calendar/sync`, now in the spec and so in
+  Swagger UI). The link is a secret; it is never logged.
+- `calendar --ics FILE` exports calendar items as an iCalendar file (RFC 5545) to import into
+  another calendar app; stable UIDs, so a newer export updates the same events.
+- `--full` for `announcements` and `system-news`: whole texts instead of a 3-line preview.
+- A cache for attachment files, their text, and calendar details in `PARRO_DATA_DIR` (default
+  `~/.parro/data`), readable only by you and never holding download links. Lists are never cached.
+  `cache info`, `cache clear`, `--no-cache`, `PARRO_CACHE=off`, `PARRO_CACHE_MAX_MB`.
+
+### Changed
+- The CLI prints markdown when its output goes to a terminal. Use `--format json` or
+  `PARRO_FORMAT=json` to keep JSON there too; piped output is JSON as before.
+- An announcement or calendar item that reaches you through several groups is listed once.
+  Announcements then carry `groups` with every group's name; `from` keeps the first one.
+- JSON additions: `author` and `pinned` on announcements, `readCount` on a single announcement,
+  `chatroom_id` on chat messages. Nothing was removed or renamed.
+- Calendar details list attachments without their download link; `attachment <id>` fetches one.
+- `PARRO_CACHE_MAX_MB` counts 1 MB as 1,000,000 bytes, like the sizes shown.
+
+### Fixed
+- **The calendar now shows what is coming up.** The API lists calendar items with the furthest
+  future first, so the first page can hold only items months ahead. `calendar` and the overview now
+  read page by page until today and list upcoming items soonest first (JSON: `period: "upcoming"`).
+  Before, they sorted the first page, which missed the coming weeks (also in the original server).
+- **A multi-day calendar item is listed once.** The API returns one entry per day (each with its
+  own id and `dayNumber`); the agenda, the overview and the .ics export now merge them by calendar
+  item. The .ics UIDs are built from the calendar item, so they stay stable between exports.
+- Previews stop at 300 characters as well as 3 lines; long group lists are shortened ("+5 more").
+- Default paths (`~/.parro-mcp/tokens.json`, the data folder) follow `HOME` when it changes, instead
+  of being fixed when the program starts.
+
 ## [0.1.0] - 2026-11-04
 
 First public release of the client: a read-only Parro API client in Python (standard library only),
@@ -41,4 +89,5 @@ OpenAPI specification in this repository, inspired by
 - Attachment download links (unsigned CDN URLs) are never logged, and the Parro token is never sent
   to the CDN or to any host other than the configured API.
 
+[0.2.0]: https://github.com/chris-swift-dev/parro-api-client/releases/tag/v0.2.0
 [0.1.0]: https://github.com/chris-swift-dev/parro-api-client/releases/tag/v0.1.0

@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from .authenticator import Authenticator
+from .cache import Cache
 from .errors import ApiError, ConfigurationError, TokenRejected
 from .geon import (
     build_range_header,
@@ -85,6 +86,10 @@ class ParroClient:
         )
         self.authenticator = authenticator or Authenticator(
             settings, self.transport, self.token_store
+        )
+        # Attachments and calendar details only (PLAN-readable-output §3b); lists never.
+        self.cache = Cache(
+            settings.data_dir / "cache", settings.cache_max_bytes, enabled=settings.cache_enabled
         )
         self._account: dict[str, Any] | None = None
         self._role_header: str | None = None
@@ -242,6 +247,18 @@ class ParroClient:
     def list_system_news(self, limit: int = 20) -> ApiResponse:
         return self.get("/systemnews", limit=limit, count_total=True)
 
+    def get_calendar_link(self) -> str | None:
+        """GET /calendar/sync: the personal iCalendar subscription link, or None if there is none.
+
+        The link is a secret (anyone holding it can read the calendar), so it is never logged.
+        """
+        payload = self.get("/calendar/sync").payload
+        strings = payload.get("strings") if isinstance(payload, dict) else None
+        links = [
+            link for link in strings or [] if isinstance(link, str) and link.startswith("http")
+        ]
+        return links[0] if links else None
+
     def get_absence_settings(self) -> ApiResponse:
         return self.get("/absence/setting")
 
@@ -253,9 +270,26 @@ class ParroClient:
 
     # ---------------------------------------------------------------------------- events
 
-    def list_events(self, group_id: int, event_dtype: str, limit: int = 20) -> ApiResponse:
-        """GET /event for one group. `event_dtype` picks announcements or calendar items."""
-        return self.get("/event", {"dtype": event_dtype, "group": int(group_id)}, limit=limit)
+    def list_events(
+        self,
+        group_id: int,
+        event_dtype: str,
+        limit: int = 20,
+        offset: int = 0,
+        count_total: bool = False,
+    ) -> ApiResponse:
+        """GET /event for one group. `event_dtype` picks announcements or calendar items.
+
+        Both come newest first. For calendar items that means the furthest future first: the
+        coming weeks can be several pages in (see operations.collect_calendar).
+        """
+        return self.get(
+            "/event",
+            {"dtype": event_dtype, "group": int(group_id)},
+            limit=limit,
+            offset=offset,
+            count_total=count_total,
+        )
 
     def get_event(self, event_id: int, event_dtype: str) -> dict[str, Any]:
         """GET /event/{id}. The dtype is required: without it the API answers 406."""
@@ -300,19 +334,24 @@ class ParroClient:
         return names
 
     def collect_feed(
-        self, event_dtype: str, group_id: int | None = None, limit_per_group: int = 20
+        self,
+        event_dtype: str,
+        group_id: int | None = None,
+        limit_per_group: int = 20,
+        groups: dict[int, str | None] | None = None,
     ) -> list[FeedEvent]:
         """Events of one group, or of every current group (the spec: query each group separately).
 
         Events carry the group's name only when several groups were merged. Not sorted: the caller
-        decides the order.
+        decides the order. `groups` ({id: name}) saves the group request when the caller already
+        has them, e.g. the overview, which reads two feeds.
         """
         if group_id is not None:
-            groups: dict[int, str | None] = {int(group_id): None}
+            chosen: dict[int, str | None] = {int(group_id): None}
         else:
-            groups = self.list_current_group_names()
+            chosen = groups if groups is not None else self.list_current_group_names()
         collected: list[FeedEvent] = []
-        for one_group_id, group_name in groups.items():
+        for one_group_id, group_name in chosen.items():
             page = self.list_events(one_group_id, event_dtype, limit=limit_per_group)
             collected.extend(FeedEvent(event, group_name) for event in page.items)
         return collected

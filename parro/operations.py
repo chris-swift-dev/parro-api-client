@@ -9,10 +9,11 @@ MCP tool always give identical output.
 
 import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 from . import attachments, summaries
-from .api_client import ANNOUNCEMENT_LIST_DTYPE, CALENDAR_LIST_DTYPE, ParroClient
+from .api_client import ANNOUNCEMENT_LIST_DTYPE, CALENDAR_LIST_DTYPE, FeedEvent, ParroClient
 from .errors import AttachmentError, ConfigurationError, ParroError
 from .settings import LoginMethod
 
@@ -158,17 +159,154 @@ def show_announcement(client: ParroClient, announcement_id: int | None, raw: boo
     return event if raw else summaries.summarize_announcement_detail(event)
 
 
+CALENDAR_PAGE_SIZE = 50
+# A school year has a few hundred items at most; this many pages per group is a safe ceiling.
+CALENDAR_MAX_PAGES = 20
+
+
+def current_time() -> datetime:
+    """Now, as an aware datetime. One place, so tests can fix the date."""
+    return datetime.now(timezone.utc)
+
+
 def list_calendar(
     client: ParroClient,
     group_id: int | None = None,
     limit: int = 20,
     event_dtype: str | None = None,
     raw: bool = False,
+    details: bool = False,
+    past: bool = False,
 ) -> Any:
-    feed = client.collect_feed(event_dtype or CALENDAR_LIST_DTYPE, group_id, limit_per_group=limit)
+    """Calendar items from today on, soonest first; with `past`, earlier items, latest first.
+
+    `details` adds location, description and attachments per shown item: one extra request each
+    (cached), because the list does not include them (spec).
+    """
+    now = current_time()
+    groups = None if group_id is not None else client.list_current_group_names()
+    feed = collect_calendar(client, event_dtype, group_id, groups, now, past, limit)
     if raw:
         return [item.event for item in feed]
-    return summaries.summarize_calendar_feed(feed, limit)
+    agenda = choose_period(summaries.summarize_calendar_feed(feed, len(feed)), now, past, limit)
+    if details:
+        for item in agenda["items"]:
+            item["details"] = calendar_details(client, item)
+    return agenda
+
+
+def collect_calendar(
+    client: ParroClient,
+    event_dtype: str | None,
+    group_id: int | None,
+    groups: dict[int, str | None] | None,
+    now: datetime,
+    past: bool,
+    wanted: int,
+) -> list[FeedEvent]:
+    """Calendar items of one group or of every current group, read far enough to reach today.
+
+    The API lists calendar items furthest future first (seen live: the whole-school group's first
+    50 of 100 items were 6-9 months ahead). So pages are read until an item lies before today;
+    for past items, until `wanted` of them are in.
+    """
+    chosen = {int(group_id): None} if group_id is not None else dict(groups or {})
+    collected: list[FeedEvent] = []
+    for one_group_id, group_name in chosen.items():
+        offset, past_items = 0, 0
+        for _page_number in range(CALENDAR_MAX_PAGES):
+            page = client.list_events(
+                one_group_id,
+                event_dtype or CALENDAR_LIST_DTYPE,
+                limit=CALENDAR_PAGE_SIZE,
+                offset=offset,
+                count_total=True,
+            )
+            collected.extend(FeedEvent(event, group_name) for event in page.items)
+            offset += len(page.items)
+            past_items += sum(summaries.is_over(event, now) for event in page.items)
+            reached = past_items >= wanted if past else past_items > 0
+            if reached or not page.items or (page.total is not None and offset >= page.total):
+                break
+    return collected
+
+
+def choose_period(agenda: dict[str, Any], now: datetime, past: bool, limit: int) -> dict[str, Any]:
+    """Upcoming items soonest first, or past items latest first; `period` says which."""
+    if past:
+        items = [item for item in agenda["items"] if summaries.is_over(item, now)][::-1]
+    else:
+        items = [item for item in agenda["items"] if not summaries.is_over(item, now)]
+    shown = items[:limit]
+    return {"count": len(shown), "period": "past" if past else "upcoming", "items": shown}
+
+
+def calendar_details(client: ParroClient, item: dict[str, Any]) -> dict[str, Any]:
+    """Details of one calendar item: from the cache while the list shows the same version."""
+    event_id = require_id(item.get("id"), "calendar item id")
+    version = (
+        f"{item.get('lastModifiedAt')}|{(item.get('calendarItem') or {}).get('lastModifiedAt')}"
+    )
+    cached = client.cache.get_json("events", f"{event_id}.json")
+    if isinstance(cached, dict) and cached.get("version") == version:
+        return dict(cached.get("details") or {})
+    details = summaries.summarize_calendar_details(client.get_calendar_item(event_id))
+    client.cache.put_json("events", f"{event_id}.json", {"version": version, "details": details})
+    return details
+
+
+# ------------------------------------------------------------------------ calendar link
+
+CALENDAR_LINK_WARNING = (
+    "This link is personal and works without logging in: anyone who has it can read your Parro "
+    "calendar. Paste it only into your own calendar app; do not share or publish it."
+)
+
+
+def calendar_link(client: ParroClient) -> dict[str, Any]:
+    """Parro's own agenda subscription link (GET /calendar/sync), with how to use it."""
+    link = client.get_calendar_link()
+    if link is None:
+        raise ParroError(
+            "Parro returned no calendar link. Agenda sync may not be part of your school's Parro "
+            "plan (ParnasSys lists it for the paid Parro Ouderapp). `calendar --ics FILE` exports "
+            "the agenda to a file instead."
+        )
+    return {
+        "calendar_link": link,
+        "warning": CALENDAR_LINK_WARNING,
+        "how_to_use": [
+            "Google Calendar: Other calendars → + → From URL, paste the link (updates daily).",
+            "Apple Calendar: File → New Calendar Subscription, paste the link.",
+            "Outlook: Add calendar → Subscribe from web, paste the link.",
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------- overview
+
+OVERVIEW_ITEMS = 5
+
+
+def show_overview(
+    client: ParroClient, now: datetime | None = None, limit: int = OVERVIEW_ITEMS
+) -> dict[str, Any]:
+    """The app's home screen: unread counts, latest announcements, what is coming up, and chats
+    with unread messages. `now` decides what "coming up" means (tests pass a fixed time)."""
+    moment = now or current_time()
+    groups = client.list_current_group_names()
+    feed = client.collect_feed(ANNOUNCEMENT_LIST_DTYPE, limit_per_group=limit, groups=groups)
+    calendar = collect_calendar(client, None, None, groups, moment, False, limit)
+    agenda = summaries.summarize_calendar_feed(calendar, limit=len(calendar))
+    upcoming = choose_period(agenda, moment, past=False, limit=limit)["items"]
+    rooms = summaries.summarize_chatrooms(client.list_chatrooms())
+    unread_rooms = [room for room in rooms["chatrooms"] if room.get("unreadCount")]
+    return {
+        "unread": summaries.summarize_unread_counts(client.get_unread_counts()),
+        "announcements": summaries.summarize_announcement_feed(feed, limit),
+        "calendar": {"count": len(upcoming), "items": upcoming},
+        "chats": {"total": len(unread_rooms), "chatrooms": unread_rooms},
+    }
 
 
 # ------------------------------------------------------------------------------ chats
@@ -182,8 +320,11 @@ def list_chatrooms(client: ParroClient, limit: int = 25, raw: bool = False) -> A
 def list_chat_messages(
     client: ParroClient, chatroom_id: int | None, limit: int = 30, raw: bool = False
 ) -> Any:
-    response = client.list_chat_messages(require_id(chatroom_id, "chatroom id"), limit=limit)
-    return response.payload if raw else summaries.summarize_chat_messages(response)
+    room_id = require_id(chatroom_id, "chatroom id")
+    response = client.list_chat_messages(room_id, limit=limit)
+    if raw:
+        return response.payload
+    return {"chatroom_id": room_id, **summaries.summarize_chat_messages(response)}
 
 
 # ------------------------------------------------------------------------- attachments
@@ -269,6 +410,7 @@ def read_one_attachment(
             described.content_type,
             described.size,
             options,
+            cache_key=described.cache_key(),
         )
     except ParroError as problem:
         failed = {
@@ -280,6 +422,26 @@ def read_one_attachment(
     return attachments.AttachmentReading(
         {**reading.summary, "attachment_id": described.attachment_id}, reading.image
     )
+
+
+# ------------------------------------------------------------------------------- cache
+
+
+def cache_info(client: ParroClient) -> dict[str, Any]:
+    """Where the cache is, whether it is on, and how full it is."""
+    info = client.cache.info()
+    return {
+        "directory": info.directory,
+        "enabled": info.enabled,
+        "files": info.files,
+        "bytes": info.bytes,
+        "max_bytes": info.max_bytes,
+        "holds": "attachment files and their text; calendar-item details. Never lists.",
+    }
+
+
+def cache_clear(client: ParroClient) -> dict[str, Any]:
+    return {"directory": str(client.cache.directory), "removed_files": client.cache.clear()}
 
 
 # --------------------------------------------------------------------------- anything

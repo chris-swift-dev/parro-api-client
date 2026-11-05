@@ -12,10 +12,14 @@ Nothing else changes: still standard library only (plus the optional `pymupdf` /
 `requirements.txt`), same entry point, same environment variables. New and optional:
 `PARRO_LOGIN_METHOD` (`login-form` is the default; see README → Login methods).
 
+Since 0.2.0 the server keeps a cache of attachments and calendar details (README → Local data).
+Point it at the volume, so it survives a rebuild and stays out of the image:
+`PARRO_DATA_DIR=/data/parro`. Or switch it off with `PARRO_CACHE=off`.
+
 Check after a rebuild:
 
 ```bash
-docker exec <container> /opt/venv/bin/python /app/parro_mcp.py tools   # lists 16 tools
+docker exec <container> /opt/venv/bin/python /app/parro_mcp.py tools   # lists 18 tools
 ```
 
 ## Logging in to Parro itself
