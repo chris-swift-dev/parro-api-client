@@ -128,6 +128,18 @@ def test_calendar_details_summary():
     assert details["location"] == "Natuurmuseum Voorbeeldstad"
     assert details["description"].startswith("We vertrekken")
     assert details["attachments"][0]["filename"] == "Route.jpg"
+    assert details["helpers"] == [
+        {"title": "Rijden naar het museum", "wanted": 2, "signed_up": 1, "you_signed_up": False}
+    ]
+
+
+def test_helpers_from_the_calendar_item_endpoint_and_items_without_them():
+    item = load_sample("getCalendarItem.200.json")  # GET /calendaritem/{id}: the bare item
+    assert summaries.wants_helpers(item)
+    assert summaries.summarize_helpers(item)[0]["wanted"] == 2
+    christmas = load_sample("getEvent_calendar-7000000102.200.json")
+    assert "helpers" not in summaries.summarize_calendar_details(christmas)
+    assert not summaries.wants_helpers(christmas["calendarItem"])
 
 
 def test_chat_summaries():

@@ -454,3 +454,43 @@ def test_a_multi_day_item_is_listed_once_not_once_per_day(environment):
     markdown = rendering.render("calendar", agenda)
     assert markdown.count("Kerstvakantie") == 1
     assert "all day, 10 days until Fri 13 Nov 2026  Projectweken" in markdown
+
+
+# ------------------------------------------------------------------------- helper slots
+
+
+def volunteer_item(*slots: dict[str, Any]) -> dict[str, Any]:
+    item: dict[str, Any] = {"id": 7000000301, "calendarItem": {"type": "VOLUNTEER"}}
+    if slots:
+        item["details"] = {"helpers": list(slots)}
+    return item
+
+
+@pytest.mark.parametrize(
+    ("slots", "status"),
+    [
+        ((), "helpers wanted"),  # the list only says the item asks for helpers
+        (
+            ({"title": "Rijden", "wanted": 2, "signed_up": 1, "you_signed_up": False},),
+            "helpers wanted",
+        ),
+        (
+            ({"title": "Rijden", "wanted": 2, "signed_up": 2, "you_signed_up": False},),
+            "helpers: full",
+        ),
+        (
+            ({"title": "Rijden", "wanted": 2, "signed_up": 2, "you_signed_up": True},),
+            "you signed up to help",
+        ),
+        (({"title": "Rijden", "signed_up": 3, "you_signed_up": False},), "helpers wanted"),
+    ],
+)
+def test_helper_status(slots, status):
+    assert rendering.helper_status(volunteer_item(*slots)) == status
+
+
+def test_no_helper_marker_for_ordinary_items_and_slot_wording():
+    assert rendering.helper_status({"calendarItem": {"type": "ACTIVITY"}}) == ""
+    you = {"title": "Rijden", "wanted": 2, "signed_up": 2, "you_signed_up": True}
+    assert rendering.helper_slot_text(you) == "Rijden: 2 of 2 signed up, including you"
+    assert rendering.helper_slot_text({"signed_up": 0}) == "Helpers: 0 signed up"

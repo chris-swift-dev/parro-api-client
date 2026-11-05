@@ -138,6 +138,10 @@ def test_ics_to_standard_output_follows_the_standard(environment, capsys):
     assert museum["DTSTART;VALUE=DATE"] == "20261112"
     assert museum["DTEND;VALUE=DATE"] == "20261113", "all day: DTEND is the next day"
     assert "Reply needed in Parro." in museum["DESCRIPTION"]
+    assert (
+        "Helpers wanted\\, sign up in Parro.\\nRijden naar het museum: 1 of 2 signed up."
+        in museum["DESCRIPTION"]
+    ), "RFC 5545 escapes the comma and the line break"
     assert museum["LOCATION"] == "Natuurmuseum Voorbeeldstad"
 
     christmas = by_title["Kerstvakantie"]  # 5 per-day entries in the API: one event here

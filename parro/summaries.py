@@ -283,7 +283,8 @@ def is_over(item: dict[str, Any], now: datetime) -> bool:
 
 
 def summarize_calendar_details(event: dict[str, Any]) -> dict[str, Any]:
-    """What the calendar list leaves out: location, description, attachments (spec: getEvent).
+    """What the calendar list leaves out: location, description, helper slots and attachments
+    (spec: getEvent).
 
     Attachments are listed without their download `url`: these details may be cached, and links
     are never cached. `attachment <event id>` fetches a fresh link when one is needed.
@@ -294,9 +295,41 @@ def summarize_calendar_details(event: dict[str, Any]) -> dict[str, Any]:
         {
             "location": item.get("location") or None,
             "description": item.get("description") or None,
+            "helpers": summarize_helpers(item) or None,
             "attachments": attachments or None,
         }
     )
+
+
+VOLUNTEER_TYPE = "VOLUNTEER"
+
+
+def summarize_helpers(calendar_item: dict[str, Any]) -> list[dict[str, Any]]:
+    """The helper slots of a calendar item that asks for volunteers (spec: getCalendarItem).
+
+    Each slot: its title, how many helpers are wanted, how many signed up, and whether you did.
+    The API spells the last one `commitedByMe`.
+    """
+    slots = []
+    for resource in calendar_item.get("resources") or []:
+        if not isinstance(resource, dict):
+            continue
+        slots.append(
+            drop_missing(
+                {
+                    "title": str(resource.get("title") or "").strip() or None,
+                    "wanted": resource.get("amount"),
+                    "signed_up": resource.get("amountCommitted"),
+                    "you_signed_up": bool(resource.get("commitedByMe")),
+                }
+            )
+        )
+    return slots
+
+
+def wants_helpers(calendar_item: dict[str, Any]) -> bool:
+    """True for a calendar item that asks parents to help (the list shows only its type)."""
+    return calendar_item.get("type") == VOLUNTEER_TYPE or bool(calendar_item.get("resources"))
 
 
 def without_url(attachment: dict[str, Any]) -> dict[str, Any]:
