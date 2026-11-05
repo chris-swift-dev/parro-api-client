@@ -282,9 +282,11 @@ def test_calendar_details_cost_one_request_per_item(environment, capsys):
     agenda = json.loads(capsys.readouterr().out)
     extra = api.api_requests()[requests_without_details:]
     detail_calls = [r for r in extra if "/event/" in r.url]
-    assert len(detail_calls) == agenda["count"] == 6
-    assert agenda["items"][1]["details"]["location"] == "Natuurmuseum Voorbeeldstad"
-    assert agenda["items"][3]["details"] == {}, "a holiday has no details"
+    assert len(detail_calls) == agenda["count"] == 7
+    museum_trip = next(item for item in agenda["items"] if item["id"] == fakes.MUSEUM_TRIP_ID)
+    assert museum_trip["details"]["location"] == "Natuurmuseum Voorbeeldstad"
+    christmas = next(i for i in agenda["items"] if i["calendarItem"]["title"] == "Kerstvakantie")
+    assert christmas["details"] == {}, "a holiday has no details"
 
 
 def test_conversation_is_in_reading_order_whatever_the_api_order():
@@ -370,8 +372,8 @@ def test_overview_view(environment):
 @pytest.mark.parametrize(
     ("today", "first_upcoming", "count"),
     [
-        ("2026-11-05", 7000000101, 5),  # six items ahead; the overview shows five
-        ("2026-11-12", 7000000301, 5),  # Sint-Maarten (11 Nov) is over, the trip is today
+        ("2026-11-05", 7000000202, 5),  # the project fortnight (2-13 Nov) is running
+        ("2026-11-12", 7000000202, 5),  # Sint-Maarten (11 Nov) is over, the projects are not
         ("2026-12-24", 7000000102, 3),  # the 5-day holiday is still running
         ("2026-12-26", 7000000104, 2),  # only 2027 left
         ("2027-09-01", None, 0),
@@ -413,18 +415,21 @@ def test_calendar_pages_until_today_because_the_api_starts_far_ahead(environment
 
     agenda = operations.list_calendar(client)
 
-    # Whole school: [Jul 2027, Feb 2027] → [Dec, 11 Nov] → [31 Aug: past, stop].
-    assert calendar_requests(api, fakes.SCHOOLWIDE_GROUP) == ["items=0-1", "items=2-3", "items=4-5"]
+    # Whole school, 13 entries (two 5-day holidays listed per day), furthest future first:
+    # pages are read until the one with 31 Aug, the first past item.
+    requests = calendar_requests(api, fakes.SCHOOLWIDE_GROUP)
+    assert requests == [f"items={start}-{start + 1}" for start in range(0, 13, 2)]
     # Group 6: [12 Nov, 7 Oct: past] on the first page already.
     assert calendar_requests(api, fakes.GROUP_6) == ["items=0-1"]
     assert agenda["period"] == "upcoming"
-    assert [item["id"] for item in agenda["items"]][:2] == [7000000101, 7000000301]
+    assert [item["id"] for item in agenda["items"]][:3] == [7000000202, 7000000101, 7000000301]
 
 
 def test_overview_finds_the_coming_weeks_behind_far_future_pages(environment, monkeypatch):
     monkeypatch.setattr(operations, "CALENDAR_PAGE_SIZE", 2)
     result, _ = overview()
-    assert result["calendar"]["items"][0]["id"] == 7000000101, "Sint-Maarten, on page 2"
+    titles = [item["calendarItem"]["title"] for item in result["calendar"]["items"]]
+    assert "Sint-Maartenviering" in titles, "on page 6 of the whole-school group"
 
 
 def test_past_calendar_items_latest_first(environment):
@@ -434,3 +439,18 @@ def test_past_calendar_items_latest_first(environment):
     past = operations.list_calendar(client, past=True)
     assert past["period"] == "past"
     assert [item["id"] for item in past["items"]] == [7000000302, 7000000103]
+
+
+def test_a_multi_day_item_is_listed_once_not_once_per_day(environment):
+    """Live finding 2026-11-05: one 40-day item came back as 40 entries (one per day)."""
+    api = fakes.FakeParroApi(load_sample)
+    client = ParroClient(Settings(role_override="GUARDIAN:1"), transport=api)
+    client.token_store.save_token_response({"access_token": fakes.ACCESS_TOKEN})
+    agenda = operations.list_calendar(client, limit=50)
+    titles = [item["calendarItem"]["title"] for item in agenda["items"]]
+    assert len(titles) == len(set(titles)) == agenda["count"] == 7
+    christmas = next(i for i in agenda["items"] if i["calendarItem"]["title"] == "Kerstvakantie")
+    assert christmas["id"] == 7000000102 and christmas["dayNumber"] == 1, "the first day is kept"
+    markdown = rendering.render("calendar", agenda)
+    assert markdown.count("Kerstvakantie") == 1
+    assert "all day, 10 days until Fri 13 Nov 2026  Projectweken" in markdown

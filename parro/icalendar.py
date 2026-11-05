@@ -4,8 +4,8 @@ Input: the agenda that operations.list_calendar() returns (with `--details`, loc
 description are included). Output: one VCALENDAR text with one VEVENT per item.
 
 Choices, and why:
-  * Each event's UID is built from its Parro id, so importing a newer export updates events
-    instead of adding duplicates.
+  * Each event's UID is built from its Parro calendar item id, so importing a newer export
+    updates events instead of adding duplicates.
   * Timed events are written in UTC ("…Z"): unambiguous without VTIMEZONE blocks.
   * All-day events use dates; DTEND is the day *after* the last day (RFC 5545 §3.6.1).
   * Text is escaped and long lines are folded at 75 octets, never inside a UTF-8 character.
@@ -50,7 +50,7 @@ def event_lines(item: dict[str, Any], stamp: str) -> list[str]:
         return []
     lines = [
         "BEGIN:VEVENT",
-        f"UID:parro-event-{item.get('id')}@{UID_DOMAIN}",
+        f"UID:{event_uid(item)}",
         f"DTSTAMP:{stamp}",
         *time_lines(item, start),
         f"SUMMARY:{escape(str(calendar_item.get('title') or 'Parro').strip())}",
@@ -66,6 +66,18 @@ def event_lines(item: dict[str, Any], stamp: str) -> list[str]:
         lines.append("STATUS:CANCELLED")
     lines.append("END:VEVENT")
     return lines
+
+
+def event_uid(item: dict[str, Any]) -> str:
+    """A UID that stays the same in every export, so re-importing updates instead of duplicating.
+
+    Built from the calendar item's id: a multi-day item has one event id *per day* (and which
+    day comes first in a list depends on the date), but a single calendar item id.
+    """
+    calendar_item_id = (item.get("calendarItem") or {}).get("id")
+    if calendar_item_id is not None:
+        return f"parro-calendaritem-{calendar_item_id}@{UID_DOMAIN}"
+    return f"parro-event-{item.get('id')}@{UID_DOMAIN}"
 
 
 def time_lines(item: dict[str, Any], start: datetime) -> list[str]:

@@ -246,11 +246,28 @@ def summarize_calendar_feed(feed: list[FeedEvent], limit: int) -> dict[str, Any]
     group it was found through first.
     """
     ordered = sorted(feed, key=lambda item: item.event.get("sortDate") or "")
+    entries = one_per_calendar_item([item for item, _names in merge_duplicates(ordered)])
     shown = [
-        {**strip_geon_metadata(item.event), "group": item.group_name}
-        for item, _names in merge_duplicates(ordered)[:limit]
+        {**strip_geon_metadata(item.event), "group": item.group_name} for item in entries[:limit]
     ]
     return {"count": len(shown), "items": shown}
+
+
+def one_per_calendar_item(entries: list[FeedEvent]) -> list[FeedEvent]:
+    """Keep one entry per calendar item: the API lists a multi-day item once per day.
+
+    Each day has its own event id and `dayNumber`, but all share the `calendarItem` (seen live
+    2026-11-05: one 40-day item gave 40 entries). The first entry (the earliest day, as the
+    list is sorted) is kept; its calendarItem's start, end and dayDates describe the whole span.
+    """
+    kept: list[FeedEvent] = []
+    seen: set[Any] = set()
+    for entry in entries:
+        key = get_object_id(entry.event.get("calendarItem")) or get_object_id(entry.event)
+        if key is None or key not in seen:
+            kept.append(entry)
+            seen.add(key)
+    return kept
 
 
 def is_over(item: dict[str, Any], now: datetime) -> bool:

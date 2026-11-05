@@ -122,10 +122,11 @@ def test_ics_to_standard_output_follows_the_standard(environment, capsys):
     raw_lines = out.split("\r\n")[:-1]
     assert all(len(line.encode("utf-8")) <= 75 for line in raw_lines), "folded at 75 octets"
     assert "\n" not in out.replace("\r\n", ""), "only CRLF line endings"
-    by_id = {e["UID"].split("@")[0].removeprefix("parro-event-"): e for e in events(out)}
-    assert len(by_id) == 6, "the six upcoming items"
+    by_title = {e["SUMMARY"]: e for e in events(out)}
+    assert len(events(out)) == len(by_title) == 7, "the seven upcoming items, each once"
 
-    st_martin = by_id["7000000101"]
+    st_martin = by_title["Sint-Maartenviering"]
+    assert st_martin["UID"] == "parro-calendaritem-7000000151@parro-api-client"
     assert st_martin["DTSTART"] == "20261111T163000Z", "17:30 +01:00 in UTC"
     assert st_martin["DTEND"] == "20261111T180000Z"
     assert st_martin["LOCATION"] == "Schoolplein"
@@ -133,25 +134,26 @@ def test_ics_to_standard_output_follows_the_standard(environment, capsys):
     assert st_martin["CATEGORIES"] == "Basisschool De Linde"
     assert st_martin["DTSTAMP"] == "20261105T110000Z", "the (frozen) export time, in UTC"
 
-    museum = by_id["7000000301"]
+    museum = by_title["Excursie Natuurmuseum"]
     assert museum["DTSTART;VALUE=DATE"] == "20261112"
     assert museum["DTEND;VALUE=DATE"] == "20261113", "all day: DTEND is the next day"
     assert "Reply needed in Parro." in museum["DESCRIPTION"]
     assert museum["LOCATION"] == "Natuurmuseum Voorbeeldstad"
 
-    christmas = by_id["7000000102"]
-    assert (christmas["DTSTART;VALUE=DATE"], christmas["DTEND;VALUE=DATE"]) == (
-        "20261221",
-        "20261226",
-    )
+    christmas = by_title["Kerstvakantie"]  # 5 per-day entries in the API: one event here
+    assert christmas["DTSTART;VALUE=DATE"] == "20261221"
+    assert christmas["DTEND;VALUE=DATE"] == "20261226"
+    projects = by_title["Projectweken: de ruimte"]  # half over on "today", still listed
+    assert projects["DTSTART;VALUE=DATE"] == "20261102"
+    assert projects["DTEND;VALUE=DATE"] == "20261114"
 
 
 def test_ics_file_is_private_and_the_cli_reports_it(environment, capsys):
     target = environment / "export" / "parro.ics"
     exit_code, out, _ = run(capsys, "calendar", "--ics", str(target), "--format", "json")
     report = json.loads(out)
-    assert exit_code == 0 and report == {"ics_file": str(target), "events": 6, "period": "upcoming"}
-    assert len(events(target.read_bytes().decode("utf-8"))) == 6  # bytes: keep the CRLFs
+    assert exit_code == 0 and report == {"ics_file": str(target), "events": 7, "period": "upcoming"}
+    assert len(events(target.read_bytes().decode("utf-8"))) == 7  # bytes: keep the CRLFs
     if os.name == "posix":
         assert stat.S_IMODE(target.stat().st_mode) == 0o600
     _, markdown, _ = run(capsys, "calendar", "--ics", str(target), "--format", "markdown")

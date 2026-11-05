@@ -13,6 +13,7 @@ The files are committed. After changing this script, run it and commit the resul
 File names follow the samples/ convention: <operationId>[_<variant>].<status>.json
 """
 
+import copy
 import json
 from pathlib import Path
 from typing import Any
@@ -571,11 +572,52 @@ def furthest_future_first(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(items, key=lambda item: item["sortDate"], reverse=True)
 
 
+def one_entry_per_day(event: dict[str, Any]) -> list[dict[str, Any]]:
+    """How the real API lists a multi-day item (seen live 2026-11-05): one entry per day, each
+    with its own event id, `dayNumber` and `sortDate`, all sharing one `calendarItem`.
+
+    Day 1 keeps the item's own event id; later days get <event id><day number>.
+    """
+    days = event["calendarItem"]["dayDates"]
+    entries = []
+    for number, day in enumerate(days, start=1):
+        entry = copy.deepcopy(event)
+        event_id = (
+            event["links"][0]["id"] if number == 1 else event["links"][0]["id"] * 100 + number
+        )
+        entry["links"][0]["id"] = event_id
+        entry["links"][0]["href"] = entry["links"][0]["href"].rsplit("/", 1)[0] + f"/{event_id}"
+        entry["permissions"][0]["full"] = f"{event['dtype']}:READ:INSTANCE({event_id})"
+        entry["permissions"][0]["instances"] = [f"INSTANCE({event_id})"]
+        entry["dayNumber"] = number
+        entry["sortDate"] = day
+        entries.append(entry)
+    return entries
+
+
+# A project fortnight that is half over on the tests' "today" (5 Nov 2026).
+PROJECT_WEEKS = calendar_item(
+    7000000202,
+    "Projectweken: de ruimte",
+    "2026-11-02T00:00:00+01:00",
+    "2026-11-13T00:00:00+01:00",
+    "ACTIVITY",
+    False,
+    [group_primer(GROUP_3)],
+    [f"2026-11-{day:02d}T00:00:00+01:00" for day in (2, 3, 4, 5, 6, 9, 10, 11, 12, 13)],
+)
+
 CALENDAR_BY_GROUP = {
     SCHOOLWIDE_GROUP: furthest_future_first(
-        [SCHOOL_START, ST_MARTIN, CHRISTMAS, STUDY_DAY_2027, SUMMER_2027]
+        [
+            SCHOOL_START,
+            ST_MARTIN,
+            *one_entry_per_day(CHRISTMAS),
+            STUDY_DAY_2027,
+            *one_entry_per_day(SUMMER_2027),
+        ]
     ),
-    GROUP_3: furthest_future_first([PARENT_EVENINGS]),
+    GROUP_3: furthest_future_first([PARENT_EVENINGS, *one_entry_per_day(PROJECT_WEEKS)]),
     GROUP_6: furthest_future_first([LIBRARY_VISIT, MUSEUM_TRIP]),
 }
 
@@ -890,7 +932,7 @@ def files() -> dict[str, Any]:
         "getEvent_calendar-7000000201.200.json": PARENT_EVENINGS_DETAIL,
         **{
             f"getEvent_calendar-{event['links'][0]['id']}.200.json": details_without_extras(event)
-            for event in (SCHOOL_START, LIBRARY_VISIT, STUDY_DAY_2027, SUMMER_2027)
+            for event in (SCHOOL_START, LIBRARY_VISIT, STUDY_DAY_2027, SUMMER_2027, PROJECT_WEEKS)
         },
         "getEvent.406.json": {
             "code": 406,

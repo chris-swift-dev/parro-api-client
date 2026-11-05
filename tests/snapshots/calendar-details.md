@@ -1,4 +1,7 @@
-# Agenda (6)
+# Agenda (7)
+
+## Mon 2 Nov 2026
+- all day, 10 days until Fri 13 Nov 2026  Projectweken: de ruimte · Groep 3 - juf Eva · #7000000202
 
 ## Wed 11 Nov 2026
 - 17:30-19:00  Sint-Maartenviering · Basisschool De Linde · #7000000101

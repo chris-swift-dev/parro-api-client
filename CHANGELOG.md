@@ -45,6 +45,9 @@ small cache stops the same newsletter from being downloaded again and again.
   future first, so the first page can hold only items months ahead. `calendar` and the overview now
   read page by page until today and list upcoming items soonest first (JSON: `period: "upcoming"`).
   Before, they sorted the first page, which missed the coming weeks (also in the original server).
+- **A multi-day calendar item is listed once.** The API returns one entry per day (each with its
+  own id and `dayNumber`); the agenda, the overview and the .ics export now merge them by calendar
+  item. The .ics UIDs are built from the calendar item, so they stay stable between exports.
 - Previews stop at 300 characters as well as 3 lines; long group lists are shortened ("+5 more").
 - Default paths (`~/.parro-mcp/tokens.json`, the data folder) follow `HOME` when it changes, instead
   of being fixed when the program starts.

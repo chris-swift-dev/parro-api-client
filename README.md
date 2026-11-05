@@ -370,6 +370,8 @@ Readable output, the cache and the overview against the real API, with one passw
 | Order of chat messages | Newest first (the newest 30 of 89); the conversation view shows them in reading order |
 | Order of calendar items | **Furthest future first**: a group's first 50 of 100 items were 6-9 months ahead. Fixed: the client now pages to today (the overview had missed near-term whole-school events) |
 | Newsletter PDF read twice | Second read from the cache, same text; folders 0700, files 0600, no links stored |
+| `calendar-link` | Returns the subscription link; it answers `200 text/calendar` without login, refreshes hourly, works without `noCache`, and its token is stable |
+| Multi-day calendar items | The API lists them **once per day** (one 40-day item: 40 entries). Fixed: merged by calendar item; afterwards our agenda, our `.ics` and Parro's own feed agree on all 44 upcoming items (title and start day) |
 
 ## Note on the HAR
 
