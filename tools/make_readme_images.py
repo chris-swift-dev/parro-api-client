@@ -8,9 +8,14 @@ tests/test_readme_images.py fails when a picture no longer matches its snapshot.
 
 Every picture comes in a light and a dark variant; the README picks one with <picture>.
 
+--swagger also takes the two Swagger UI screenshots (docs/images/swagger-*.png), see
+swagger_screenshots.py. That needs Firefox and the network, so it is not part of --check or the
+tests: run it by hand after a change to the spec, and look at the result.
+
 Standard library only.  Usage:
     python3 tools/make_readme_images.py           # (re)write docs/images/terminal-*.svg
     python3 tools/make_readme_images.py --check   # exit 1 when a picture is out of date
+    python3 tools/make_readme_images.py --swagger # also the Swagger UI screenshots
 """
 
 import argparse
@@ -208,7 +213,13 @@ def all_images() -> dict[Path, str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="only report outdated pictures")
+    parser.add_argument("--swagger", action="store_true", help="also take the Swagger screenshots")
     args = parser.parse_args(argv)
+    if args.swagger and not args.check:
+        from swagger_screenshots import take_screenshots  # noqa: PLC0415 (needs Firefox)
+
+        for path in take_screenshots(IMAGES):
+            print(f"{path.relative_to(ROOT)}: written ({path.stat().st_size // 1024} KB)")
     outdated = []
     for path, svg in all_images().items():
         current = path.read_text(encoding="utf-8") if path.exists() else None
