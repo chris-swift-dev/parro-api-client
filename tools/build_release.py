@@ -43,6 +43,9 @@ INCLUDED_FILES = [
     "LICENSE-CODE",
     "requirements.txt",
     "docs/CODE-TOUR.md",
+    "docs/LOGIN.md",
+    "docs/CONFIGURATION.md",
+    "docs/API-NOTES.md",
     "openapi/parro.public.openapi.json",
 ]
 INCLUDED_PACKAGE = "parro"
