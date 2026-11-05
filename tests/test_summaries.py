@@ -140,6 +140,9 @@ def test_helpers_from_the_calendar_item_endpoint_and_items_without_them():
     christmas = load_sample("getEvent_calendar-7000000102.200.json")
     assert "helpers" not in summaries.summarize_calendar_details(christmas)
     assert not summaries.wants_helpers(christmas["calendarItem"])
+    # Seen live (2026-11-05): school-wide helper requests have their own type.
+    assert summaries.wants_helpers({"type": "SCHOOLWIDE_VOLUNTEER"})
+    assert not summaries.wants_helpers({"type": "SCHOOLWIDE_ACTIVITY"})
 
 
 def test_chat_summaries():

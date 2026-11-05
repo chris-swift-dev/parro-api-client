@@ -45,3 +45,16 @@ Readable output, the cache and the overview against the real API, with one passw
 | Second `sync` | Everything unchanged; **11 requests, all lists** (no details, messages or downloads), 2 s |
 | Calendar against Parro's own feed | Same items, except multi-day timed items (one item here, one event per day there) and 3 summer items posted in last year's groups, which `sync --previous` archives |
 | On disk | Folders 0700, files 0600; no download or avatar links (the only links are ones written in messages) |
+
+## Live check (2026-11-05, release 0.4.0: privacy and helper slots)
+
+No password check: the stored refresh token was used. Personal data is left out here.
+
+| Check | Result |
+| --- | --- |
+| `privacy` | OK, one request: 2 children, parents can change the choices, state `OPEN`, last changed in May 2024 by a school staff member (not the parent) |
+| `privacy --link CHILD_ID` | OK: a `start.parnassys.net/bao/privacy?signedpermission=…` link with a 168-character signature, **different on every call** (probably short-lived). The page opens without a login (one redirect that sets a session cookie, then the consent form). Only read, nothing saved. The link was never printed, and was not in the `-vv` log or anywhere under `~/.parro` and `~/.parro-mcp` |
+| Calendar item types | Upcoming 44: 34 `SCHOOLWIDE_ACTIVITY`, 9 `VOLUNTEER`, 1 `SCHOOLWIDE_VOLUNTEER`. Past 62 also had `ACTIVITY` and one `TIMESLOT` (probably parent–teacher talks) |
+| **Found and fixed** | School-wide helper requests have their own type, `SCHOOLWIDE_VOLUNTEER`; the client only knew `VOLUNTEER`, so they were not marked and their details were cached. Now every type ending in `VOLUNTEER` counts |
+| `calendar --details` | Every helper item has slots: one each for `VOLUNTEER`, four for the school-wide one (e.g. 10 wanted, 4 signed up); some also need an RSVP. The agenda marked 6 *helpers wanted* and 4 *helpers: full*, with 13 slot lines; the overview marked 5 |
+| Cache | Helper items are fetched fresh on every run and their cache entries are neither read nor rewritten (entries from before 0.4.0 stay unused until `cache clear` or the size limit removes them) |

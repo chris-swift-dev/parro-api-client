@@ -850,7 +850,7 @@
             "$ref": "#/components/responses/GeonErrorResponse"
           }
         },
-        "description": "The same `calendar.RCalendarItem` that `GET /event/{id}` embeds as `calendarItem` (without `lastEditedBy`), addressed by the calendar item's own id.\n\nItems of `type: VOLUNTEER` ask for helpers: each entry in `resources[]` (`RCalendarItemVolunteerResource`) has a `title`, `amount` (helpers wanted), `amountCommitted`, `commitedByMe` (sic) and `commitments[]`. `numberOfTimeslots` and the `RCalendarItemTimeslotCreate` permission point to timeslots (e.g. parent–teacher talks) that hang off calendar items; their path is not known."
+        "description": "The same `calendar.RCalendarItem` that `GET /event/{id}` embeds as `calendarItem` (without `lastEditedBy`), addressed by the calendar item's own id.\n\nItems of `type: VOLUNTEER` or `SCHOOLWIDE_VOLUNTEER` (seen live) ask for helpers: each entry in `resources[]` (`RCalendarItemVolunteerResource`) has a `title`, `amount` (helpers wanted), `amountCommitted`, `commitedByMe` (sic) and `commitments[]`. `numberOfTimeslots` and the `RCalendarItemTimeslotCreate` permission point to timeslots (e.g. parent–teacher talks) that hang off calendar items; their path is not known."
       }
     },
     "/systemnews": {

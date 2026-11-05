@@ -1,6 +1,6 @@
 # Plan 5: the unverified endpoints
 
-*Status: phases 1–6 done (2026-11-05), on branch `unverified-endpoints`; the live check and release 0.4.0 are next. Decisions taken as recommended (§6).*
+*Status: phases 1–7 done (2026-11-05), on branch `unverified-endpoints`; release 0.4.0 is next. Decisions taken as recommended (§6). The live check found `SCHOOLWIDE_VOLUNTEER` (fixed) and a `TIMESLOT` item type.*
 
 **Goal:** every path the spec lists as *Unverified* is either described from real responses or
 removed, and the client gains what is useful to a parent. Source: three HAR captures from the web

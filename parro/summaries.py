@@ -301,7 +301,8 @@ def summarize_calendar_details(event: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-VOLUNTEER_TYPE = "VOLUNTEER"
+# Calendar item types that ask parents to help (seen live: VOLUNTEER and SCHOOLWIDE_VOLUNTEER).
+VOLUNTEER_TYPE_SUFFIX = "VOLUNTEER"
 
 
 def summarize_helpers(calendar_item: dict[str, Any]) -> list[dict[str, Any]]:
@@ -329,7 +330,8 @@ def summarize_helpers(calendar_item: dict[str, Any]) -> list[dict[str, Any]]:
 
 def wants_helpers(calendar_item: dict[str, Any]) -> bool:
     """True for a calendar item that asks parents to help (the list shows only its type)."""
-    return calendar_item.get("type") == VOLUNTEER_TYPE or bool(calendar_item.get("resources"))
+    kind = str(calendar_item.get("type") or "")
+    return kind.endswith(VOLUNTEER_TYPE_SUFFIX) or bool(calendar_item.get("resources"))
 
 
 def without_url(attachment: dict[str, Any]) -> dict[str, Any]:

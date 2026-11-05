@@ -16,7 +16,7 @@ All in the spec; the important ones:
 - Attachments: announcements keep them in `attachments[]`, calendar items in
   `calendarItem.attachments[]`. Each carries an unsigned CloudFront URL that must be fetched
   **without** the Parro `Authorization` header and is never logged.
-- Calendar items of `type: VOLUNTEER` ask parents to help. The slots are in
+- Calendar items of `type: VOLUNTEER` or `SCHOOLWIDE_VOLUNTEER` ask parents to help. The slots are in
   `calendarItem.resources[]` of `GET /event/{id}` (or `GET /calendaritem/{id}`): `amount` wanted,
   `amountCommitted`, and `commitedByMe` (the API's spelling). The list only carries the type.
 - Privacy: `GET /child?currentSchoolYear=true&dtype=identity.RPrivacySettingChild` gives per child

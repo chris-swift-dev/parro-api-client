@@ -483,7 +483,8 @@ def build(samples_dir, public=False):
             ref("CalendarItem"), ["getCalendarItem.200.json"],
             desc="The same `calendar.RCalendarItem` that `GET /event/{id}` embeds as `calendarItem` "
                  "(without `lastEditedBy`), addressed by the calendar item's own id.\n\n"
-                 "Items of `type: VOLUNTEER` ask for helpers: each entry in `resources[]` "
+                 "Items of `type: VOLUNTEER` or `SCHOOLWIDE_VOLUNTEER` (seen live) ask for helpers: "
+                 "each entry in `resources[]` "
                  "(`RCalendarItemVolunteerResource`) has a `title`, `amount` (helpers wanted), "
                  "`amountCommitted`, `commitedByMe` (sic) and `commitments[]`. `numberOfTimeslots` "
                  "and the `RCalendarItemTimeslotCreate` permission point to timeslots (e.g. "
