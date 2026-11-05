@@ -201,7 +201,8 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "parro_calendar",
-        "description": "Calendar items (activities, parent evenings, trips), soonest first.",
+        "description": "Calendar items (activities, parent evenings, trips) from today on, "
+        "soonest first; `past` for earlier ones.",
         "inputSchema": schema(
             {
                 "group_id": integer(),
@@ -210,6 +211,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "details": flag(
                     "Add location, description and attachments (one extra request per item)."
                 ),
+                "past": flag("Earlier items, latest first, instead of what is coming up."),
             }
         ),
     },
@@ -330,6 +332,7 @@ TOOL_FUNCTIONS: dict[str, ToolFunction] = {
         a.get("dtype"),
         raw=raw(a),
         details=bool(a.get("details")),
+        past=bool(a.get("past")),
     ),
     "parro_chatrooms": lambda c, a: operations.list_chatrooms(
         c, integer_argument(a, "limit", 25), raw=raw(a)

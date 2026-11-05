@@ -9,6 +9,7 @@ contract test reads them (load_real_sample), and it skips when they are absent.
 
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -47,3 +48,16 @@ def private_home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.M
     home = tmp_path_factory.mktemp("home")
     monkeypatch.setenv("HOME", str(home))
     return home
+
+
+# "Today" for every test: the invented fixtures are dated around it.
+FIXED_NOW = datetime(2026, 11, 5, 12, 0, tzinfo=timezone(timedelta(hours=1)))
+
+
+@pytest.fixture(autouse=True)
+def fixed_today(monkeypatch: pytest.MonkeyPatch) -> datetime:
+    """Freeze parro.operations.current_time(), so calendar results do not change as time passes."""
+    from parro import operations
+
+    monkeypatch.setattr(operations, "current_time", lambda: FIXED_NOW)
+    return FIXED_NOW

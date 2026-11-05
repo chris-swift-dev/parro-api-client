@@ -80,7 +80,7 @@ class Settings:
     output_format: OutputFormat = "auto"
     data_dir: Path = dataclasses.field(default_factory=default_data_dir)
     cache_enabled: bool = True
-    cache_max_bytes: int = DEFAULT_CACHE_MAX_MB * 1024 * 1024
+    cache_max_bytes: int = DEFAULT_CACHE_MAX_MB * 1_000_000
 
     @classmethod
     def from_environment(cls, environment: Mapping[str, str] | None = None) -> "Settings":
@@ -117,9 +117,9 @@ class Settings:
             output_format=parse_output_format(text("PARRO_FORMAT", "auto")),
             data_dir=Path(text("PARRO_DATA_DIR", str(default_data_dir()))).expanduser(),
             cache_enabled=parse_switch(env, "PARRO_CACHE", default=True),
+            # Megabytes as people count them (1 MB = 1,000,000 bytes), like the sizes shown.
             cache_max_bytes=int(parse_number(env, "PARRO_CACHE_MAX_MB", DEFAULT_CACHE_MAX_MB))
-            * 1024
-            * 1024,
+            * 1_000_000,
         )
 
     def with_overrides(self, **changes: object) -> "Settings":

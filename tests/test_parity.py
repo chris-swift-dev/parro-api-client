@@ -81,13 +81,9 @@ CASES: list[tuple[str, dict[str, Any], Adjust]] = [
     ("parro_announcements", {"limit": 20}, merged_feed),
     ("parro_announcements", {"group_id": fakes.GROUP_3, "limit": 2}, single_group_feed),
     ("parro_announcements", {"group_id": fakes.GROUP_3, "unread_only": True}, single_group_feed),
-    (
-        # Fix 8 (§4): `count` is the number of items shown, not the number fetched.
-        "parro_calendar",
-        {"limit": 2},
-        lambda old, new: (without(old, "count"), without(new, "count")),
-    ),
-    ("parro_calendar", {"group_id": fakes.GROUP_3}, None),
+    # parro_calendar is not compared: the original sorted the API's first page, which holds the
+    # furthest-future items (seen live 2026-11-05), so it never showed the coming weeks. The new
+    # client pages to today (PLAN-readable-output, live look). Covered by test_calendar_*.
     ("parro_chatrooms", {}, None),
     ("parro_chatrooms", {"limit": 1}, None),
     # New: the messages name their chatroom (PLAN-readable-output phase 4).
@@ -216,6 +212,7 @@ def test_tools_list_matches_the_original_plus_the_login_method(tmp_path, monkeyp
     for tool in new_interface.values():  # PLAN-readable-output: optional `format` everywhere
         assert tool["properties"].pop("format")["default"] == "json"
     assert new_interface["parro_calendar"]["properties"].pop("details")["type"] == "boolean"
+    assert new_interface["parro_calendar"]["properties"].pop("past")["type"] == "boolean"
     assert new_interface.pop("parro_overview") == {"properties": {}}  # new tool
     assert new_interface == old_interface
     assert list(new_interface) == list(old_interface), "same tools, same order"

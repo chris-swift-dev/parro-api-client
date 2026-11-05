@@ -258,9 +258,26 @@ class ParroClient:
 
     # ---------------------------------------------------------------------------- events
 
-    def list_events(self, group_id: int, event_dtype: str, limit: int = 20) -> ApiResponse:
-        """GET /event for one group. `event_dtype` picks announcements or calendar items."""
-        return self.get("/event", {"dtype": event_dtype, "group": int(group_id)}, limit=limit)
+    def list_events(
+        self,
+        group_id: int,
+        event_dtype: str,
+        limit: int = 20,
+        offset: int = 0,
+        count_total: bool = False,
+    ) -> ApiResponse:
+        """GET /event for one group. `event_dtype` picks announcements or calendar items.
+
+        Both come newest first. For calendar items that means the furthest future first: the
+        coming weeks can be several pages in (see operations.collect_calendar).
+        """
+        return self.get(
+            "/event",
+            {"dtype": event_dtype, "group": int(group_id)},
+            limit=limit,
+            offset=offset,
+            count_total=count_total,
+        )
 
     def get_event(self, event_id: int, event_dtype: str) -> dict[str, Any]:
         """GET /event/{id}. The dtype is required: without it the API answers 406."""

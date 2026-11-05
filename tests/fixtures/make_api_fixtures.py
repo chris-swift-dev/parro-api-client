@@ -521,10 +521,62 @@ MUSEUM_TRIP = calendar_item(
     [group_primer(GROUP_6)],
     ["2026-11-12T00:00:00+01:00"],
 )
+# Past items (before 5 Nov 2026, the date the tests treat as today).
+SCHOOL_START = calendar_item(
+    7000000103,
+    "Eerste schooldag",
+    "2026-08-31T00:00:00+02:00",
+    "2026-08-31T00:00:00+02:00",
+    "SCHOOLWIDE_ACTIVITY",
+    False,
+    [group_primer(SCHOOLWIDE_GROUP)],
+    ["2026-08-31T00:00:00+02:00"],
+)
+LIBRARY_VISIT = calendar_item(
+    7000000302,
+    "Bezoek bibliotheek",
+    "2026-10-07T08:30:00+02:00",
+    "2026-10-07T10:30:00+02:00",
+    "ACTIVITY",
+    False,
+    [group_primer(GROUP_6)],
+    ["2026-10-07T00:00:00+02:00"],
+)
+# Far-future items: the real API lists these *first* (see below).
+STUDY_DAY_2027 = calendar_item(
+    7000000104,
+    "Studiedag",
+    "2027-02-15T00:00:00+01:00",
+    "2027-02-15T00:00:00+01:00",
+    "SCHOOLWIDE_ACTIVITY",
+    False,
+    [group_primer(SCHOOLWIDE_GROUP)],
+    ["2027-02-15T00:00:00+01:00"],
+)
+SUMMER_2027 = calendar_item(
+    7000000105,
+    "Zomervakantie",
+    "2027-07-17T00:00:00+02:00",
+    "2027-08-29T00:00:00+02:00",
+    "HOLIDAY",
+    False,
+    [group_primer(SCHOOLWIDE_GROUP)],
+    [f"2027-07-{day}T00:00:00+02:00" for day in (19, 20, 21, 22, 23)],
+)
+
+
+def furthest_future_first(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The real API's order for calendar lists: newest first, starting with the furthest future
+    (seen live 2026-11-05: the whole-school group's first 50 of 100 items ran May-Aug 2027)."""
+    return sorted(items, key=lambda item: item["sortDate"], reverse=True)
+
+
 CALENDAR_BY_GROUP = {
-    SCHOOLWIDE_GROUP: [ST_MARTIN, CHRISTMAS],
-    GROUP_3: [PARENT_EVENINGS],
-    GROUP_6: [MUSEUM_TRIP],
+    SCHOOLWIDE_GROUP: furthest_future_first(
+        [SCHOOL_START, ST_MARTIN, CHRISTMAS, STUDY_DAY_2027, SUMMER_2027]
+    ),
+    GROUP_3: furthest_future_first([PARENT_EVENINGS]),
+    GROUP_6: furthest_future_first([LIBRARY_VISIT, MUSEUM_TRIP]),
 }
 
 TEACHER_TOM = geon(
@@ -775,6 +827,23 @@ def children() -> list[dict[str, Any]]:
     ]
 
 
+def details_without_extras(primer: dict[str, Any]) -> dict[str, Any]:
+    """The full RCalendarItemEvent of a list item that has no location, description or files."""
+    item = primer["calendarItem"]
+    return calendar_item(
+        primer["links"][0]["id"],
+        item["title"],
+        item["startDate"],
+        item["endDate"],
+        item["type"],
+        item["rsvpRequired"],
+        primer["groups"],
+        item["dayDates"],
+        read=primer["read"],
+        detail={"pending": False, "resources": [], "respondents": [], "attachments": []},
+    )
+
+
 def files() -> dict[str, Any]:
     """File name → content."""
     written: dict[str, Any] = {
@@ -819,6 +888,10 @@ def files() -> dict[str, Any]:
         "getEvent_calendar-7000000101.200.json": ST_MARTIN_DETAIL,
         "getEvent_calendar-7000000102.200.json": CHRISTMAS_DETAIL,
         "getEvent_calendar-7000000201.200.json": PARENT_EVENINGS_DETAIL,
+        **{
+            f"getEvent_calendar-{event['links'][0]['id']}.200.json": details_without_extras(event)
+            for event in (SCHOOL_START, LIBRARY_VISIT, STUDY_DAY_2027, SUMMER_2027)
+        },
         "getEvent.406.json": {
             "code": 406,
             "reason": "Not Acceptable",

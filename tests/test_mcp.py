@@ -141,6 +141,7 @@ def test_tool_interface_only_gains_optional_arguments():
         "enum": ["login-form", "password-grant", "auto"],
     }
     expected["parro_calendar"]["properties"]["details"] = {"type": "boolean"}
+    expected["parro_calendar"]["properties"]["past"] = {"type": "boolean"}
     expected["parro_overview"] = {"properties": {}}  # new tool, added at the end
     for tool in expected.values():
         tool["properties"]["format"] = FORMAT_ARGUMENT

@@ -98,6 +98,7 @@ CLI_CASES = [
     (["announcement", str(fakes.NEWSLETTER_ID)], "announcement", "announcement"),
     (["calendar"], "calendar", "calendar"),
     (["calendar", "--details"], "calendar-details", "calendar"),
+    (["calendar", "--past"], "calendar-past", "calendar"),
     (["chatrooms"], "chatrooms", "chatrooms"),
     (["chat-messages", "8000000001"], "chat-messages", "chat_messages"),
 ]
@@ -212,6 +213,12 @@ def test_small_helpers():
     assert rendering.plural(1, "photo") == "1 photo"
     assert rendering.plural(3, "child", "children") == "3 children"
     assert rendering.preview("a\n\n b \nc\nd") == "a\nb\nc …"
+    long_line = "Op dinsdagmiddag gaan de kinderen pompoenen uithollen. " * 10
+    shortened = rendering.preview(long_line)
+    assert len(shortened) <= 302 and shortened.endswith(" …") and " uithol …" not in shortened
+    assert rendering.preview("short") == "short"
+    assert rendering.short_list(["a", "b", "c", "d"]) == "a, b, c, d"
+    assert rendering.short_list(["a", "b", "c", "d", "e"]) == "a, b, c +2 more"
     assert rendering.quote("one\n\ntwo") == "> one\n>\n> two"
     assert rendering.join_parts(["a", "", None, "b"]) == "a · b"
 
@@ -275,7 +282,7 @@ def test_calendar_details_cost_one_request_per_item(environment, capsys):
     agenda = json.loads(capsys.readouterr().out)
     extra = api.api_requests()[requests_without_details:]
     detail_calls = [r for r in extra if "/event/" in r.url]
-    assert len(detail_calls) == agenda["count"] == 4
+    assert len(detail_calls) == agenda["count"] == 6
     assert agenda["items"][1]["details"]["location"] == "Natuurmuseum Voorbeeldstad"
     assert agenda["items"][3]["details"] == {}, "a holiday has no details"
 
@@ -363,10 +370,11 @@ def test_overview_view(environment):
 @pytest.mark.parametrize(
     ("today", "first_upcoming", "count"),
     [
-        ("2026-11-05", 7000000101, 4),  # everything is still ahead
-        ("2026-11-12", 7000000301, 3),  # Sint-Maarten (11 Nov) is over, the trip is today
-        ("2026-12-24", 7000000102, 1),  # the 5-day holiday is still running
-        ("2026-12-26", None, 0),
+        ("2026-11-05", 7000000101, 5),  # six items ahead; the overview shows five
+        ("2026-11-12", 7000000301, 5),  # Sint-Maarten (11 Nov) is over, the trip is today
+        ("2026-12-24", 7000000102, 3),  # the 5-day holiday is still running
+        ("2026-12-26", 7000000104, 2),  # only 2027 left
+        ("2027-09-01", None, 0),
     ],
 )
 def test_overview_coming_up_depends_on_today(environment, today, first_upcoming, count):
@@ -383,3 +391,46 @@ def test_cli_and_mcp_overview(environment, capsys):
     server = parro_mcp.McpServer(make_client=lambda s: ParroClient(s, transport=api))
     result = server.call_tool("parro_overview", {"format": "markdown"})
     assert not result.is_error and "parro_calendar(details=true)" in result.content[0]["text"]
+
+
+# ------------------------------------------------------------- calendar: furthest future first
+
+
+def calendar_requests(api: fakes.FakeParroApi, group_id: int) -> list[str]:
+    return [
+        r.headers.get("Range", "")
+        for r in api.api_requests()
+        if "RCalendarItemEventPrimer" in r.url and f"group={group_id}" in r.url
+    ]
+
+
+def test_calendar_pages_until_today_because_the_api_starts_far_ahead(environment, monkeypatch):
+    """Live finding 2026-11-05: the first page of a group can hold only items months ahead."""
+    monkeypatch.setattr(operations, "CALENDAR_PAGE_SIZE", 2)
+    api = fakes.FakeParroApi(load_sample)
+    client = ParroClient(Settings(role_override="GUARDIAN:1"), transport=api)
+    client.token_store.save_token_response({"access_token": fakes.ACCESS_TOKEN})
+
+    agenda = operations.list_calendar(client)
+
+    # Whole school: [Jul 2027, Feb 2027] → [Dec, 11 Nov] → [31 Aug: past, stop].
+    assert calendar_requests(api, fakes.SCHOOLWIDE_GROUP) == ["items=0-1", "items=2-3", "items=4-5"]
+    # Group 6: [12 Nov, 7 Oct: past] on the first page already.
+    assert calendar_requests(api, fakes.GROUP_6) == ["items=0-1"]
+    assert agenda["period"] == "upcoming"
+    assert [item["id"] for item in agenda["items"]][:2] == [7000000101, 7000000301]
+
+
+def test_overview_finds_the_coming_weeks_behind_far_future_pages(environment, monkeypatch):
+    monkeypatch.setattr(operations, "CALENDAR_PAGE_SIZE", 2)
+    result, _ = overview()
+    assert result["calendar"]["items"][0]["id"] == 7000000101, "Sint-Maarten, on page 2"
+
+
+def test_past_calendar_items_latest_first(environment):
+    api = fakes.FakeParroApi(load_sample)
+    client = ParroClient(Settings(role_override="GUARDIAN:1"), transport=api)
+    client.token_store.save_token_response({"access_token": fakes.ACCESS_TOKEN})
+    past = operations.list_calendar(client, past=True)
+    assert past["period"] == "past"
+    assert [item["id"] for item in past["items"]] == [7000000302, 7000000103]

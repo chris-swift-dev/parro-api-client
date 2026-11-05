@@ -113,9 +113,9 @@ def test_calendar_details_are_reused_while_the_list_shows_the_same_version(tmp_p
     api = fakes.FakeParroApi(load_sample)
     client = make_client(tmp_path, api)
     first = operations.list_calendar(client, details=True)
-    assert detail_requests(api) == 4
+    assert detail_requests(api) == 6  # the six upcoming items
     second = operations.list_calendar(client, details=True)
-    assert detail_requests(api) == 4, "all four came from the cache"
+    assert detail_requests(api) == 6, "all six came from the cache"
     assert second == first
 
 
@@ -128,12 +128,13 @@ def test_a_newer_last_modified_at_fetches_the_details_again(tmp_path):
         payload = load_sample(name)
         if name == "listEvents_calendar-4000000003.200.json":
             payload = copy.deepcopy(payload)
-            payload["items"][0]["lastModifiedAt"] = "2026-11-05T09:00:00.000+01:00"
+            museum_trip = next(i for i in payload["items"] if i["links"][0]["id"] == 7000000301)
+            museum_trip["lastModifiedAt"] = "2026-11-05T09:00:00.000+01:00"
         return payload
 
     api.load_sample = edited
     operations.list_calendar(client, details=True)
-    assert detail_requests(api) == 5, "only the edited item (the museum trip) is fetched again"
+    assert detail_requests(api) == 7, "only the edited item (the museum trip) is fetched again"
 
 
 def test_lists_are_never_cached(tmp_path):
@@ -158,7 +159,7 @@ def test_files_are_private_and_hold_no_download_links(tmp_path):
     operations.list_calendar(client, details=True)
     cache_dir = tmp_path / "data" / "cache"
     stored = [path for path in cache_dir.rglob("*") if path.is_file()]
-    assert len(stored) == 3 + 4  # attachment: bytes, meta, text; four calendar details
+    assert len(stored) == 3 + 6  # attachment: bytes, meta, text; six calendar details
     if os.name == "posix":
         for path in stored:
             assert stat.S_IMODE(path.stat().st_mode) == 0o600, path
@@ -236,10 +237,10 @@ def run(capsys, *argv: str) -> tuple[int, Any]:
 def test_cache_info_and_clear_commands(environment, capsys):
     run(capsys, "calendar", "--details")
     exit_code, info = run(capsys, "cache", "info")
-    assert exit_code == 0 and info["files"] == 4 and info["enabled"] is True
+    assert exit_code == 0 and info["files"] == 6 and info["enabled"] is True
     assert info["directory"] == str(environment / "data" / "cache")
     exit_code, cleared = run(capsys, "cache", "clear")
-    assert exit_code == 0 and cleared["removed_files"] == 4
+    assert exit_code == 0 and cleared["removed_files"] == 6
     assert run(capsys, "cache", "info")[1]["files"] == 0
 
 

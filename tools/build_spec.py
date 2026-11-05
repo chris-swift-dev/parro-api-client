@@ -403,7 +403,13 @@ def build(samples_dir, public=False):
         "/event": {"get": op(
             "listEvents", "Events", "Announcements or calendar items of one group", event_list_item,
             ["listEvents_announcements.200.json", "listEvents_calendar-items.200.json"], coll=True,
-            desc="The main feed. Query each group separately and merge by `sortDate`.",
+            desc="The main feed. Query each group separately and merge by `sortDate`.\n\n"
+                 "**Order: newest first.** For calendar items that means the *furthest future* first: "
+                 "in a live check (2026-11-05) a whole-school group's first 50 of 100 items lay 6 to 9 "
+                 "months ahead, so the coming weeks were on page 2. Page with `Range` until the dates "
+                 "reach today.\n\n"
+                 "**Duplicates:** an announcement sent to several groups is returned once per group "
+                 "(same id; 2 of 71 events in that check). Merge by id.",
             params=[q("dtype", {"type": "string", "enum": ["event.RAnnouncementEventPrimer",
                                                            "event.RCalendarItemEventPrimer"]},
                       "Which event type to list.", required=True),
@@ -436,7 +442,8 @@ def build(samples_dir, public=False):
             "listChatMessages", "Chat", "Messages in one chat conversation", ref("ChatTextMessage"),
             ["listChatMessages.200.json"], coll=True,
             desc="Only `chat.RChatTextMessage` has been observed; other message types (e.g. with files) "
-                 "probably exist.",
+                 "probably exist.\n\n**Order: newest first** (live check 2026-11-05: `Range: items=0-29` "
+                 "returned the newest 30 of 89 messages). Reverse them for reading order.",
             params=[dict(id_param, description="Chatroom id from `GET /chatroom`.")])},
     }
 

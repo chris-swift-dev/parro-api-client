@@ -37,6 +37,9 @@ PHOTO_MARK = "🖼"
 PINNED_MARK = "📌"
 WARNING_MARK = "⚠"
 PREVIEW_LINES = 3
+# Real descriptions often put a whole paragraph on one line (live look), so cap characters too.
+PREVIEW_CHARACTERS = 300
+GROUPS_SHOWN = 3
 
 
 @dataclass(frozen=True)
@@ -91,7 +94,7 @@ def format_size(byte_count: Any) -> str:
     if not isinstance(byte_count, int):
         return ""
     if byte_count >= 1_000_000:
-        return f"{byte_count / 1_000_000:.1f} MB"
+        return f"{byte_count / 1_000_000:.1f}".removesuffix(".0") + " MB"
     if byte_count >= 1_000:
         return f"{round(byte_count / 1_000)} KB"
     return f"{byte_count} bytes"
@@ -102,13 +105,17 @@ def plural(count: int, singular: str, plural_form: str | None = None) -> str:
     return f"{count} {singular if count == 1 else (plural_form or singular + 's')}"
 
 
-def preview(text: Any, line_count: int = PREVIEW_LINES) -> str:
-    """The first `line_count` non-empty lines of a text, with '…' when there is more."""
+def preview(
+    text: Any, line_count: int = PREVIEW_LINES, max_characters: int = PREVIEW_CHARACTERS
+) -> str:
+    """The first `line_count` non-empty lines, at most `max_characters`, with '…' when cut."""
     lines = [line for line in tidy_whitespace(str(text or "")).split("\n") if line]
-    shown = lines[:line_count]
-    if len(lines) > line_count:
-        shown[-1] += " …"
-    return "\n".join(shown)
+    shown = "\n".join(lines[:line_count])
+    cut = len(lines) > line_count
+    if len(shown) > max_characters:
+        shown = shown[:max_characters].rsplit(" ", 1)[0].rstrip(" ,.;:")
+        cut = True
+    return f"{shown} …" if cut else shown
 
 
 def quote(text: Any) -> str:
@@ -409,7 +416,8 @@ def render_agenda(result: dict[str, Any], options: RenderOptions) -> str:
         day = format_day(start) if start else "Date unknown"
         days.setdefault(day, []).append(agenda_entry(item, options))
     blocks = [f"## {day}\n" + "\n".join(entries) for day, entries in days.items()]
-    heading = f"# Agenda ({result.get('count', len(result.get('items', [])))})"
+    title = "Agenda, earlier items" if result.get("period") == "past" else "Agenda"
+    heading = f"# {title} ({result.get('count', len(result.get('items', [])))})"
     return document(heading, *blocks) if blocks else document(heading, "Nothing planned.")
 
 
@@ -420,7 +428,7 @@ def agenda_entry(item: dict[str, Any], options: RenderOptions) -> str:
     if item.get("cancelled"):
         title = f"{title} (cancelled)"
     markers = [
-        ", ".join(group_names(item)),
+        short_list(group_names(item)),
         "RSVP needed" if calendar_item.get("rsvpRequired") else "",
         f"{UNREAD_MARK} new" if item.get("read") is False else "",
         object_id(item.get("id")),
@@ -428,6 +436,13 @@ def agenda_entry(item: dict[str, Any], options: RenderOptions) -> str:
     lines = [f"- {time_span(item)}  {join_parts([title, *markers])}"]
     lines += [f"  {line}" for line in detail_lines(item, options)]
     return "\n".join(lines)
+
+
+def short_list(names: list[str], shown: int = GROUPS_SHOWN) -> str:
+    """'a, b, c +5 more' instead of eight names on one line."""
+    if len(names) <= shown + 1:
+        return ", ".join(names)
+    return f"{', '.join(names[:shown])} +{len(names) - shown} more"
 
 
 def group_names(item: dict[str, Any]) -> list[str]:

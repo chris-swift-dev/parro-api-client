@@ -153,7 +153,7 @@ def add_reading_commands(command: CommandFactory) -> None:
     announcement = command("announcement", "one announcement in full, with its author")
     announcement.add_argument("id", type=int, help="announcement id")
 
-    calendar = command("calendar", "calendar items, soonest first")
+    calendar = command("calendar", "calendar items from today on, soonest first")
     calendar.add_argument("--group", type=int, help="only this group (see `groups`)")
     add_limit(calendar, 20)
     calendar.add_argument(
@@ -161,6 +161,7 @@ def add_reading_commands(command: CommandFactory) -> None:
         action="store_true",
         help="add location, description and attachments (one extra request per item)",
     )
+    calendar.add_argument("--past", action="store_true", help="earlier items, latest first")
 
     add_attachment_command(command)
 
@@ -319,7 +320,7 @@ HANDLERS: dict[str, Handler] = {
     ),
     "announcement": lambda c, a: operations.show_announcement(c, a.id, raw=a.raw),
     "calendar": lambda c, a: operations.list_calendar(
-        c, a.group, a.limit, raw=a.raw, details=a.details
+        c, a.group, a.limit, raw=a.raw, details=a.details, past=a.past
     ),
     "attachment": run_attachment,
     "chatrooms": lambda c, a: operations.list_chatrooms(c, a.limit, raw=a.raw),

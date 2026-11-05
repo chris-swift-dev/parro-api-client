@@ -104,17 +104,20 @@ def test_feed_is_newest_first_and_limited():
 def test_calendar_summary_counts_what_it_shows_and_lists_each_item_once():
     schoolwide = load_sample("listEvents_calendar-4000000001.200.json")["items"]
     group_6 = load_sample("listEvents_calendar-4000000003.200.json")["items"]
-    feed = [FeedEvent(event, "A") for event in schoolwide] + [
-        FeedEvent(group_6[0], "B"),
-        FeedEvent(schoolwide[0], "C"),  # the same item, found through another group
+    st_martin = next(e for e in schoolwide if e["links"][0]["id"] == 7000000101)
+    museum_trip = next(e for e in group_6 if e["links"][0]["id"] == 7000000301)
+    feed = [
+        FeedEvent(museum_trip, "B"),
+        FeedEvent(st_martin, "A"),
+        FeedEvent(st_martin, "C"),  # the same item, found through another group
     ]
-    result = summaries.summarize_calendar_feed(feed, limit=2)
-    assert result["count"] == 2 and len(result["items"]) == 2
-    assert [item["id"] for item in result["items"]] == [7000000101, 7000000301], "soonest first"
-    assert result["items"][0]["group"] == "A"
-    assert result["items"][1]["calendarItem"]["type"] == "ACTIVITY"
+    result = summaries.summarize_calendar_feed(feed, limit=1)
+    assert result["count"] == 1 and len(result["items"]) == 1
+    assert result["items"][0]["id"] == 7000000101, "soonest first"
+    assert result["items"][0]["group"] == "A", "the first group it was found through"
     everything = summaries.summarize_calendar_feed(feed, limit=10)
-    assert everything["count"] == 3, "the duplicate is merged"
+    assert everything["count"] == 2, "the duplicate is merged"
+    assert everything["items"][1]["calendarItem"]["type"] == "ACTIVITY"
     assert_no_geon_bookkeeping(result)
 
 

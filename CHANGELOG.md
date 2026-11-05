@@ -19,6 +19,7 @@ small cache stops the same newsletter from being downloaded again and again.
 - `overview` command and `parro_overview` tool: unread counts, the latest announcements, what is
   coming up, and chats with unread messages, like the app's home screen.
 - `calendar --details` (MCP: `details: true`) adds location, description and attachments.
+- `calendar --past` (MCP: `past: true`) lists earlier items, latest first.
 - `--full` for `announcements` and `system-news`: whole texts instead of a 3-line preview.
 - A cache for attachment files, their text, and calendar details in `PARRO_DATA_DIR` (default
   `~/.parro/data`), readable only by you and never holding download links. Lists are never cached.
@@ -32,8 +33,14 @@ small cache stops the same newsletter from being downloaded again and again.
 - JSON additions: `author` and `pinned` on announcements, `readCount` on a single announcement,
   `chatroom_id` on chat messages. Nothing was removed or renamed.
 - Calendar details list attachments without their download link; `attachment <id>` fetches one.
+- `PARRO_CACHE_MAX_MB` counts 1 MB as 1,000,000 bytes, like the sizes shown.
 
 ### Fixed
+- **The calendar now shows what is coming up.** The API lists calendar items with the furthest
+  future first, so the first page can hold only items months ahead. `calendar` and the overview now
+  read page by page until today and list upcoming items soonest first (JSON: `period: "upcoming"`).
+  Before, they sorted the first page, which missed the coming weeks (also in the original server).
+- Previews stop at 300 characters as well as 3 lines; long group lists are shortened ("+5 more").
 - Default paths (`~/.parro-mcp/tokens.json`, the data folder) follow `HOME` when it changes, instead
   of being fixed when the program starts.
 

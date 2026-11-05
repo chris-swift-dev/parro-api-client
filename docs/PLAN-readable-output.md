@@ -1,6 +1,6 @@
 # Plan 3: human-readable output for the CLI and the MCP server
 
-*Status (2026-11-05): phases 0–5 implemented on the `readable-output` branch; phase 6: docs and version 0.2.0 done, live look and release pending.
+*Status (2026-11-05): phases 0–6 done on the `readable-output` branch (live look passed, calendar order fixed); release 0.2.0 pending.
 Phases 7–8 (archive, 0.3.0) not started.*
 
 **Goal:** besides JSON, `parro_cli.py` and `parro_mcp.py` can show the data the way the Parro app does:
@@ -213,6 +213,9 @@ Snapshot tests: each view is rendered from the synthetic fixtures and compared w
 - Chat messages are sorted only in the markdown view; JSON keeps the API's order.
 - The group list is not cached (a long-running MCP server would keep it stale); the overview
   fetches it once per call and passes it to both feeds.
+- Live look (2026-11-05): announcements do come back once per group, chat messages come newest
+  first, and calendar lists come **furthest future first**. The last one was a bug in the
+  original design: `calendar` and the overview now page to today (`--past` for earlier items).
 - `parse_timestamp()` lives in `geon.py` (needed by summaries and rendering) and accepts every
   fraction length, which Python 3.10's `fromisoformat` does not.
 

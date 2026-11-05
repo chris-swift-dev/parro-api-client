@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from . import attachments, summaries
-from .api_client import ANNOUNCEMENT_LIST_DTYPE, CALENDAR_LIST_DTYPE, ParroClient
+from .api_client import ANNOUNCEMENT_LIST_DTYPE, CALENDAR_LIST_DTYPE, FeedEvent, ParroClient
 from .errors import AttachmentError, ConfigurationError, ParroError
 from .settings import LoginMethod
 
@@ -159,6 +159,16 @@ def show_announcement(client: ParroClient, announcement_id: int | None, raw: boo
     return event if raw else summaries.summarize_announcement_detail(event)
 
 
+CALENDAR_PAGE_SIZE = 50
+# A school year has a few hundred items at most; this many pages per group is a safe ceiling.
+CALENDAR_MAX_PAGES = 20
+
+
+def current_time() -> datetime:
+    """Now, as an aware datetime. One place, so tests can fix the date."""
+    return datetime.now(timezone.utc)
+
+
 def list_calendar(
     client: ParroClient,
     group_id: int | None = None,
@@ -166,17 +176,69 @@ def list_calendar(
     event_dtype: str | None = None,
     raw: bool = False,
     details: bool = False,
+    past: bool = False,
 ) -> Any:
-    """Calendar items. `details` adds location, description and attachments per shown item:
-    one extra request each, because the list does not include them (spec)."""
-    feed = client.collect_feed(event_dtype or CALENDAR_LIST_DTYPE, group_id, limit_per_group=limit)
+    """Calendar items from today on, soonest first; with `past`, earlier items, latest first.
+
+    `details` adds location, description and attachments per shown item: one extra request each
+    (cached), because the list does not include them (spec).
+    """
+    now = current_time()
+    groups = None if group_id is not None else client.list_current_group_names()
+    feed = collect_calendar(client, event_dtype, group_id, groups, now, past, limit)
     if raw:
         return [item.event for item in feed]
-    agenda = summaries.summarize_calendar_feed(feed, limit)
+    agenda = choose_period(summaries.summarize_calendar_feed(feed, len(feed)), now, past, limit)
     if details:
         for item in agenda["items"]:
             item["details"] = calendar_details(client, item)
     return agenda
+
+
+def collect_calendar(
+    client: ParroClient,
+    event_dtype: str | None,
+    group_id: int | None,
+    groups: dict[int, str | None] | None,
+    now: datetime,
+    past: bool,
+    wanted: int,
+) -> list[FeedEvent]:
+    """Calendar items of one group or of every current group, read far enough to reach today.
+
+    The API lists calendar items furthest future first (seen live: the whole-school group's first
+    50 of 100 items were 6-9 months ahead). So pages are read until an item lies before today;
+    for past items, until `wanted` of them are in.
+    """
+    chosen = {int(group_id): None} if group_id is not None else dict(groups or {})
+    collected: list[FeedEvent] = []
+    for one_group_id, group_name in chosen.items():
+        offset, past_items = 0, 0
+        for _page_number in range(CALENDAR_MAX_PAGES):
+            page = client.list_events(
+                one_group_id,
+                event_dtype or CALENDAR_LIST_DTYPE,
+                limit=CALENDAR_PAGE_SIZE,
+                offset=offset,
+                count_total=True,
+            )
+            collected.extend(FeedEvent(event, group_name) for event in page.items)
+            offset += len(page.items)
+            past_items += sum(summaries.is_over(event, now) for event in page.items)
+            reached = past_items >= wanted if past else past_items > 0
+            if reached or not page.items or (page.total is not None and offset >= page.total):
+                break
+    return collected
+
+
+def choose_period(agenda: dict[str, Any], now: datetime, past: bool, limit: int) -> dict[str, Any]:
+    """Upcoming items soonest first, or past items latest first; `period` says which."""
+    if past:
+        items = [item for item in agenda["items"] if summaries.is_over(item, now)][::-1]
+    else:
+        items = [item for item in agenda["items"] if not summaries.is_over(item, now)]
+    shown = items[:limit]
+    return {"count": len(shown), "period": "past" if past else "upcoming", "items": shown}
 
 
 def calendar_details(client: ParroClient, item: dict[str, Any]) -> dict[str, Any]:
@@ -203,13 +265,12 @@ def show_overview(
 ) -> dict[str, Any]:
     """The app's home screen: unread counts, latest announcements, what is coming up, and chats
     with unread messages. `now` decides what "coming up" means (tests pass a fixed time)."""
-    moment = now or datetime.now(timezone.utc)
+    moment = now or current_time()
     groups = client.list_current_group_names()
     feed = client.collect_feed(ANNOUNCEMENT_LIST_DTYPE, limit_per_group=limit, groups=groups)
-    # The calendar feed starts in the past; look further ahead to find `limit` upcoming items.
-    calendar = client.collect_feed(CALENDAR_LIST_DTYPE, limit_per_group=50, groups=groups)
+    calendar = collect_calendar(client, None, None, groups, moment, False, limit)
     agenda = summaries.summarize_calendar_feed(calendar, limit=len(calendar))
-    upcoming = [item for item in agenda["items"] if not summaries.is_over(item, moment)][:limit]
+    upcoming = choose_period(agenda, moment, past=False, limit=limit)["items"]
     rooms = summaries.summarize_chatrooms(client.list_chatrooms())
     unread_rooms = [room for room in rooms["chatrooms"] if room.get("unreadCount")]
     return {

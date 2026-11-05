@@ -86,7 +86,7 @@ python3 parro_cli.py token                       # paste into Swagger UI → Aut
 Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-finish <url>`,
 `overview`, `me`, `children`, `groups [--previous]`, `unread`, `system-news [--full]`,
 `announcements [--group ID] [--limit N] [--unread-only] [--full]`, `announcement <id>`,
-`calendar [--group ID] [--limit N] [--details]`,
+`calendar [--group ID] [--limit N] [--details] [--past]`,
 `attachment <event-id> [--attachment-id ID | --all] [--save-to DIR] [--text]`, `chatrooms`,
 `chat-messages <chatroom-id>`, `cache info|clear`,
 `get <path> [--param k=v ...] [--limit N] [--offset N]`.
@@ -109,7 +109,7 @@ Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in ·
 | `parro_announcements` | The main feed. Merges all groups, newest first, full text + attachment list. |
 | `parro_announcement` | One announcement by id, with author. |
 | **`parro_attachment`** | **Downloads an attachment of an announcement or calendar item and returns its text (PDF/docx/txt/csv/html) or the image.** |
-| `parro_calendar` | Calendar items, soonest first; `details: true` adds location and description. |
+| `parro_calendar` | Calendar items from today on, soonest first; `details: true` adds location and description, `past: true` earlier items. |
 | `parro_chatrooms` / `parro_chat_messages` | Conversations. |
 | `parro_unread` | Unread counts per category. |
 | `parro_get` | Escape hatch: GET any `/rest/v2` path not covered above. |
@@ -339,6 +339,20 @@ left out here.
 | `parro_mcp.py call parro_unread` / `parro_groups` | OK: same core, live |
 | `token` → Swagger UI **bearerToken** | OK: "Try it out" works with it |
 | `logout` | OK: IdP answered 200 for refresh and access token; token file removed; `me` then exits 3 |
+
+## Live check (2026-11-05, release 0.2.0)
+
+Readable output, the cache and the overview against the real API, with one password check
+(personal data left out):
+
+| Check | Result |
+| --- | --- |
+| `login --prompt` at a terminal | OK, 1 password check; `auto` printed markdown |
+| `overview`, `announcements`, `calendar --details`, `chat-messages` | OK |
+| An announcement sent to several groups | The API returns it once per group (2 of 71 events); the feed lists it once with both groups |
+| Order of chat messages | Newest first (the newest 30 of 89); the conversation view shows them in reading order |
+| Order of calendar items | **Furthest future first**: a group's first 50 of 100 items were 6-9 months ahead. Fixed: the client now pages to today (the overview had missed near-term whole-school events) |
+| Newsletter PDF read twice | Second read from the cache, same text; folders 0700, files 0600, no links stored |
 
 ## Note on the HAR
 

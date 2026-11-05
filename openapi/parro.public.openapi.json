@@ -593,7 +593,7 @@
             "$ref": "#/components/responses/GeonErrorResponse"
           }
         },
-        "description": "The main feed. Query each group separately and merge by `sortDate`."
+        "description": "The main feed. Query each group separately and merge by `sortDate`.\n\n**Order: newest first.** For calendar items that means the *furthest future* first: in a live check (2026-11-05) a whole-school group's first 50 of 100 items lay 6 to 9 months ahead, so the coming weeks were on page 2. Page with `Range` until the dates reach today.\n\n**Duplicates:** an announcement sent to several groups is returned once per group (same id; 2 of 71 events in that check). Merge by id."
       }
     },
     "/event/{id}": {
@@ -1000,7 +1000,7 @@
             "$ref": "#/components/responses/GeonErrorResponse"
           }
         },
-        "description": "Only `chat.RChatTextMessage` has been observed; other message types (e.g. with files) probably exist."
+        "description": "Only `chat.RChatTextMessage` has been observed; other message types (e.g. with files) probably exist.\n\n**Order: newest first** (live check 2026-11-05: `Range: items=0-29` returned the newest 30 of 89 messages). Reverse them for reading order."
       }
     },
     "/absence": {

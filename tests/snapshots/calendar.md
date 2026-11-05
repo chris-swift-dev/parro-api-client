@@ -1,4 +1,4 @@
-# Agenda (4)
+# Agenda (6)
 
 ## Wed 11 Nov 2026
 - 17:30-19:00  Sint-Maartenviering · Basisschool De Linde · #7000000101
@@ -11,3 +11,9 @@
 
 ## Mon 21 Dec 2026
 - all day, 5 days until Fri 25 Dec 2026  Kerstvakantie · Basisschool De Linde · #7000000102
+
+## Mon 15 Feb 2027
+- all day  Studiedag · Basisschool De Linde · #7000000104
+
+## Sat 17 Jul 2027
+- all day, 5 days until Fri 23 Jul 2027  Zomervakantie · Basisschool De Linde · #7000000105
