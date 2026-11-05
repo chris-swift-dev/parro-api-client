@@ -53,8 +53,7 @@ VIEWS: dict[str, dict[str, Any]] = {
         "options": {"docExpansion": "list"},
         # Only the four sections a reader of the README cares about.
         "css": ".opblock-tag-section:has(#operations-tag-Auth),"
-        ".opblock-tag-section:has(#operations-tag-Misc),"
-        ".opblock-tag-section:has(#operations-tag-Unverified){display:none !important}",
+        ".opblock-tag-section:has(#operations-tag-Misc){display:none !important}",
         "anchor": "",
     },
     "swagger-calendar-sync": {

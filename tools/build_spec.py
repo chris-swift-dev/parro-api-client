@@ -215,8 +215,8 @@ Read-only description of the REST API behind **talk.parro.com**, the Dutch paren
 communication app by Topicus (ParnasSys). The API is a Topicus *geon* API.
 This spec was derived from the web client's traffic: a captured browser session and sanitized response
 samples. Response schemas list **only fields seen in those samples**. Treat every object as
-open: geon adds fields between contract versions. Operations tagged **Unverified** appear in the
-web app's code but were never called.
+open: geon adds fields between contract versions. Every operation here was called at least once;
+two paths from the web app's code, `/conversations` and `/timeslot`, answered `404` and are left out.
 
 **A client for this API:** [parro-api-client](https://github.com/chris-swift-dev/parro-api-client),
 a read-only command-line client and MCP server in plain Python
@@ -239,6 +239,9 @@ whose working login and API calls were the starting point for this specification
   `206 Partial Content` with `Content-Range: items 0-1/2`, **even without a `Range` header**
   (the server's default page size is unknown). Add `topicus-Range-Count: Exact` to get an exact total.
 * **Dates** are ISO-8601 with an offset. Fractional seconds vary from none to 3 digits.
+* **CORS preflights** answer `Access-Control-Allow-Methods: DELETE, POST, GET, OPTIONS, PUT` on
+  every path, even read-only ones such as `/child`. It is a server-wide setting and says nothing
+  about which methods a path supports.
 
 ## Authentication
 OAuth2 against the ParnasSys IdP (`https://inloggen.parnassys.net`, see the **Auth** operations).
@@ -391,8 +394,29 @@ def build(samples_dir, public=False):
             "getOrganisation", "Account", "The school (organisation)", ref("OrganisationPrimer"),
             ["getOrganisation.200.json"], params=[dict(id_param, description="From `/account/me` → `organisation`.")])},
         "/child": {"get": op(
-            "listChildren", "Account", "Children linked to the account", ref("ChildPrimer"),
-            ["listChildren.200.json"], coll=True)},
+            "listChildren", "Account", "Children linked to the account",
+            poly("ChildPrimer", "PrivacySettingChild",
+                 dtypes=["identity.RChildPrimer", "identity.RPrivacySettingChild"]),
+            ["listChildren.200.json", "listChildren_privacy.200.json"], coll=True,
+            desc="Without parameters: `RChildPrimer` per child. With "
+                 "`currentSchoolYear=true&dtype=identity.RPrivacySettingChild` (what the web app sends "
+                 "for its privacy page): `RPrivacySettingChild`, the same fields plus `setting`, the "
+                 "state of the child's privacy choices: `editableForGuardians`, `editableInPeriod`, "
+                 "`state` and who changed them last. The choices themselves are not in the API; "
+                 "`GET /child/{id}/privacy` gives the link to the page where they are set.",
+            params=[q("dtype", {"type": "string", "enum": ["identity.RPrivacySettingChild"]},
+                      "Return the privacy variant."),
+                    q("currentSchoolYear", {"type": "boolean"},
+                      "Sent with the privacy variant by the web app; its effect is unknown.")])},
+        "/child/{id}/privacy": {"get": op(
+            "getChildPrivacy", "Account", "Link to the page where a child's privacy choices are set",
+            ref("PrivacySettings"), ["getChildPrivacy.200.json"],
+            desc="`url` is a link to `https://start.parnassys.net/bao/privacy?signedpermission=<signature>`, "
+                 "the ParnasSys page where a parent sets the child's privacy choices (photos, data). "
+                 "`defined` was `true` in the capture.\n\n"
+                 "⚠️ **The link is signed**: it opens the page without a login. Treat it as a secret; "
+                 "do not share or log it.",
+            params=[dict(id_param, description="Child id from `GET /child`.")])},
         "/identity/unreadcounts": {"get": op(
             "getUnreadCounts", "Account", "Unread counts per category, per guardian identity",
             ref("UnreadCount"), ["getUnreadCounts.200.json"], coll=True)},
@@ -453,16 +477,40 @@ def build(samples_dir, public=False):
                  "(iCalendar with VTIMEZONE, `REFRESH-INTERVAL` and `X-PUBLISHED-TTL` of 1 hour). It "
                  "holds the school year's items, each multi-day item once.\n\n"
                  "Not verified: ParnasSys lists agenda syncing as a feature of the paid *Parro "
-                 "Ouderapp*, so with *Parro Basis* this call may fail or return no link. The CORS "
-                 "preflight also allows `POST`, `PUT` and `DELETE` on this path (perhaps to renew or "
-                 "revoke the link); they were never called and are not described here.")},
+                 "Ouderapp*, so with *Parro Basis* this call may fail or return no link.")},
+        "/calendaritem/{id}": {"get": op(
+            "getCalendarItem", "Events", "One calendar item, directly",
+            ref("CalendarItem"), ["getCalendarItem.200.json"],
+            desc="The same `calendar.RCalendarItem` that `GET /event/{id}` embeds as `calendarItem` "
+                 "(without `lastEditedBy`), addressed by the calendar item's own id.\n\n"
+                 "Items of `type: VOLUNTEER` ask for helpers: each entry in `resources[]` "
+                 "(`RCalendarItemVolunteerResource`) has a `title`, `amount` (helpers wanted), "
+                 "`amountCommitted`, `commitedByMe` (sic) and `commitments[]`. `numberOfTimeslots` "
+                 "and the `RCalendarItemTimeslotCreate` permission point to timeslots (e.g. "
+                 "parent–teacher talks) that hang off calendar items; their path is not known.",
+            params=[dict(id_param, description="Calendar item id (`calendarItem.links[rel=self].id` "
+                                               "from `GET /event`).")])},
         "/systemnews": {"get": op(
             "listSystemNews", "Misc", "Product news from Parro itself", ref("SystemNewsEvent"),
             ["listSystemNews.200.json"], coll=True)},
         "/absence/setting": {"get": op(
             "getAbsenceSetting", "Misc", "Absence-reporting settings",
             {"$ref": REF + "GeonObject"}, ["getAbsenceSetting.200.json"], coll=True,
-            desc="Returned `{\"items\": []}` in the only sample, so the item type is unknown.")},
+            desc="Returned `{\"items\": []}` in every capture, so the item type is unknown.")},
+        "/absence": {"get": op(
+            "listAbsences", "Misc", "Absence reports",
+            {"$ref": REF + "GeonObject"}, ["listAbsences.200.json"], coll=True,
+            desc="Returned an empty page (`Content-Range: items 0-0/0`) in the only capture, so the "
+                 "item type is unknown. Reporting an absence is a write and is not described.")},
+        "/media-export": {"get": op(
+            "getMediaExport", "Misc", "Media exports",
+            {"$ref": REF + "GeonObject"}, ["getMediaExport.200.json"], coll=True,
+            desc="Answered `200` with `{\"items\": []}` (no `Content-Range`) in the only capture, so "
+                 "the item type is unknown. Probably the photo exports a parent has requested; "
+                 "requesting one is a write and is not described.")},
+        "/media-export/settings": {"get": op(
+            "getMediaExportSettings", "Misc", "Whether the school allows downloading photos",
+            ref("MediaExportSettings"), ["getMediaExportSettings.200.json"])},
         "/chatroom": {"get": op(
             "listChatrooms", "Chat", "Chat conversations", ref("ChatRoomPrimer"),
             ["listChatrooms.200.json"], coll=True)},
@@ -475,19 +523,6 @@ def build(samples_dir, public=False):
             params=[dict(id_param, description="Chatroom id from `GET /chatroom`.")])},
     }
 
-    for p, summary in [("/absence", "Absence reports"), ("/calendaritem/{id}", "A calendar item"),
-                       ("/media-export", "Media export"), ("/conversations", "Conversations"),
-                       ("/timeslot", "Timeslots for calendar items"), ("/privacy", "Privacy settings")]:
-        o = {"tags": ["Unverified"], "operationId": "unverified_" + re.sub(r"\W+", "_", p).strip("_"),
-             "summary": summary + " (unverified)", "x-parro-verified": False,
-             "description": "Path found in the web app's code; never called. Parameters and response unknown.",
-             "parameters": [{"$ref": "#/components/parameters/AppVersion"},
-                            {"$ref": "#/components/parameters/Role"}],
-             "responses": {"200": {"description": "Unknown shape.", "content": {GEON: {"schema": {}}}},
-                           "401": {"$ref": "#/components/responses/Unauthorized"}}}
-        if "{id}" in p:
-            o["parameters"].append(id_param)
-        paths[p] = {"get": o}
 
     # ---- IdP
     idp = [{"url": "https://inloggen.parnassys.net/idp", "description": "ParnasSys IdP"}]
@@ -625,8 +660,7 @@ def build(samples_dir, public=False):
             {"name": "Groups", "description": "Classes and school-wide groups."},
             {"name": "Events", "description": "Announcements (mededelingen) and calendar items, incl. attachments."},
             {"name": "Chat", "description": "Conversations with teachers."},
-            {"name": "Misc", "description": "System news and settings."},
-            {"name": "Unverified", "description": "Present in the web app's code, never called."}],
+            {"name": "Misc", "description": "System news, absence and photo-export settings."}],
         "security": [{"bearerToken": []}, {"parnassysOAuth": ["openid"]}],
         "paths": paths,
         "components": {

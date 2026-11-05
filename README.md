@@ -256,9 +256,10 @@ archive. `cache info` shows its size, `cache clear` empties it, `--no-cache` swi
 <a href="https://chris-swift-dev.github.io/parro-api-client/"><img src="docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
 
 [`openapi/parro.public.openapi.json`](openapi/parro.public.openapi.json) describes the API as
-observed from the web client: 13 verified operations (account, children, groups, announcements,
-calendar items, chats, unread counts, system news, the agenda subscription link), 6 paths seen in
-the web app's code but never called (*Unverified*), and the login server's OAuth2 endpoints. It
+observed from the web client: 18 operations of the Parro API (account, children and their privacy
+settings, groups, announcements, calendar items, chats, unread counts, system news, absence and
+photo-export settings, the agenda subscription link), each called at least once, and the login
+server's OAuth2 endpoints. It
 explains the non-obvious parts: the geon media type and headers, `Range`-based paging, `dtype`
 polymorphism, and where attachments live.
 
