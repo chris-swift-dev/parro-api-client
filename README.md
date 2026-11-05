@@ -269,6 +269,9 @@ readable without Parro:
   noticed), but unchanged items are not rewritten and a saved file is never downloaded again.
 - Documents are always saved; photos only with `--photos` (a school year of photos can run to
   several GB). `--previous` archives last school year; `--to DIR` writes elsewhere.
+- **Run `sync --previous` once as well**, especially around the start of a school year. Schools
+  sometimes post the first dates of the new year (summer, preparation days) in last year's groups;
+  a plain `sync` reads only this year's groups, while Parro's own calendar feed shows both.
 - Nothing is ever deleted: an item that disappears from Parro stays, marked *(no longer in Parro)*
   in `index.md`. A renamed item gets renamed files.
 - The archive holds your children's names, photos and school letters: its folders are readable
@@ -397,6 +400,16 @@ Readable output, the cache and the overview against the real API, with one passw
 | Newsletter PDF read twice | Second read from the cache, same text; folders 0700, files 0600, no links stored |
 | `calendar-link` | Returns the subscription link; it answers `200 text/calendar` without login, refreshes hourly, works without `noCache`, and its token is stable |
 | Multi-day calendar items | The API lists them **once per day** (one 40-day item: 40 entries). Fixed: merged by calendar item; afterwards our agenda, our `.ics` and Parro's own feed agree on all 44 upcoming items (title and start day) |
+
+## Live check (2026-11-05, release 0.3.0: `sync`)
+
+| Check | Result |
+| --- | --- |
+| First `sync` (this school year, documents only) | 69 announcements, 106 calendar items, 7 chats, 10 documents (5.4 MB; one taken from the cache); 140 API requests, 16 s |
+| `sync --previous` | 606 announcements, 385 calendar items, 95 documents (113.5 MB); 418 API requests, 69 s |
+| Second `sync` | Everything unchanged; **11 requests, all lists** (no details, messages or downloads), 2 s |
+| Calendar against Parro's own feed | Same items, except multi-day timed items (one item here, one event per day there) and 3 summer items posted in last year's groups, which `sync --previous` archives |
+| On disk | Folders 0700, files 0600; no download or avatar links (the only links are ones written in messages) |
 
 ## Note on the HAR
 

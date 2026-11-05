@@ -1,7 +1,7 @@
 # Plan 3: human-readable output for the CLI and the MCP server
 
 *Status (2026-11-05): phases 0–6 released as 0.2.0. Phase 7 (archive) done on the `archive-sync` branch;
-phase 8: docs and version 0.3.0 done, live `sync` and release pending.*
+phase 8: docs, version 0.3.0 and the live `sync` done (2026-11-05); release pending.*
 
 **Goal:** besides JSON, `parro_cli.py` and `parro_mcp.py` can show the data the way the Parro app does:
 a feed of announcements with author and photos, an agenda grouped by day, chat conversations, and an
@@ -221,6 +221,9 @@ Snapshot tests: each view is rendered from the synthetic fixtures and compared w
   skipped; `.md` files start with a YAML header; a saved file counts as complete because files are
   written in one step; an item with a failed download is marked `|incomplete` and retried; the
   archive and the cache also drop every `…Url` field (avatar links carry an access key).
+- Live `sync` (2026-11-05): a second run made 11 requests, all lists. Compared with Parro's own
+  iCal feed, the archive missed 3 summer items that the school had posted in last year's groups;
+  `sync --previous` archives them, and the README now says to run it around the school-year change.
 - `parse_timestamp()` lives in `geon.py` (needed by summaries and rendering) and accepts every
   fraction length, which Python 3.10's `fromisoformat` does not.
 
