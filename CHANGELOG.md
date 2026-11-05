@@ -4,6 +4,31 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.4.0] - 2026-11-05
+
+Helper requests in the agenda, your children's privacy choices, and a spec without guesses: every
+path the spec listed as *unverified* was called once in the Parro web app.
+
+### Added
+- **Helpers wanted**: calendar items that ask parents to help (driving, reading aloud) are marked in
+  the agenda and the overview. `calendar --details` (MCP `details: true`) shows each slot with how
+  many parents signed up and whether you did; the `.ics` export and the `sync` archive name them
+  too. Their details are always fetched fresh (sign-ups change), and an existing archive updates
+  such items once.
+- **`privacy`** (MCP `parro_privacy`): per child, whether you can still change the privacy choices
+  (photos, data) and when and by whom they were last changed. `privacy --link CHILD_ID` (MCP
+  `link: true`) gives the link to the ParnasSys page where you set them. That link opens the page
+  without a login: it is never logged, cached or archived, and the output says to keep it private.
+- Spec: `GET /calendaritem/{id}` (with the helper slots), `GET /child/{id}/privacy`, the privacy
+  variant of `GET /child`, `GET /absence`, `GET /media-export` and `GET /media-export/settings`.
+
+### Changed
+- Spec: `/conversations` and `/timeslot` answered `404` and are removed, and so is the *Unverified*
+  section. The guess that the CORS preflight shows extra methods for `/calendar/sync` is gone: it
+  allows every method on every path.
+- The spec's privacy scan also checks that names, addresses and signed links in its examples and
+  samples are placeholders.
+
 ## [0.3.0] - 2026-11-05
 
 An archive: `parro_cli.py sync` keeps a local copy of everything your Parro account can see, as

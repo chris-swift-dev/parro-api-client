@@ -1,6 +1,6 @@
 # Plan 5: the unverified endpoints
 
-*Status: planned (2026-11-05); decisions taken as recommended (§6). Nothing implemented yet.*
+*Status: phases 1–6 done (2026-11-05), on branch `unverified-endpoints`; the live check and release 0.4.0 are next. Decisions taken as recommended (§6).*
 
 **Goal:** every path the spec lists as *Unverified* is either described from real responses or
 removed, and the client gains what is useful to a parent. Source: three HAR captures from the web

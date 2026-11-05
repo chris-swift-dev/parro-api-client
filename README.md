@@ -82,7 +82,8 @@ flowchart LR
 
 At a terminal the CLI prints markdown; piped into another program it prints JSON. `--format` (or
 `PARRO_FORMAT`) chooses explicitly. Dates are shown in the school's time zone, labels are English,
-content is shown as written.
+content is shown as written. Calendar items that ask parents to help (driving, reading aloud) are
+marked *helpers wanted*; with `--details` you see how many signed up, and whether you did.
 
 <details>
 <summary><b>The agenda</b>: <code>calendar --details</code></summary>
@@ -113,17 +114,18 @@ python3 parro_cli.py status
 python3 parro_cli.py overview                    # what is new, like the app's home screen
 python3 parro_cli.py announcements --limit 5 --unread-only
 python3 parro_cli.py attachment <announcement-id> --text
-python3 parro_cli.py calendar --details          # agenda with location and description
+python3 parro_cli.py calendar --details          # agenda with location, description and helper slots
 python3 parro_cli.py calendar-link               # Parro's own link to subscribe from Google/Apple/Outlook
 python3 parro_cli.py calendar --ics parro.ics --details   # or: an .ics file to import
 python3 parro_cli.py sync                        # keep a local archive (repeat to update)
+python3 parro_cli.py privacy                     # can you still change your children's privacy choices?
 python3 parro_cli.py announcements --format json | jq '.announcements[].title'
 python3 parro_cli.py get /accountsettings
 python3 parro_cli.py token                       # paste into Swagger UI → Authorize → bearerToken
 ```
 
 Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-finish <url>`,
-`overview`, `me`, `children`, `groups [--previous]`, `unread`, `system-news [--full]`,
+`overview`, `me`, `children`, `privacy [--link CHILD_ID]`, `groups [--previous]`, `unread`, `system-news [--full]`,
 `announcements [--group ID] [--limit N] [--unread-only] [--full]`, `announcement <id>`,
 `calendar [--group ID] [--limit N] [--details] [--past] [--ics FILE]`, `calendar-link`,
 `attachment <event-id> [--attachment-id ID | --all] [--save-to DIR] [--text]`, `chatrooms`,
@@ -159,12 +161,13 @@ Ask Claude about school, and it reads Parro for you. An illustration with the in
 | `parro_announcements` | The main feed. Merges all groups, newest first, full text + attachment list. |
 | `parro_announcement` | One announcement by id, with author. |
 | **`parro_attachment`** | **Downloads an attachment of an announcement or calendar item and returns its text (PDF/docx/txt/csv/html) or the image.** |
-| `parro_calendar` | Calendar items from today on, soonest first; `details: true` adds location and description, `past: true` earlier items. |
+| `parro_calendar` | Calendar items from today on, soonest first; `details: true` adds location, description and helper slots, `past: true` earlier items. |
 | `parro_chatrooms` / `parro_chat_messages` | Conversations. |
 | `parro_unread` | Unread counts per category. |
 | `parro_get` | Escape hatch: GET any `/rest/v2` path not covered above. |
 | `parro_overview` | What is new: unread counts, latest announcements, coming up, unread chats. |
 | `parro_calendar_link` | The personal link to subscribe to the Parro agenda (keep it secret). |
+| `parro_privacy` | Per child: can parents change the privacy choices now, and when were they last changed; `link: true` gives the page to change them (keep it secret). |
 
 Every tool takes an optional `format`: `json` (default) or `markdown`, a readable view that keeps
 every id. The first 16 tools have the same names and arguments as the original server, so existing
@@ -221,6 +224,14 @@ Every environment variable: **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)**.
   subscription feature, but it is a snapshot: export again to update. Every event keeps the same
   UID, so importing a newer file updates events instead of duplicating them.
 
+## Your children's privacy choices
+
+Schools ask parents every year what they may do with photos and data of their children.
+`parro_cli.py privacy` shows per child whether you can still change those choices, and when and by
+whom they were last changed. The choices themselves are not in the API: `privacy --link CHILD_ID`
+prints the link to the ParnasSys page where you set them. **That link is a secret too**: it opens
+the page without logging in.
+
 ## Your own archive: `sync`
 
 `parro_cli.py sync` keeps a local copy of everything your account can see, as files that stay
@@ -248,7 +259,8 @@ readable without Parro:
 
 **The cache.** Attachments (and their text) and calendar details are also kept in
 `~/.parro/data/cache`, so a newsletter is downloaded once, not every time an assistant reads it.
-Lists are never cached: they are how the client learns what is new. Same privacy rules as the
+Lists are never cached: they are how the client learns what is new; neither are the details of items
+that ask for helpers, because sign-ups change. Same privacy rules as the
 archive. `cache info` shows its size, `cache clear` empties it, `--no-cache` switches it off.
 
 ## The OpenAPI specification
