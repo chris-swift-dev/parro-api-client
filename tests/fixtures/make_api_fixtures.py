@@ -904,6 +904,14 @@ def files() -> dict[str, Any]:
         "getAbsenceSetting.200.json": {"items": []},
         "listChatrooms.200.json": {"items": CHATROOMS},
         "listChatMessages.200.json": {"items": CHAT_MESSAGES},
+        # Shape of GET /calendar/sync (captured 2026-11-05); id, token and noCache are invented.
+        "getCalendarSync.200.json": {
+            "dtype": "Strings",
+            "strings": [
+                f"https://calendar.parro.com/ical/{GUARDIAN_ID}/"
+                "00000000-0000-4000-8000-0000000000aa?noCache=00000000-0000-4000-8000-0000000000bb"
+            ],
+        },
         "token.200.json": {
             "access_token": "EXAMPLE-ACCESS-TOKEN",
             "refresh_token": "EXAMPLE-REFRESH-TOKEN",

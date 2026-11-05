@@ -247,6 +247,18 @@ class ParroClient:
     def list_system_news(self, limit: int = 20) -> ApiResponse:
         return self.get("/systemnews", limit=limit, count_total=True)
 
+    def get_calendar_link(self) -> str | None:
+        """GET /calendar/sync: the personal iCalendar subscription link, or None if there is none.
+
+        The link is a secret (anyone holding it can read the calendar), so it is never logged.
+        """
+        payload = self.get("/calendar/sync").payload
+        strings = payload.get("strings") if isinstance(payload, dict) else None
+        links = [
+            link for link in strings or [] if isinstance(link, str) and link.startswith("http")
+        ]
+        return links[0] if links else None
+
     def get_absence_settings(self) -> ApiResponse:
         return self.get("/absence/setting")
 

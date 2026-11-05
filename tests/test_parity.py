@@ -213,6 +213,7 @@ def test_tools_list_matches_the_original_plus_the_login_method(tmp_path, monkeyp
         assert tool["properties"].pop("format")["default"] == "json"
     assert new_interface["parro_calendar"]["properties"].pop("details")["type"] == "boolean"
     assert new_interface["parro_calendar"]["properties"].pop("past")["type"] == "boolean"
-    assert new_interface.pop("parro_overview") == {"properties": {}}  # new tool
+    assert new_interface.pop("parro_overview") == {"properties": {}}  # new tools
+    assert new_interface.pop("parro_calendar_link") == {"properties": {}}
     assert new_interface == old_interface
     assert list(new_interface) == list(old_interface), "same tools, same order"

@@ -255,6 +255,34 @@ def calendar_details(client: ParroClient, item: dict[str, Any]) -> dict[str, Any
     return details
 
 
+# ------------------------------------------------------------------------ calendar link
+
+CALENDAR_LINK_WARNING = (
+    "This link is personal and works without logging in: anyone who has it can read your Parro "
+    "calendar. Paste it only into your own calendar app; do not share or publish it."
+)
+
+
+def calendar_link(client: ParroClient) -> dict[str, Any]:
+    """Parro's own agenda subscription link (GET /calendar/sync), with how to use it."""
+    link = client.get_calendar_link()
+    if link is None:
+        raise ParroError(
+            "Parro returned no calendar link. Agenda sync may not be part of your school's Parro "
+            "plan (ParnasSys lists it for the paid Parro Ouderapp). `calendar --ics FILE` exports "
+            "the agenda to a file instead."
+        )
+    return {
+        "calendar_link": link,
+        "warning": CALENDAR_LINK_WARNING,
+        "how_to_use": [
+            "Google Calendar: Other calendars → + → From URL, paste the link (updates daily).",
+            "Apple Calendar: File → New Calendar Subscription, paste the link.",
+            "Outlook: Add calendar → Subscribe from web, paste the link.",
+        ],
+    }
+
+
 # ---------------------------------------------------------------------------- overview
 
 OVERVIEW_ITEMS = 5

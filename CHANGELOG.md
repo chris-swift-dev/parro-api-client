@@ -20,6 +20,11 @@ small cache stops the same newsletter from being downloaded again and again.
   coming up, and chats with unread messages, like the app's home screen.
 - `calendar --details` (MCP: `details: true`) adds location, description and attachments.
 - `calendar --past` (MCP: `past: true`) lists earlier items, latest first.
+- `calendar-link` command and `parro_calendar_link` tool: Parro's own link to subscribe to the
+  agenda from Google, Apple or Outlook calendar (`GET /calendar/sync`, now in the spec and so in
+  Swagger UI). The link is a secret; it is never logged.
+- `calendar --ics FILE` exports calendar items as an iCalendar file (RFC 5545) to import into
+  another calendar app; stable UIDs, so a newer export updates the same events.
 - `--full` for `announcements` and `system-news`: whole texts instead of a 3-line preview.
 - A cache for attachment files, their text, and calendar details in `PARRO_DATA_DIR` (default
   `~/.parro/data`), readable only by you and never holding download links. Lists are never cached.

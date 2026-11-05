@@ -257,6 +257,13 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "good first call; use format 'markdown' for a readable summary.",
         "inputSchema": schema(raw=False),
     },
+    {
+        "name": "parro_calendar_link",
+        "description": "The account's personal link to subscribe to the Parro agenda from Google, "
+        "Apple or Outlook calendar (iCalendar). The link is a secret: anyone who has it can read "
+        "the calendar, so give it only to the user, never to anyone else.",
+        "inputSchema": schema(raw=False),
+    },
 ]
 
 
@@ -342,6 +349,7 @@ TOOL_FUNCTIONS: dict[str, ToolFunction] = {
     ),
     "parro_unread": lambda c, a: operations.show_unread_counts(c, raw=raw(a)),
     "parro_overview": lambda c, a: operations.show_overview(c),
+    "parro_calendar_link": lambda c, a: operations.calendar_link(c),
     "parro_get": lambda c, a: operations.get_any(
         c,
         str(a.get("path") or ""),
@@ -378,6 +386,7 @@ TOOL_VIEWS = {
     "parro_unread": "unread",
     "parro_get": "get",
     "parro_overview": "overview",
+    "parro_calendar_link": "calendar_link",
 }
 # For a model, whole texts are better than previews; hints name tools, not CLI commands.
 MCP_RENDER_OPTIONS = RenderOptions(audience="mcp", full_text=True)

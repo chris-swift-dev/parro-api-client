@@ -110,3 +110,4 @@ them only while the list shows the same value. Lists are never cached.
 | understand a login failure | `parro/authenticator.py`, `parro/login_methods.py`, `tests/test_login_safety.py` |
 | check what the API really does | `openapi/parro.openapi.json` and `samples/` (private) |
 | add test data | `tests/fixtures/make_api_fixtures.py` (invented data only), then run it |
+| change the .ics export | `parro/icalendar.py` and `tests/test_calendar_export.py` |

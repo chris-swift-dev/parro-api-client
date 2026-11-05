@@ -142,7 +142,8 @@ def test_tool_interface_only_gains_optional_arguments():
     }
     expected["parro_calendar"]["properties"]["details"] = {"type": "boolean"}
     expected["parro_calendar"]["properties"]["past"] = {"type": "boolean"}
-    expected["parro_overview"] = {"properties": {}}  # new tool, added at the end
+    expected["parro_overview"] = {"properties": {}}  # new tools, added at the end
+    expected["parro_calendar_link"] = {"properties": {}}
     for tool in expected.values():
         tool["properties"]["format"] = FORMAT_ARGUMENT
     assert interface_of(parro_mcp.TOOL_DEFINITIONS) == expected
@@ -319,7 +320,7 @@ def test_stdio_session_without_network(tmp_path):
     answers = [json.loads(line) for line in finished.stdout.splitlines()]
     assert [a.get("id") for a in answers] == [1, 2, 3, None]
     assert answers[0]["result"]["protocolVersion"] == "2025-06-18"
-    assert len(answers[1]["result"]["tools"]) == 17
+    assert len(answers[1]["result"]["tools"]) == 18
     status = json.loads(answers[2]["result"]["content"][0]["text"])
     assert status["has_access_token"] is False and "Not logged in" in status["error"]
     assert answers[3]["error"]["code"] == -32700
@@ -328,7 +329,7 @@ def test_stdio_session_without_network(tmp_path):
 
 def test_manual_tools_and_call_commands(tmp_path):
     listed = run_server(tmp_path, "", "tools")
-    assert listed.returncode == 0 and len(listed.stdout.splitlines()) == 17
+    assert listed.returncode == 0 and len(listed.stdout.splitlines()) == 18
     called = run_server(tmp_path, "", "call", "parro_auth_status")
     assert called.returncode == 0
     assert json.loads(called.stdout)["has_access_token"] is False

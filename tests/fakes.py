@@ -184,6 +184,7 @@ class FakeParroApi:
         single = {
             "/account/me": "getAccountMe.200.json",
             "/accountsettings": "getAccountSettings.200.json",
+            "/calendar/sync": "getCalendarSync.200.json",
         }
         collections = {
             "/child": "listChildren.200.json",

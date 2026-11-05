@@ -19,7 +19,7 @@ Point it at the volume, so it survives a rebuild and stays out of the image:
 Check after a rebuild:
 
 ```bash
-docker exec <container> /opt/venv/bin/python /app/parro_mcp.py tools   # lists 17 tools
+docker exec <container> /opt/venv/bin/python /app/parro_mcp.py tools   # lists 18 tools
 ```
 
 ## Logging in to Parro itself

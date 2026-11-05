@@ -428,6 +428,21 @@ def build(samples_dir, public=False):
                       "Concrete event type.", required=True)],
             extra={"406": {"description": "Missing or abstract `dtype`.",
                            "content": content(ref("GeonError"), ["getEvent.406.json"])}})},
+        "/calendar/sync": {"get": op(
+            "getCalendarSync", "Events", "Personal iCalendar link for subscribing to the agenda",
+            ref("Strings"), ["getCalendarSync.200.json"],
+            desc="Returns the account's personal **agenda subscription link** in `strings[0]`, e.g. "
+                 "`https://calendar.parro.com/ical/<guardianId>/<token>?noCache=<uuid>`. Calendar apps "
+                 "(Google, Apple, Outlook) subscribe to it and update by themselves; this is what the "
+                 "app's \"sync the agenda\" option copies. Observed once (2026-11-05, web client).\n\n"
+                 "⚠️ **The link is a secret**: anyone who has it can read the calendar, without logging "
+                 "in. Do not share or log it.\n\n"
+                 "* `noCache` looks like a cache-buster added per request; whether the link works without "
+                 "it is not verified.\n"
+                 "* ParnasSys lists agenda syncing as a feature of the paid *Parro Ouderapp*; with *Parro "
+                 "Basis* the call may fail or return nothing (not verified).\n"
+                 "* The CORS preflight also allows `POST`, `PUT` and `DELETE` on this path (perhaps to "
+                 "renew or revoke the link). They were never called and are not described here.")},
         "/systemnews": {"get": op(
             "listSystemNews", "Misc", "Product news from Parro itself", ref("SystemNewsEvent"),
             ["listSystemNews.200.json"], coll=True)},

@@ -679,6 +679,42 @@
         "description": "`dtype` is required. Without it the API answers `406 EVENT_BAD_TYPE` (abstract supertype `RAbstractEvent`). **Pitfall:** `dtype=event.RAnnouncementEvent` answers **401**, not 406. Use `event.RAnnouncementEventPrimer` for announcements. A client that treats every 401 as an expired token will loop through logins."
       }
     },
+    "/calendar/sync": {
+      "get": {
+        "tags": [
+          "Events"
+        ],
+        "operationId": "getCalendarSync",
+        "summary": "Personal iCalendar link for subscribing to the agenda",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "$ref": "#/components/schemas/Strings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        },
+        "description": "Returns the account's personal **agenda subscription link** in `strings[0]`, e.g. `https://calendar.parro.com/ical/<guardianId>/<token>?noCache=<uuid>`. Calendar apps (Google, Apple, Outlook) subscribe to it and update by themselves; this is what the app's \"sync the agenda\" option copies. Observed once (2026-11-05, web client).\n\n⚠️ **The link is a secret**: anyone who has it can read the calendar, without logging in. Do not share or log it.\n\n* `noCache` looks like a cache-buster added per request; whether the link works without it is not verified.\n* ParnasSys lists agenda syncing as a feature of the paid *Parro Ouderapp*; with *Parro Basis* the call may fail or return nothing (not verified).\n* The CORS preflight also allows `POST`, `PUT` and `DELETE` on this path (perhaps to renew or revoke the link). They were never called and are not described here."
+      }
+    },
     "/systemnews": {
       "get": {
         "tags": [
@@ -3775,6 +3811,30 @@
           "dtype"
         ],
         "description": "Geon type `auth.ROrganisationPrimer`. Inferred from 2 object(s) in: `getAccountMe.200.json`, `getOrganisation.200.json`."
+      },
+      "Strings": {
+        "type": "object",
+        "properties": {
+          "dtype": {
+            "type": "string",
+            "enum": [
+              "Strings"
+            ],
+            "example": "Strings",
+            "description": "Geon type discriminator."
+          },
+          "strings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
+        "required": [
+          "dtype"
+        ],
+        "description": "Geon type `Strings`. Inferred from 1 object(s) in: `getCalendarSync.200.json`."
       },
       "SystemNewsEvent": {
         "type": "object",

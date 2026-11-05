@@ -671,6 +671,27 @@ def overview_chats(chats: dict[str, Any], options: RenderOptions) -> str:
     return "## Chats with unread messages\n" + "\n".join([*lines, more] if lines else ["None."])
 
 
+def render_calendar_link(result: dict[str, Any], options: RenderOptions) -> str:
+    steps = "\n".join(f"- {step}" for step in result.get("how_to_use", []))
+    return document(
+        "# Your Parro calendar link",
+        result.get("calendar_link", ""),
+        f"{WARNING_MARK} {result.get('warning', '')}",
+        steps,
+    )
+
+
+def render_ics_export(result: dict[str, Any], options: RenderOptions) -> str:
+    period = "earlier" if result.get("period") == "past" else "upcoming"
+    lines = [
+        f"- File: {result.get('ics_file')}",
+        f"- {plural(result.get('events', 0), 'event')} ({period})",
+        "- Import it into your calendar app. Importing a newer export updates the same events.",
+        "- For a calendar that updates by itself: parro_cli.py calendar-link",
+    ]
+    return document("# Calendar exported", "\n".join(lines))
+
+
 def render_cache(result: dict[str, Any], options: RenderOptions) -> str:
     if "removed_files" in result:
         removed = plural(result["removed_files"], "file")
@@ -708,6 +729,8 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "attachment": render_attachment,
     "cache": render_cache,
     "overview": render_overview,
+    "calendar_link": render_calendar_link,
+    "ics_export": render_ics_export,
 }
 
 

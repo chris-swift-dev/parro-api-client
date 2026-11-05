@@ -19,9 +19,10 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from parro import operations
+from parro import icalendar, operations
 from parro.api_client import ParroClient
 from parro.attachments import ReadOptions
+from parro.cache import write_private_file
 from parro.errors import EXIT_OK, EXIT_USAGE_ERROR, ConfigurationError, ParroError
 from parro.rendering import RenderOptions, choose_format, render
 from parro.settings import LOGIN_METHODS, OUTPUT_FORMATS, Settings
@@ -155,14 +156,25 @@ def add_reading_commands(command: CommandFactory) -> None:
 
     calendar = command("calendar", "calendar items from today on, soonest first")
     calendar.add_argument("--group", type=int, help="only this group (see `groups`)")
-    add_limit(calendar, 20)
+    calendar.add_argument(
+        "--limit",
+        type=int,
+        help=f"how many items (default 20; with --ics all upcoming, up to {ICS_MAX_ITEMS})",
+    )
     calendar.add_argument(
         "--details",
         action="store_true",
         help="add location, description and attachments (one extra request per item)",
     )
     calendar.add_argument("--past", action="store_true", help="earlier items, latest first")
+    calendar.add_argument(
+        "--ics",
+        metavar="FILE",
+        help="write the items as an iCalendar file to import elsewhere ('-' = standard output). "
+        "Add --details for locations and descriptions. For automatic updates use calendar-link",
+    )
 
+    command("calendar-link", "your personal link to subscribe to the Parro agenda (keep it secret)")
     add_attachment_command(command)
 
     add_limit(command("chatrooms", "chat conversations"), 25)
@@ -247,6 +259,27 @@ def run_attachment(client: ParroClient, args: argparse.Namespace) -> Any:
     return PlainText(attachment_texts(report.summary))
 
 
+ICS_MAX_ITEMS = 500
+
+
+def run_calendar(client: ParroClient, args: argparse.Namespace) -> Any:
+    """The agenda, or with --ics the agenda as an iCalendar file."""
+    if args.ics and args.raw:
+        raise ConfigurationError("--ics writes calendar events; it cannot be combined with --raw.")
+    limit = args.limit if args.limit is not None else (ICS_MAX_ITEMS if args.ics else 20)
+    agenda = operations.list_calendar(
+        client, args.group, limit, raw=args.raw, details=args.details, past=args.past
+    )
+    if not args.ics:
+        return agenda
+    text = icalendar.build_icalendar(agenda, operations.current_time())
+    if args.ics == "-":
+        return PlainText(text)
+    path = Path(args.ics).expanduser()
+    write_private_file(path, text.encode("utf-8"))
+    return {"ics_file": str(path), "events": agenda["count"], "period": agenda["period"]}
+
+
 def attachment_texts(summary: dict[str, Any]) -> str:
     """The extracted text(s) of an attachment report, separated by a header line per file."""
     if "message" in summary:  # several attachments and none chosen: nothing was read
@@ -289,6 +322,7 @@ COMMAND_VIEWS = {
     "announcement": "announcement",
     "calendar": "calendar",
     "attachment": "attachment",
+    "calendar-link": "calendar_link",
     "chatrooms": "chatrooms",
     "chat-messages": "chat_messages",
     "get": "get",
@@ -319,10 +353,9 @@ HANDLERS: dict[str, Handler] = {
         c, a.group, a.limit, a.unread_only, raw=a.raw
     ),
     "announcement": lambda c, a: operations.show_announcement(c, a.id, raw=a.raw),
-    "calendar": lambda c, a: operations.list_calendar(
-        c, a.group, a.limit, raw=a.raw, details=a.details, past=a.past
-    ),
+    "calendar": lambda c, a: run_calendar(c, a),
     "attachment": run_attachment,
+    "calendar-link": lambda c, a: operations.calendar_link(c),
     "chatrooms": lambda c, a: operations.list_chatrooms(c, a.limit, raw=a.raw),
     "chat-messages": lambda c, a: operations.list_chat_messages(
         c, a.chatroom_id, a.limit, raw=a.raw
@@ -375,10 +408,11 @@ def main(
 def print_result(args: argparse.Namespace, result: Any, output_format: str) -> None:
     """Plain text as is; otherwise markdown or JSON, as chosen."""
     if isinstance(result, PlainText):
-        print(result)
+        print(result, end="" if result.endswith("\n") else "\n")
     elif output_format == "markdown":
         options = RenderOptions(audience="cli", full_text=getattr(args, "full", False))
-        print(render(COMMAND_VIEWS.get(args.command, "get"), result, options), end="")
+        view = "ics_export" if "ics_file" in result else COMMAND_VIEWS.get(args.command, "get")
+        print(render(view, result, options), end="")
     else:
         print(operations.to_json_text(result, compact=args.compact))
 

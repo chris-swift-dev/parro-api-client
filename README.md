@@ -78,6 +78,8 @@ python3 parro_cli.py overview                    # what is new, like the app's h
 python3 parro_cli.py announcements --limit 5 --unread-only
 python3 parro_cli.py attachment <announcement-id> --text
 python3 parro_cli.py calendar --details          # agenda with location and description
+python3 parro_cli.py calendar-link               # Parro's own link to subscribe from Google/Apple/Outlook
+python3 parro_cli.py calendar --ics parro.ics --details   # or: an .ics file to import
 python3 parro_cli.py announcements --format json | jq '.announcements[].title'
 python3 parro_cli.py get /accountsettings
 python3 parro_cli.py token                       # paste into Swagger UI → Authorize → bearerToken
@@ -86,7 +88,7 @@ python3 parro_cli.py token                       # paste into Swagger UI → Aut
 Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-finish <url>`,
 `overview`, `me`, `children`, `groups [--previous]`, `unread`, `system-news [--full]`,
 `announcements [--group ID] [--limit N] [--unread-only] [--full]`, `announcement <id>`,
-`calendar [--group ID] [--limit N] [--details] [--past]`,
+`calendar [--group ID] [--limit N] [--details] [--past] [--ics FILE]`, `calendar-link`,
 `attachment <event-id> [--attachment-id ID | --all] [--save-to DIR] [--text]`, `chatrooms`,
 `chat-messages <chatroom-id>`, `cache info|clear`,
 `get <path> [--param k=v ...] [--limit N] [--offset N]`.
@@ -114,6 +116,7 @@ Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in ·
 | `parro_unread` | Unread counts per category. |
 | `parro_get` | Escape hatch: GET any `/rest/v2` path not covered above. |
 | `parro_overview` | What is new: unread counts, latest announcements, coming up, unread chats. |
+| `parro_calendar_link` | The personal link to subscribe to the Parro agenda (keep it secret). |
 
 Every tool takes an optional `format`: `json` (default) or `markdown`, a readable view that keeps
 every id. The first 16 tools have the same names and arguments as the original server, so existing
@@ -232,6 +235,20 @@ So a local tool must borrow the web client's `client_id`, which is pinned to
 Switch to the acceptance environment by overriding `PARRO_BASE_URI`, `PARRO_LOGIN_URI` and
 `PARRO_CLIENT_ID`.
 
+## The agenda in your own calendar app
+
+Two ways, depending on what you need:
+
+- **`calendar-link`** prints Parro's own subscription link (`GET /calendar/sync`). Paste it into
+  Google Calendar (*Other calendars → From URL*), Apple Calendar (*New Calendar Subscription*) or
+  Outlook (*Subscribe from web*), and the calendar keeps itself up to date. **The link is a secret**:
+  anyone who has it can read your Parro calendar without logging in. ParnasSys lists agenda syncing
+  as a feature of the paid *Parro Ouderapp*, so not every school may offer it.
+- **`calendar --ics FILE`** writes an iCalendar file of the upcoming items (`--past` for earlier
+  ones, `--details` for locations and descriptions, `-` for standard output). It works without the
+  subscription feature, but it is a snapshot: export again to update. Every event keeps the same
+  UID, so importing a newer file updates events instead of duplicating them.
+
 ## Local data: the cache
 
 Downloading the same newsletter again and again is slow, and an AI assistant often reads it several
@@ -253,7 +270,7 @@ written to it. `parro_cli.py cache info` shows its size; `cache clear` empties i
 `openapi/parro.public.openapi.json` describes the API as observed from the web client:
 
 - **Account, children, groups, announcements, calendar items, chats, unread counts, system news**:
-  12 verified operations, plus 6 paths that appear in the web app's code but were never called
+  13 verified operations (incl. the agenda subscription link), plus 6 paths that appear in the web app's code but were never called
   (tagged *Unverified*).
 - **Authentication** against the ParnasSys IdP: authorization code + PKCE, password grant,
   refresh, revoke, OIDC discovery.
