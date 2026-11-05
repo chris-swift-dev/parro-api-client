@@ -138,6 +138,13 @@ def add_reading_commands(command: CommandFactory) -> None:
     command("overview", "what is new: unread counts, latest announcements, coming up, chats")
     command("me", "the account: name, e-mail, school")
     add_limit(command("children", "the children linked to the account"), 20)
+    privacy = command("privacy", "per child: can you change the privacy choices (photos, data) now")
+    privacy.add_argument(
+        "--link",
+        type=int,
+        metavar="CHILD_ID",
+        help="the signed link to the page where they are set (a secret: do not share it)",
+    )
     groups = command("groups", "groups (classes) with the ids other commands need")
     groups.add_argument("--previous", action="store_true", help="last school year instead")
     add_limit(groups, 50)
@@ -346,6 +353,7 @@ COMMAND_VIEWS = {
     "calendar": "calendar",
     "attachment": "attachment",
     "calendar-link": "calendar_link",
+    "privacy": "privacy",
     "chatrooms": "chatrooms",
     "chat-messages": "chat_messages",
     "get": "get",
@@ -380,6 +388,9 @@ HANDLERS: dict[str, Handler] = {
     "calendar": lambda c, a: run_calendar(c, a),
     "attachment": run_attachment,
     "calendar-link": lambda c, a: operations.calendar_link(c),
+    "privacy": lambda c, a: (
+        operations.privacy_link(c, a.link) if a.link is not None else operations.privacy(c, a.raw)
+    ),
     "chatrooms": lambda c, a: operations.list_chatrooms(c, a.limit, raw=a.raw),
     "chat-messages": lambda c, a: operations.list_chat_messages(
         c, a.chatroom_id, a.limit, raw=a.raw

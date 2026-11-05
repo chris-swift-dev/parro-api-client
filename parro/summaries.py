@@ -336,6 +336,38 @@ def without_url(attachment: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in attachment.items() if key != "url"}
 
 
+# -------------------------------------------------------------------------------- privacy
+
+
+def summarize_privacy(response: ApiResponse) -> dict[str, Any]:
+    """Per child, the state of the privacy choices (spec: listChildren, privacy variant).
+
+    The choices themselves are not in the API; `privacy --link` gives the page that has them.
+    `lastEditedBy` is a plain name here (a person object elsewhere in the API).
+    """
+    children = []
+    for child in response.items:
+        setting = child.get("setting") if isinstance(child.get("setting"), dict) else {}
+        changed_by = setting.get("lastEditedBy")
+        children.append(
+            drop_missing(
+                {
+                    "id": get_object_id(child),
+                    "name": child.get("firstname") or full_name(child) or None,
+                    "parents_can_change": setting.get("editableForGuardians"),
+                    "editable_in_period": setting.get("editableInPeriod"),
+                    "state": setting.get("state"),
+                    "last_changed": setting.get("lastModifiedAt"),
+                    "last_changed_by": (
+                        full_name(changed_by) if isinstance(changed_by, dict) else changed_by
+                    )
+                    or None,
+                }
+            )
+        )
+    return {"total": total_or_count(response), "children": children}
+
+
 # ---------------------------------------------------------------------------------- chats
 
 

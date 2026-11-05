@@ -786,6 +786,45 @@ def render_calendar_link(result: dict[str, Any], options: RenderOptions) -> str:
     )
 
 
+def render_privacy(result: dict[str, Any], options: RenderOptions) -> str:
+    """Per child, the state of the privacy choices; or, with --link, the page to set them."""
+    if "privacy_link" in result:
+        return document(
+            f"# Privacy page for child {object_id(result.get('child_id'))}",
+            result["privacy_link"],
+            f"{WARNING_MARK} {result.get('warning', '')}",
+        )
+    children = result.get("children", [])
+    lines = [f"- {privacy_line(child)}" for child in children]
+    more = hint(
+        options,
+        "privacy --link CHILD_ID  (the page where you set them)",
+        "parro_privacy(child_id=ID, link=true)",
+    )
+    body = "\n".join([*lines, more]) if lines else "No children found."
+    return document(f"# Privacy choices ({len(children)})", body)
+
+
+def privacy_line(child: dict[str, Any]) -> str:
+    """'Mila · parents can change them · last changed Mon 14 Sep 2026 by … · #id'."""
+    can_change = child.get("parents_can_change")
+    who = {True: "parents can change them", False: "parents cannot change them now"}
+    changed = parse_timestamp(child.get("last_changed"))
+    when = f"last changed {format_day(changed)}" if changed else ""
+    if when and child.get("last_changed_by"):
+        when += f" by {child['last_changed_by']}"
+    state = str(child.get("state") or "")
+    return join_parts(
+        [
+            child.get("name") or "(no name)",
+            who.get(can_change, "") if isinstance(can_change, bool) else "",
+            when,
+            f"state: {state.lower()}" if state and state != "OPEN" else "",
+            object_id(child.get("id")),
+        ]
+    )
+
+
 def render_ics_export(result: dict[str, Any], options: RenderOptions) -> str:
     period = "earlier" if result.get("period") == "past" else "upcoming"
     lines = [
@@ -869,6 +908,7 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "cache": render_cache,
     "overview": render_overview,
     "calendar_link": render_calendar_link,
+    "privacy": render_privacy,
     "ics_export": render_ics_export,
     "sync": render_sync,
 }

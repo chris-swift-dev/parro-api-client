@@ -215,5 +215,6 @@ def test_tools_list_matches_the_original_plus_the_login_method(tmp_path, monkeyp
     assert new_interface["parro_calendar"]["properties"].pop("past")["type"] == "boolean"
     assert new_interface.pop("parro_overview") == {"properties": {}}  # new tools
     assert new_interface.pop("parro_calendar_link") == {"properties": {}}
+    assert set(new_interface.pop("parro_privacy")["properties"]) == {"child_id", "link", "raw"}
     assert new_interface == old_interface
     assert list(new_interface) == list(old_interface), "same tools, same order"

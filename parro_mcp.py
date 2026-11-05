@@ -264,6 +264,24 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "the calendar, so give it only to the user, never to anyone else.",
         "inputSchema": schema(raw=False),
     },
+    {
+        "name": "parro_privacy",
+        "description": "Per child, the state of the privacy choices (photos, data) that schools "
+        "ask parents to set: whether parents can change them now, and when and by whom they were "
+        "last changed. The choices themselves are not in the API. With link=true and child_id: "
+        "the signed link to the page where they are set; it opens without a login, so give it "
+        "only to the user, never to anyone else.",
+        "inputSchema": schema(
+            {
+                "child_id": integer("Child id from this tool or parro_children; needed with link."),
+                "link": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Give the link to the child's privacy page instead.",
+                },
+            }
+        ),
+    },
 ]
 
 
@@ -350,6 +368,11 @@ TOOL_FUNCTIONS: dict[str, ToolFunction] = {
     "parro_unread": lambda c, a: operations.show_unread_counts(c, raw=raw(a)),
     "parro_overview": lambda c, a: operations.show_overview(c),
     "parro_calendar_link": lambda c, a: operations.calendar_link(c),
+    "parro_privacy": lambda c, a: (
+        operations.privacy_link(c, a.get("child_id"))
+        if a.get("link")
+        else operations.privacy(c, raw=raw(a))
+    ),
     "parro_get": lambda c, a: operations.get_any(
         c,
         str(a.get("path") or ""),
@@ -387,6 +410,7 @@ TOOL_VIEWS = {
     "parro_get": "get",
     "parro_overview": "overview",
     "parro_calendar_link": "calendar_link",
+    "parro_privacy": "privacy",
 }
 # For a model, whole texts are better than previews; hints name tools, not CLI commands.
 MCP_RENDER_OPTIONS = RenderOptions(audience="mcp", full_text=True)

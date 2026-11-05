@@ -270,6 +270,32 @@ def calendar_details(client: ParroClient, item: dict[str, Any]) -> dict[str, Any
     return details
 
 
+# ------------------------------------------------------------------------------ privacy
+
+PRIVACY_LINK_WARNING = (
+    "This link is signed and opens the page without logging in: anyone who has it can see and "
+    "change your child's privacy choices. Open it yourself; do not share or publish it."
+)
+
+
+def privacy(client: ParroClient, raw: bool = False) -> Any:
+    """Per child: can parents change the privacy choices now, and when were they last changed."""
+    response = client.list_children_privacy()
+    return response.payload if raw else summaries.summarize_privacy(response)
+
+
+def privacy_link(client: ParroClient, child_id: Any) -> dict[str, Any]:
+    """The signed link to the page where one child's privacy choices are set (a secret)."""
+    child = require_id(child_id, "child id")
+    link = client.get_privacy_link(child)
+    if link is None:
+        raise ParroError(
+            f"Parro returned no privacy page for child {child}. `privacy` lists the children "
+            "and their ids."
+        )
+    return {"child_id": child, "privacy_link": link, "warning": PRIVACY_LINK_WARNING}
+
+
 # ------------------------------------------------------------------------ calendar link
 
 CALENDAR_LINK_WARNING = (

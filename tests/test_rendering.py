@@ -85,6 +85,7 @@ def ids_that_must_show(view: str, data: Any) -> set[int]:
 CLI_CASES = [
     (["me"], "me", "account"),
     (["children"], "children", "children"),
+    (["privacy"], "privacy", "privacy"),
     (["groups"], "groups", "groups"),
     (["groups", "--previous"], "groups-previous", "groups"),
     (["unread"], "unread", "unread"),
