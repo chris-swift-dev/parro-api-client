@@ -14,7 +14,8 @@ Nothing else changes: still standard library only (plus the optional `pymupdf` /
 
 Since 0.2.0 the server keeps a cache of attachments and calendar details (README → Local data).
 Point it at the volume, so it survives a rebuild and stays out of the image:
-`PARRO_DATA_DIR=/data/parro`. Or switch it off with `PARRO_CACHE=off`.
+`PARRO_DATA_DIR=/data/parro`. Or switch it off with `PARRO_CACHE=off`. The `sync` archive (0.3.0)
+is a CLI command; run it where you want the files, not inside the MCP container.
 
 Check after a rebuild:
 

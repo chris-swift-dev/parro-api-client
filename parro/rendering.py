@@ -552,9 +552,8 @@ def render_conversation(result: dict[str, Any], options: RenderOptions) -> str:
     blocks = [f"## {day}\n\n" + "\n\n".join(entries) for day, entries in days.items()]
     total = result.get("total", len(messages))
     shown = plural(len(messages), "message") + (f" of {total}" if total > len(messages) else "")
-    heading = f"# Chat {object_id(result.get('chatroom_id'))} ({shown})".replace(
-        "Chat  (", "Chat ("
-    )
+    name = result.get("title") or join_parts(["Chat", object_id(result.get("chatroom_id"))])
+    heading = f"# {name.replace(' · ', ' ')} ({shown})"
     return document(heading, *blocks) if blocks else document(heading, "No messages.")
 
 
@@ -614,6 +613,70 @@ def attachment_reading(reading: dict[str, Any], options: RenderOptions) -> str:
         "\n".join(note for note in notes if note),
         str(reading.get("text") or "").strip(),
     ).rstrip("\n")
+
+
+# ----------------------------------------------------------------------------- archive files
+
+
+@dataclass(frozen=True)
+class SavedFile:
+    """An attachment as the archive knows it: what it is, and where it was saved (if it was)."""
+
+    attachment_id: Any
+    filename: str | None
+    content_type: str | None
+    size: int | None
+    link: str | None  # relative to the item's .md file, e.g. "attachments/…"; None = not saved
+
+
+def saved_file_lines(files: list[SavedFile]) -> str | None:
+    """'## Attachments' with links to the saved files, or why a file was not saved."""
+    if not files:
+        return None
+    lines = []
+    for file in files:
+        photo = str(file.content_type or "").startswith("image/")
+        name = file.filename or "attachment"
+        size = format_size(file.size)
+        if file.link:
+            label = f"{PHOTO_MARK if photo else ATTACHMENT_MARK} [{name}]({file.link})"
+        else:
+            reason = "not saved: run sync --photos" if photo else "not saved"
+            label = f"{PHOTO_MARK if photo else ATTACHMENT_MARK} {name} ({reason})"
+        lines.append(f"- {join_parts([label, size, object_id(file.attachment_id)])}")
+    return "## Attachments\n" + "\n".join(lines)
+
+
+def render_archived_announcement(item: dict[str, Any], files: list[SavedFile]) -> str:
+    """One announcement as an archive file: everything in full, attachments as local links."""
+    return document(
+        f"# {item.get('title') or '(no title)'}\n{announcement_byline(item)}",
+        str(item.get("contents") or "").strip(),
+        saved_file_lines(files),
+    )
+
+
+def render_archived_calendar_item(
+    item: dict[str, Any], details: dict[str, Any], files: list[SavedFile]
+) -> str:
+    """One calendar item as an archive file: when, for whom, where, what, attachments."""
+    calendar_item = item.get("calendarItem") or {}
+    start = parse_timestamp(calendar_item.get("startDate"))
+    when = f"{format_day(start)}, {time_span(item)}" if start else time_span(item)
+    lines = [
+        f"- When: {when}",
+        f"- Groups: {', '.join(group_names(item)) or '-'}",
+        f"- Location: {details['location']}" if details.get("location") else "",
+        "- Reply needed in Parro (RSVP)" if calendar_item.get("rsvpRequired") else "",
+        "- Cancelled" if item.get("cancelled") else "",
+        f"- Parro id: {object_id(item.get('id'))}",
+    ]
+    return document(
+        f"# {calendar_item.get('title') or '(no title)'}",
+        "\n".join(line for line in lines if line),
+        str(details.get("description") or "").strip(),
+        saved_file_lines(files),
+    )
 
 
 # -------------------------------------------------------------------------------- overview
@@ -692,6 +755,40 @@ def render_ics_export(result: dict[str, Any], options: RenderOptions) -> str:
     return document("# Calendar exported", "\n".join(lines))
 
 
+def render_sync(result: dict[str, Any], options: RenderOptions) -> str:
+    """What a sync did: per kind written/unchanged/renamed/gone, files saved, problems."""
+    labels = {"announcement": "Announcements", "calendar": "Calendar items", "chat": "Chats"}
+    lines = []
+    for kind, label in labels.items():
+        counts = result.get(kind)
+        if not isinstance(counts, dict):
+            continue
+        parts = [
+            f"{counts.get('written', 0)} written",
+            f"{counts.get('unchanged', 0)} unchanged",
+            f"{counts['renamed']} renamed" if counts.get("renamed") else "",
+            f"{counts['no_longer_in_parro']} no longer in Parro"
+            if counts.get("no_longer_in_parro")
+            else "",
+        ]
+        lines.append(f"- {label}: {join_parts(parts)}")
+    size = format_size(result.get("bytes_saved")) or "0 bytes"
+    saved = f"{plural(result.get('files_saved', 0), 'file')} ({size})"
+    lines.append(f"- Attachments saved: {saved}")
+    if result.get("photos_not_saved"):
+        lines.append(
+            f"- Photos not saved: {result['photos_not_saved']} (add --photos to save them)"
+        )
+    year = "last school year" if result.get("school_year") == "previous" else "this school year"
+    problems = [f"{WARNING_MARK} {problem}" for problem in result.get("problems", [])]
+    return document(
+        f"# Archive updated ({year})",
+        f"Folder: {result.get('archive')} (open index.md)",
+        "\n".join(lines),
+        "\n".join(problems) if problems else None,
+    )
+
+
 def render_cache(result: dict[str, Any], options: RenderOptions) -> str:
     if "removed_files" in result:
         removed = plural(result["removed_files"], "file")
@@ -731,6 +828,7 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "overview": render_overview,
     "calendar_link": render_calendar_link,
     "ics_export": render_ics_export,
+    "sync": render_sync,
 }
 
 

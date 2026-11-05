@@ -8,13 +8,23 @@ MCP tool always give identical output.
 """
 
 import json
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from functools import partial
+from pathlib import Path
 from typing import Any
 
-from . import attachments, summaries
-from .api_client import ANNOUNCEMENT_LIST_DTYPE, CALENDAR_LIST_DTYPE, FeedEvent, ParroClient
+from . import archive, attachments, rendering, summaries
+from .api_client import (
+    ANNOUNCEMENT_LIST_DTYPE,
+    CALENDAR_LIST_DTYPE,
+    ApiResponse,
+    FeedEvent,
+    ParroClient,
+)
 from .errors import AttachmentError, ConfigurationError, ParroError
+from .geon import get_object_id, strip_geon_metadata
 from .settings import LoginMethod
 
 # With unread_only, look further back per group than `limit`, so older unread items are not missed.
@@ -471,3 +481,272 @@ def require_id(value: Any, what: str) -> int:
     if number <= 0:
         raise ConfigurationError(f"A numeric {what} is required.")
     return number
+
+
+# ------------------------------------------------------------------------------ archive
+
+SYNC_PAGE_SIZE = 50
+# A safety ceiling per list: 200 pages of 50 is far more than a school year holds.
+SYNC_MAX_PAGES = 200
+
+
+@dataclass(frozen=True)
+class SyncOptions:
+    target: Path
+    previous_year: bool = False  # last school year's groups instead of this year's
+    photos: bool = False  # also save photos (documents are always saved)
+
+
+@dataclass
+class SyncProgress:
+    """Files saved and problems met during one sync; a problem never stops the run."""
+
+    files_saved: int = 0
+    bytes_saved: int = 0
+    photos_not_saved: int = 0
+    problems: list[str] = field(default_factory=list)
+
+
+def sync_archive(client: ParroClient, options: SyncOptions) -> dict[str, Any]:
+    """Write or update the local archive (PLAN-readable-output §3b). Read-only towards Parro."""
+    target = archive.Archive(options.target)
+    progress = SyncProgress()
+    scope = "previous" if options.previous_year else "current"
+    groups = (
+        previous_group_names(client) if options.previous_year else client.list_current_group_names()
+    )
+    sync_announcements(client, target, groups, scope, options, progress)
+    sync_calendar_items(client, target, groups, scope, options, progress)
+    scopes = {scope}
+    if not options.previous_year:  # chats do not belong to a school year
+        sync_chats(client, target, progress)
+        scopes.add("chats")
+    target.finish(scopes, current_time())
+    return {
+        "archive": str(options.target),
+        "school_year": "previous" if options.previous_year else "current",
+        **{kind: vars(counts) for kind, counts in target.counts.items() if kind != "chat"},
+        **({"chat": vars(target.counts["chat"])} if not options.previous_year else {}),
+        "files_saved": progress.files_saved,
+        "bytes_saved": progress.bytes_saved,
+        "photos_not_saved": progress.photos_not_saved,
+        "problems": progress.problems,
+    }
+
+
+def previous_group_names(client: ParroClient) -> dict[int, str | None]:
+    """{group id: name} for last school year's groups."""
+    names: dict[int, str | None] = {}
+    for group in client.list_groups(previous_year=True, limit=50).items:
+        group_id = get_object_id(group)
+        if group_id is not None:
+            names[group_id] = group.get("name")
+    return names
+
+
+def read_all_pages(fetch_page: Callable[[int], ApiResponse]) -> list[Any]:
+    """Every item of a paged list: fetch_page(offset) until the Content-Range total is reached."""
+    items: list[Any] = []
+    for _page_number in range(SYNC_MAX_PAGES):
+        page = fetch_page(len(items))
+        items.extend(page.items)
+        if not page.items or page.total is None or len(items) >= page.total:
+            break
+    return items
+
+
+def collect_all_events(
+    client: ParroClient, groups: dict[int, str | None], event_dtype: str
+) -> list[FeedEvent]:
+    """Every event of every group (all pages), each with the group it was found through."""
+    feed: list[FeedEvent] = []
+    for group_id, group_name in groups.items():
+
+        def fetch_page(offset: int, group: int = group_id) -> ApiResponse:
+            return client.list_events(group, event_dtype, SYNC_PAGE_SIZE, offset, count_total=True)
+
+        feed.extend(FeedEvent(event, group_name) for event in read_all_pages(fetch_page))
+    return feed
+
+
+def sync_announcements(
+    client: ParroClient,
+    target: archive.Archive,
+    groups: dict[int, str | None],
+    scope: str,
+    options: SyncOptions,
+    progress: SyncProgress,
+) -> None:
+    feed = collect_all_events(client, groups, ANNOUNCEMENT_LIST_DTYPE)
+    for item, names in summaries.merge_duplicates(feed):
+        event_id = get_object_id(item.event)
+        if event_id is None:
+            continue
+        version = f"{item.event.get('lastModifiedAt')}|photos={options.photos}"
+        if target.is_current("announcement", event_id, version):
+            target.keep("announcement", event_id)
+            continue
+        summary = summaries.summarize_announcement(item.event, item.group_name, names)
+        files = save_attachments(
+            client, target, "announcement", event_id, item.event, options, progress
+        )
+        version = mark_if_incomplete(version, files, options)
+        markdown = rendering.render_archived_announcement(summary, files)
+        entry = archive.ArchiveEntry(
+            "announcement", event_id, version, str(summary.get("title") or ""),
+            str(summary.get("date") or ""), "", scope, groups=names,
+        )  # fmt: skip
+        target.save(entry, markdown, summary)
+
+
+def sync_calendar_items(
+    client: ParroClient,
+    target: archive.Archive,
+    groups: dict[int, str | None],
+    scope: str,
+    options: SyncOptions,
+    progress: SyncProgress,
+) -> None:
+    feed = collect_all_events(client, groups, CALENDAR_LIST_DTYPE)
+    ordered = sorted(feed, key=lambda entry: entry.event.get("sortDate") or "")
+    entries = summaries.one_per_calendar_item([e for e, _ in summaries.merge_duplicates(ordered)])
+    for entry in entries:
+        sync_calendar_item(client, target, entry, scope, options, progress)
+
+
+def sync_calendar_item(
+    client: ParroClient,
+    target: archive.Archive,
+    entry: FeedEvent,
+    scope: str,
+    options: SyncOptions,
+    progress: SyncProgress,
+) -> None:
+    """One calendar item: details fetched only when its version changed (one request)."""
+    event_id = get_object_id(entry.event)
+    if event_id is None:
+        return
+    calendar_item = entry.event.get("calendarItem") or {}
+    version = (
+        f"{entry.event.get('lastModifiedAt')}|{calendar_item.get('lastModifiedAt')}"
+        f"|photos={options.photos}"
+    )
+    if target.is_current("calendar", event_id, version):
+        target.keep("calendar", event_id)
+        return
+    try:
+        detail = client.get_calendar_item(event_id)
+    except ParroError as problem:
+        progress.problems.append(f"calendar item {event_id}: {problem}")
+        detail = entry.event
+    item = {**strip_geon_metadata(entry.event), "group": entry.group_name}
+    details = summaries.summarize_calendar_details(detail)
+    files = save_attachments(client, target, "calendar", event_id, detail, options, progress)
+    version = mark_if_incomplete(version, files, options)
+    markdown = rendering.render_archived_calendar_item(item, details, files)
+    names = rendering.group_names(item)
+    record = archive.ArchiveEntry(
+        "calendar", event_id, version, str(calendar_item.get("title") or "").strip(),
+        str(calendar_item.get("startDate") or ""), "", scope, groups=names,
+    )  # fmt: skip
+    target.save(record, markdown, {**item, "details": details})
+
+
+def sync_chats(client: ParroClient, target: archive.Archive, progress: SyncProgress) -> None:
+    """Every chat as one file; the messages are fetched only when the chat changed."""
+    rooms = read_all_pages(lambda offset: client.list_chatrooms(SYNC_PAGE_SIZE, offset))
+    for room in rooms:
+        room_id = get_object_id(room)
+        if room_id is None:
+            continue
+        last_message = get_object_id(room.get("lastMessage"))
+        version = f"{room.get('lastModifiedAt')}|{last_message}"
+        if target.is_current("chat", room_id, version):
+            target.keep("chat", room_id)
+            continue
+        messages = read_all_pages(partial(client.list_chat_messages, room_id, SYNC_PAGE_SIZE))
+        conversation = {
+            "chatroom_id": room_id,
+            "title": room.get("title"),
+            "total": len(messages),
+            "messages": [strip_geon_metadata(message) for message in messages],
+        }
+        markdown = rendering.render(
+            "chat_messages", conversation, rendering.RenderOptions(full_text=True)
+        )
+        record = archive.ArchiveEntry(
+            "chat", room_id, version, str(room.get("title") or "").strip(),
+            str(room.get("sortDate") or room.get("lastModifiedAt") or ""), "", "chats",
+            groups=list(room.get("memberNames") or []),
+        )  # fmt: skip
+        target.save(record, markdown, conversation)
+
+
+def save_attachments(
+    client: ParroClient,
+    target: archive.Archive,
+    kind: str,
+    item_id: int,
+    event: dict[str, Any],
+    options: SyncOptions,
+    progress: SyncProgress,
+) -> list[rendering.SavedFile]:
+    """Save an item's attachments (photos only with --photos); never download a file twice."""
+    saved = []
+    for raw_attachment in attachments.find_attachments(event):
+        file = attachments.describe_attachment(raw_attachment)
+        path = archive.attachment_path(kind, item_id, file.attachment_id, file.filename)
+        photo = attachments.detect_format(file.content_type, file.filename) == "image"
+        if not target.has_file(path):
+            if photo and not options.photos:
+                progress.photos_not_saved += 1
+            else:
+                store_attachment(client, target, path, file, progress)
+        # Link whatever is on disk, also photos saved by an earlier run with --photos.
+        link = path.split("/", 1)[1] if target.has_file(path) else None
+        saved.append(
+            rendering.SavedFile(
+                file.attachment_id, file.filename, file.content_type, file.size, link
+            )
+        )
+    return saved
+
+
+def mark_if_incomplete(version: str, files: list[rendering.SavedFile], options: SyncOptions) -> str:
+    """Add '|incomplete' when a file that should be saved is missing (e.g. a failed download).
+
+    The next run computes the version without it, sees a difference, and tries again. Photos
+    left out on purpose (no --photos) do not count.
+    """
+    for file in files:
+        photo = attachments.detect_format(file.content_type, file.filename) == "image"
+        if file.link is None and (options.photos or not photo):
+            return f"{version}|incomplete"
+    return version
+
+
+def store_attachment(
+    client: ParroClient,
+    target: archive.Archive,
+    path: str,
+    file: attachments.AttachmentFile,
+    progress: SyncProgress,
+) -> bool:
+    """Write one attachment: from the cache when it is there, else downloaded once."""
+    key = file.cache_key()
+    data = client.cache.get_bytes("attachments", f"{key}.bin") if key else None
+    if data is None:
+        if not file.url:
+            progress.problems.append(f"{path}: no download link")
+            return False
+        try:
+            data = attachments.download_attachment(
+                client, file.url, file.size, file.content_type
+            ).data
+        except ParroError as problem:
+            progress.problems.append(f"{path}: {problem}")
+            return False
+    target.save_file(path, data)
+    progress.files_saved += 1
+    progress.bytes_saved += len(data)
+    return True
