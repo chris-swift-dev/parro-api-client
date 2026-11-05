@@ -117,7 +117,7 @@ def test_calendar_summary_counts_what_it_shows_and_lists_each_item_once():
     assert result["items"][0]["group"] == "A", "the first group it was found through"
     everything = summaries.summarize_calendar_feed(feed, limit=10)
     assert everything["count"] == 2, "the duplicate is merged"
-    assert everything["items"][1]["calendarItem"]["type"] == "ACTIVITY"
+    assert everything["items"][1]["calendarItem"]["type"] == "VOLUNTEER"
     assert_no_geon_bookkeeping(result)
 
 

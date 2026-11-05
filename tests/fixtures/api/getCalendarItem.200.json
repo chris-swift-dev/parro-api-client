@@ -1,0 +1,204 @@
+{
+  "dtype": "calendar.RCalendarItem",
+  "links": [
+    {
+      "id": 7000000351,
+      "rel": "self",
+      "type": "calendar.RCalendarItem",
+      "href": "https://rest-v2.parro.com/rest/v2/calendaritem/7000000351"
+    }
+  ],
+  "permissions": [
+    {
+      "full": "calendar.RCalendarItem:READ:INSTANCE(7000000351)",
+      "type": "calendar.RCalendarItem",
+      "operations": [
+        "READ"
+      ],
+      "instances": [
+        "INSTANCE(7000000351)"
+      ]
+    }
+  ],
+  "additionalObjects": {},
+  "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+  "type": "VOLUNTEER",
+  "title": "Excursie Natuurmuseum",
+  "rsvpRequired": true,
+  "startDate": "2026-11-12T00:00:00+01:00",
+  "endDate": "2026-11-12T00:00:00+01:00",
+  "dayDates": [
+    "2026-11-12T00:00:00+01:00"
+  ],
+  "imported": false,
+  "status": "OPEN",
+  "description": "We vertrekken om 8.45 uur met de auto. Neem een lunchpakket mee.",
+  "location": "Natuurmuseum Voorbeeldstad",
+  "pending": false,
+  "owner": {
+    "dtype": "identity.RTeacherPrimer",
+    "links": [
+      {
+        "id": 2100000002,
+        "rel": "self",
+        "type": "identity.RTeacherPrimer",
+        "href": "https://rest-v2.parro.com/rest/v2/teacherprimer/2100000002"
+      }
+    ],
+    "permissions": [
+      {
+        "full": "identity.RTeacherPrimer:READ:INSTANCE(2100000002)",
+        "type": "identity.RTeacherPrimer",
+        "operations": [
+          "READ"
+        ],
+        "instances": [
+          "INSTANCE(2100000002)"
+        ]
+      }
+    ],
+    "additionalObjects": {},
+    "lastModifiedAt": "2021-10-28T10:18:43.076+02:00",
+    "firstname": "Tom",
+    "surname": "Smit",
+    "role": "TEACHER",
+    "active": true,
+    "accountActive": true
+  },
+  "numberOfResources": 1,
+  "numberOfTimeslots": 0,
+  "numberOfOpenTimeslots": 0,
+  "numberOfUncommittedChildren": 0,
+  "timeslotInterval": 0,
+  "slack": 0,
+  "reminderInterval": 0,
+  "totalRespondents": 0,
+  "resources": [
+    {
+      "dtype": "calendar.RCalendarItemVolunteerResource",
+      "links": [
+        {
+          "id": 7000000361,
+          "rel": "self",
+          "type": "calendar.RCalendarItemVolunteerResource",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemvolunteerresource/7000000361"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "calendar.RCalendarItemVolunteerResource:READ:INSTANCE(7000000361)",
+          "type": "calendar.RCalendarItemVolunteerResource",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(7000000361)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-28T13:00:00.000+01:00",
+      "title": "Rijden naar het museum",
+      "amount": 2,
+      "amountCommitted": 1,
+      "commitedByMe": 0,
+      "type": "VOLUNTEER",
+      "commitments": []
+    }
+  ],
+  "respondents": [],
+  "attachments": [
+    {
+      "dtype": "attachment.RCalendarItemAttachment",
+      "links": [
+        {
+          "id": 6000000401,
+          "rel": "self",
+          "type": "attachment.RCalendarItemAttachment",
+          "href": "https://rest-v2.parro.com/rest/v2/calendaritemattachment/6000000401"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "attachment.RCalendarItemAttachment:READ:INSTANCE(6000000401)",
+          "type": "attachment.RCalendarItemAttachment",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(6000000401)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-31T18:00:00.000+01:00",
+      "attachmentType": "IMAGE",
+      "uploadId": "00000000-0000-4000-8000-006000000401",
+      "entries": [
+        {
+          "dtype": "attachment.RAttachmentDocumentEntry",
+          "links": [
+            {
+              "id": 6000000402,
+              "rel": "self",
+              "type": "attachment.RAttachmentDocumentEntry",
+              "href": "https://rest-v2.parro.com/rest/v2/attachmentdocumententry/6000000402"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "attachment.RAttachmentDocumentEntry:READ:INSTANCE(6000000402)",
+              "type": "attachment.RAttachmentDocumentEntry",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(6000000402)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+          "type": "SOURCE",
+          "url": "https://d111111abcdef8.cloudfront.net/image/00000000000000000000000165a0bd91/1-00000000000000000000000165a0bd91.jpeg",
+          "size": 1333337,
+          "contentType": "image/jpeg",
+          "filename": "Route.jpg",
+          "expiresAt": "2027-10-01T10:00:00.000+02:00"
+        },
+        {
+          "dtype": "attachment.RAttachmentImageEntry",
+          "links": [
+            {
+              "id": 6000000403,
+              "rel": "self",
+              "type": "attachment.RAttachmentImageEntry",
+              "href": "https://rest-v2.parro.com/rest/v2/attachmentimageentry/6000000403"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "attachment.RAttachmentImageEntry:READ:INSTANCE(6000000403)",
+              "type": "attachment.RAttachmentImageEntry",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(6000000403)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+          "type": "THUMBNAIL",
+          "url": "https://d111111abcdef8.cloudfront.net/thumbnail/00000000000000000000000165a0bd91/1-00000000000000000000000165a0bd91.jpeg",
+          "size": 96614,
+          "contentType": "image/jpg",
+          "height": 400,
+          "width": 300
+        }
+      ],
+      "index": 0
+    }
+  ]
+}

@@ -162,3 +162,26 @@ def test_the_api_only_ever_receives_get(tmp_path, api):
     client.get_calendar_item(1)
     client.collect_feed("event.RCalendarItemEventPrimer")
     assert {r.method for r in api.api_requests()} == {"GET"}
+
+
+def test_the_fake_api_answers_the_paths_found_in_the_web_app_captures(tmp_path, api):
+    """PLAN-unverified-endpoints: the fake answers like the captures, so later phases can use it."""
+    client = make_client(tmp_path, api)
+    privacy = client.get("/child?currentSchoolYear=true&dtype=identity.RPrivacySettingChild")
+    assert [child["dtype"] for child in privacy.items] == ["identity.RPrivacySettingChild"] * 2
+    assert {child["setting"]["dtype"] for child in privacy.items} == {
+        "privacy.RPrivacyCentreSetting"
+    }
+    assert client.get("/child").items[0]["dtype"] == "identity.RChildPrimer"
+
+    link = client.get("/child/3000000001/privacy").payload
+    assert link["defined"] is True and "signedpermission=EXAMPLE-3000000001" in link["url"]
+
+    item = client.get("/calendaritem/7000000351").payload
+    assert item["type"] == "VOLUNTEER" and "lastEditedBy" not in item
+    (drivers,) = item["resources"]
+    assert (drivers["amount"], drivers["amountCommitted"], drivers["commitedByMe"]) == (2, 1, 0)
+
+    for missing in ("/child/1/privacy", "/calendaritem/1"):
+        with pytest.raises(ApiError):
+            client.get(missing)
