@@ -154,6 +154,29 @@ def add_reading_commands(command: CommandFactory) -> None:
     announcement = command("announcement", "one announcement in full, with its author")
     announcement.add_argument("id", type=int, help="announcement id")
 
+    add_calendar_commands(command)
+    add_attachment_command(command)
+
+    add_limit(command("chatrooms", "chat conversations"), 25)
+    messages = command("chat-messages", "messages in one chat conversation")
+    messages.add_argument("chatroom_id", type=int, help="chatroom id (see `chatrooms`)")
+    add_limit(messages, 30)
+
+    add_local_data_commands(command)
+    get = command("get", "GET any API path, e.g. /accountsettings (read-only)")
+    get.add_argument("path", help="path below /rest/v2, e.g. /absence/setting")
+    get.add_argument(
+        "--param",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="query parameter, repeatable",
+    )
+    get.add_argument("--limit", type=int, help="page size (sends a Range header)")
+    get.add_argument("--offset", type=int, default=0, help="first item of the page")
+
+
+def add_calendar_commands(command: CommandFactory) -> None:
     calendar = command("calendar", "calendar items from today on, soonest first")
     calendar.add_argument("--group", type=int, help="only this group (see `groups`)")
     calendar.add_argument(
@@ -175,27 +198,27 @@ def add_reading_commands(command: CommandFactory) -> None:
     )
 
     command("calendar-link", "your personal link to subscribe to the Parro agenda (keep it secret)")
-    add_attachment_command(command)
 
-    add_limit(command("chatrooms", "chat conversations"), 25)
-    messages = command("chat-messages", "messages in one chat conversation")
-    messages.add_argument("chatroom_id", type=int, help="chatroom id (see `chatrooms`)")
-    add_limit(messages, 30)
+
+def add_local_data_commands(command: CommandFactory) -> None:
+    """The archive (sync) and the cache: commands that write to your own disk."""
+    sync = command(
+        "sync",
+        "save everything as files: announcements, calendar items and chats as markdown (+ JSON), "
+        "with their documents; repeat it to update",
+    )
+    sync.add_argument(
+        "--to", type=Path, metavar="DIR", help="archive folder (default: PARRO_DATA_DIR/archive)"
+    )
+    sync.add_argument(
+        "--previous", action="store_true", help="last school year instead of this one"
+    )
+    sync.add_argument(
+        "--photos", action="store_true", help="also save photos (can be several GB per school year)"
+    )
 
     cache = command("cache", "show or empty the local cache of attachments and calendar details")
     cache.add_argument("action", choices=("info", "clear"), help="info (default) or clear")
-
-    get = command("get", "GET any API path, e.g. /accountsettings (read-only)")
-    get.add_argument("path", help="path below /rest/v2, e.g. /absence/setting")
-    get.add_argument(
-        "--param",
-        action="append",
-        default=[],
-        metavar="KEY=VALUE",
-        help="query parameter, repeatable",
-    )
-    get.add_argument("--limit", type=int, help="page size (sends a Range header)")
-    get.add_argument("--offset", type=int, default=0, help="first item of the page")
 
 
 def add_attachment_command(command: CommandFactory) -> None:
@@ -327,6 +350,7 @@ COMMAND_VIEWS = {
     "chat-messages": "chat_messages",
     "get": "get",
     "cache": "cache",
+    "sync": "sync",
 }
 
 
@@ -359,6 +383,14 @@ HANDLERS: dict[str, Handler] = {
     "chatrooms": lambda c, a: operations.list_chatrooms(c, a.limit, raw=a.raw),
     "chat-messages": lambda c, a: operations.list_chat_messages(
         c, a.chatroom_id, a.limit, raw=a.raw
+    ),
+    "sync": lambda c, a: operations.sync_archive(
+        c,
+        operations.SyncOptions(
+            target=(a.to or c.settings.data_dir / "archive").expanduser(),
+            previous_year=a.previous,
+            photos=a.photos,
+        ),
     ),
     "cache": lambda c, a: (
         operations.cache_clear(c) if a.action == "clear" else operations.cache_info(c)

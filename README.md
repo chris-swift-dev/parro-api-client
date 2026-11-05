@@ -80,6 +80,7 @@ python3 parro_cli.py attachment <announcement-id> --text
 python3 parro_cli.py calendar --details          # agenda with location and description
 python3 parro_cli.py calendar-link               # Parro's own link to subscribe from Google/Apple/Outlook
 python3 parro_cli.py calendar --ics parro.ics --details   # or: an .ics file to import
+python3 parro_cli.py sync                        # keep a local archive (repeat to update)
 python3 parro_cli.py announcements --format json | jq '.announcements[].title'
 python3 parro_cli.py get /accountsettings
 python3 parro_cli.py token                       # paste into Swagger UI → Authorize → bearerToken
@@ -90,7 +91,7 @@ Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-f
 `announcements [--group ID] [--limit N] [--unread-only] [--full]`, `announcement <id>`,
 `calendar [--group ID] [--limit N] [--details] [--past] [--ics FILE]`, `calendar-link`,
 `attachment <event-id> [--attachment-id ID | --all] [--save-to DIR] [--text]`, `chatrooms`,
-`chat-messages <chatroom-id>`, `cache info|clear`,
+`chat-messages <chatroom-id>`, `sync [--to DIR] [--previous] [--photos]`, `cache info|clear`,
 `get <path> [--param k=v ...] [--limit N] [--offset N]`.
 Global options: `--format auto|json|markdown`, `--login-method`, `--raw`, `--compact`,
 `--no-cache`, `--verbose`. `--full` shows whole texts instead of a 3-line preview.
@@ -228,7 +229,7 @@ So a local tool must borrow the web client's `client_id`, which is pinned to
 | `PARRO_MAX_DOWNLOAD` | `62914560` (60 MB) |
 | `PARRO_MAX_IMAGE_PX` | `1400` |
 | `PARRO_FORMAT` | `auto` (CLI: markdown at a terminal, JSON when piped), `json` or `markdown` |
-| `PARRO_DATA_DIR` | `~/.parro/data` (the cache lives in `cache/` inside it) |
+| `PARRO_DATA_DIR` | `~/.parro/data` (the cache in `cache/`, the `sync` archive in `archive/`) |
 | `PARRO_CACHE` | `on` (`off` = never read or write the cache; CLI: `--no-cache`) |
 | `PARRO_CACHE_MAX_MB` | `500` |
 
@@ -248,6 +249,33 @@ Two ways, depending on what you need:
   ones, `--details` for locations and descriptions, `-` for standard output). It works without the
   subscription feature, but it is a snapshot: export again to update. Every event keeps the same
   UID, so importing a newer file updates events instead of duplicating them.
+
+## Your own archive: `sync`
+
+`parro_cli.py sync` keeps a local copy of everything your account can see, as files that stay
+readable without Parro:
+
+```
+~/.parro/data/archive/
+  announcements/2026-10-22-nieuwsbrief-nr-3-5000000101.md   (+ .json, + attachments/)
+  calendar/2026-11-11-sint-maartenviering-7000000101.md     (+ .json, + attachments/)
+  chats/rijden-naar-het-natuurmuseum-8000000001.md          (+ .json)
+  index.md                                                  (everything, newest first)
+```
+
+- Each `.md` file starts with a small YAML header (id, type, title, date, groups), so notes apps
+  such as Obsidian can use it; the `.json` next to it holds the same data for scripts.
+- **Run it again to update.** Every list is read in full (that is how edits and removals are
+  noticed), but unchanged items are not rewritten and a saved file is never downloaded again.
+- Documents are always saved; photos only with `--photos` (a school year of photos can run to
+  several GB). `--previous` archives last school year; `--to DIR` writes elsewhere.
+- **Run `sync --previous` once as well**, especially around the start of a school year. Schools
+  sometimes post the first dates of the new year (summer, preparation days) in last year's groups;
+  a plain `sync` reads only this year's groups, while Parro's own calendar feed shows both.
+- Nothing is ever deleted: an item that disappears from Parro stays, marked *(no longer in Parro)*
+  in `index.md`. A renamed item gets renamed files.
+- The archive holds your children's names, photos and school letters: its folders are readable
+  only by you (0700, files 0600), and no file contains a download or avatar link.
 
 ## Local data: the cache
 
@@ -372,6 +400,16 @@ Readable output, the cache and the overview against the real API, with one passw
 | Newsletter PDF read twice | Second read from the cache, same text; folders 0700, files 0600, no links stored |
 | `calendar-link` | Returns the subscription link; it answers `200 text/calendar` without login, refreshes hourly, works without `noCache`, and its token is stable |
 | Multi-day calendar items | The API lists them **once per day** (one 40-day item: 40 entries). Fixed: merged by calendar item; afterwards our agenda, our `.ics` and Parro's own feed agree on all 44 upcoming items (title and start day) |
+
+## Live check (2026-11-05, release 0.3.0: `sync`)
+
+| Check | Result |
+| --- | --- |
+| First `sync` (this school year, documents only) | 69 announcements, 106 calendar items, 7 chats, 10 documents (5.4 MB; one taken from the cache); 140 API requests, 16 s |
+| `sync --previous` | 606 announcements, 385 calendar items, 95 documents (113.5 MB); 418 API requests, 69 s |
+| Second `sync` | Everything unchanged; **11 requests, all lists** (no details, messages or downloads), 2 s |
+| Calendar against Parro's own feed | Same items, except multi-day timed items (one item here, one event per day there) and 3 summer items posted in last year's groups, which `sync --previous` archives |
+| On disk | Folders 0700, files 0600; no download or avatar links (the only links are ones written in messages) |
 
 ## Note on the HAR
 

@@ -1,7 +1,7 @@
 # Plan 3: human-readable output for the CLI and the MCP server
 
-*Status (2026-11-05): phases 0–6 done on the `readable-output` branch (live look passed, calendar order fixed); release 0.2.0 pending.
-Phases 7–8 (archive, 0.3.0) not started.*
+*Status (2026-11-05): phases 0–6 released as 0.2.0. Phase 7 (archive) done on the `archive-sync` branch;
+phase 8: docs, version 0.3.0 and the live `sync` done (2026-11-05); release pending.*
 
 **Goal:** besides JSON, `parro_cli.py` and `parro_mcp.py` can show the data the way the Parro app does:
 a feed of announcements with author and photos, an agenda grouped by day, chat conversations, and an
@@ -153,7 +153,7 @@ A local copy of everything the account can see, as files people can read and sea
 
 ```
 <data dir>/archive/
-  announcements/2026-10-22-nieuwsbrief-nr-3-22373384212.md   (+ .json, + attachments/)
+  announcements/2026-10-22-nieuwsbrief-nr-3-5000000101.md    (+ .json, + attachments/)
   calendar/2026-11-11-sint-maartenviering-7000000101.md
   chats/<chatroom title>-<id>.md                              (whole conversation)
   index.md                                                    (newest first, links to all files)
@@ -216,6 +216,14 @@ Snapshot tests: each view is rendered from the synthetic fixtures and compared w
 - Live look (2026-11-05): announcements do come back once per group, chat messages come newest
   first, and calendar lists come **furthest future first**. The last one was a bug in the
   original design: `calendar` and the overview now page to today (`--past` for earlier items).
+- Archive (phase 7) decisions: photos are opt-in (`--photos`), documents always saved; every list
+  is read in full on each run (edits and removals are only noticed that way), unchanged items are
+  skipped; `.md` files start with a YAML header; a saved file counts as complete because files are
+  written in one step; an item with a failed download is marked `|incomplete` and retried; the
+  archive and the cache also drop every `…Url` field (avatar links carry an access key).
+- Live `sync` (2026-11-05): a second run made 11 requests, all lists. Compared with Parro's own
+  iCal feed, the archive missed 3 summer items that the school had posted in last year's groups;
+  `sync --previous` archives them, and the README now says to run it around the school-year change.
 - `parse_timestamp()` lives in `geon.py` (needed by summaries and rendering) and accepts every
   fraction length, which Python 3.10's `fromisoformat` does not.
 

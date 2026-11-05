@@ -99,6 +99,15 @@ under `PARRO_DATA_DIR/cache`. `attachments.download_or_reuse()` and `extract_or_
 bytes). `operations.calendar_details()` stores each item's details with its `lastModifiedAt` and uses
 them only while the list shows the same value. Lists are never cached.
 
+## 9. The archive
+
+`parro_cli.py sync` calls `operations.sync_archive()`. It reads every list in full
+(`read_all_pages()`), skips items whose version (`lastModifiedAt`) is already archived, and for the
+others writes markdown (`rendering.render_archived_*`) and JSON through `parro/archive.py`.
+`Archive` knows the file names, the YAML header, renames, `index.md` and the state file
+`.sync-state.json` that remembers what was written. Attachments are copied from the cache when they
+are there, otherwise downloaded once (`store_attachment()`).
+
 ## Where to look when…
 
 | …you want to | look at |
@@ -111,3 +120,4 @@ them only while the list shows the same value. Lists are never cached.
 | check what the API really does | `openapi/parro.openapi.json` and `samples/` (private) |
 | add test data | `tests/fixtures/make_api_fixtures.py` (invented data only), then run it |
 | change the .ics export | `parro/icalendar.py` and `tests/test_calendar_export.py` |
+| change the archive | `parro/archive.py` (files), `operations.sync_archive()` (fetching), `tests/test_archive.py` |

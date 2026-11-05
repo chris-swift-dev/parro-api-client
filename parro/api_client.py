@@ -262,11 +262,17 @@ class ParroClient:
     def get_absence_settings(self) -> ApiResponse:
         return self.get("/absence/setting")
 
-    def list_chatrooms(self, limit: int = 25) -> ApiResponse:
-        return self.get("/chatroom", limit=limit, count_total=True)
+    def list_chatrooms(self, limit: int = 25, offset: int = 0) -> ApiResponse:
+        return self.get("/chatroom", limit=limit, offset=offset, count_total=True)
 
-    def list_chat_messages(self, chatroom_id: int, limit: int = 30) -> ApiResponse:
-        return self.get(f"/chatroom/{int(chatroom_id)}/chatmessage", limit=limit, count_total=True)
+    def list_chat_messages(self, chatroom_id: int, limit: int = 30, offset: int = 0) -> ApiResponse:
+        """Messages of one chat, newest first (spec)."""
+        return self.get(
+            f"/chatroom/{int(chatroom_id)}/chatmessage",
+            limit=limit,
+            offset=offset,
+            count_total=True,
+        )
 
     # ---------------------------------------------------------------------------- events
 

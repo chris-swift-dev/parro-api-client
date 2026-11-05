@@ -4,6 +4,28 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.3.0] - 2026-11-05
+
+An archive: `parro_cli.py sync` keeps a local copy of everything your Parro account can see, as
+files you can read, search and keep.
+
+### Added
+- `sync` writes every announcement, calendar item and chat as a markdown file (with a small YAML
+  header) plus a JSON file, and saves the documents that come with them. `index.md` lists
+  everything, newest first.
+  - Repeat it to update: unchanged items are not rewritten, and a saved file is never downloaded
+    again (files already in the cache are copied from there).
+  - A renamed item gets renamed files; an item that disappears from Parro stays in the archive and
+    is marked *(no longer in Parro)* in `index.md`.
+  - `--photos` also saves photos (off by default: a school year of photos can be several GB),
+    `--previous` archives last school year, `--to DIR` picks the folder (default
+    `PARRO_DATA_DIR/archive`, so `~/.parro/data/archive`).
+  - A download that fails is reported and tried again on the next run.
+- Folders are readable only by you (0700/0600), and no file holds a download or avatar link.
+
+### Changed
+- The cache and the archive never store any `…Url` field (also avatar links), not only `url`.
+
 ## [0.2.0] - 2026-11-05
 
 Readable output: the CLI and the MCP server can show the data the way the Parro app does, and a
@@ -89,5 +111,6 @@ OpenAPI specification in this repository, inspired by
 - Attachment download links (unsigned CDN URLs) are never logged, and the Parro token is never sent
   to the CDN or to any host other than the configured API.
 
+[0.3.0]: https://github.com/chris-swift-dev/parro-api-client/releases/tag/v0.3.0
 [0.2.0]: https://github.com/chris-swift-dev/parro-api-client/releases/tag/v0.2.0
 [0.1.0]: https://github.com/chris-swift-dev/parro-api-client/releases/tag/v0.1.0

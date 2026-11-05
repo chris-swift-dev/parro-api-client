@@ -148,9 +148,16 @@ def write_private_file(path: Path, data: bytes) -> None:
 
 
 def remove_urls(value: Any) -> Any:
-    """A copy without any `url` field, at any depth: download links are never cached."""
+    """A copy without links, at any depth: `url` and every `…Url` field (e.g. `cachedAvatarUrl`).
+
+    Download links and avatar links carry their own access keys, so they are never stored.
+    """
     if isinstance(value, dict):
-        return {key: remove_urls(item) for key, item in value.items() if key != "url"}
+        return {
+            key: remove_urls(item)
+            for key, item in value.items()
+            if not (key == "url" or key.endswith("Url"))
+        }
     if isinstance(value, list):
         return [remove_urls(item) for item in value]
     return value
