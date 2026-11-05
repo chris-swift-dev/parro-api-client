@@ -1,7 +1,7 @@
 # Plan 3: human-readable output for the CLI and the MCP server
 
-*Status (2026-11-05): phases 0–5 implemented on the `readable-output` branch; phase 6 (docs, live look,
-release 0.2.0) in progress. Phases 7–8 (archive, 0.3.0) not started.*
+*Status (2026-11-05): phases 0–5 implemented on the `readable-output` branch; phase 6: docs and version 0.2.0 done, live look and release pending.
+Phases 7–8 (archive, 0.3.0) not started.*
 
 **Goal:** besides JSON, `parro_cli.py` and `parro_mcp.py` can show the data the way the Parro app does:
 a feed of announcements with author and photos, an agenda grouped by day, chat conversations, and an
