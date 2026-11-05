@@ -276,6 +276,33 @@ polymorphism, and where attachments live.
 - **Don't log in through Swagger UI.** The code flow can't complete there, and failed password
   attempts count toward the account lockout.
 
+## FAQ
+
+**Is this an official Parro tool?** No. It is not affiliated with or endorsed by Topicus, ParnasSys
+or Parro. It uses the same API calls as the Parro web app, as observed from that app.
+
+**Can it post, change or delete anything in Parro?** No. The Parro API only ever receives `GET`
+requests; the only `POST` requests go to the login server (logging in, refreshing, logging out).
+There is no command or tool that writes.
+
+**Where does my password go?** Only to the ParnasSys login server, the same one the web app uses.
+`login --prompt` stores nothing but the tokens (`~/.parro-mcp/tokens.json`, readable only by you);
+`logout` revokes them. With `login-url` the client never sees a password at all. Passwords, tokens
+and download links are never written to a log.
+
+**Can a wrong password lock my account?** The login server locks an account after a few failed
+attempts, so the client never retries: after one rejected password it stops logging in until you
+run `login` yourself. See [docs/LOGIN.md](docs/LOGIN.md#the-lockout-latch).
+
+**What leaves my computer?** Only requests to Parro, its login server and its attachment CDN. There
+is no telemetry. Note that with the MCP server, whatever a tool returns (school news, your
+children's names, documents) goes to the AI assistant you use, and so to its provider.
+
+**Does it work for every school?** It was tested with one parent account. The calendar
+subscription link is part of the paid *Parro Ouderapp*, so it may not work everywhere; the rest uses
+the same calls as the web app. Parro can change its API at any time; if something breaks, please
+open an issue. Security problems: please report them privately, see [SECURITY.md](SECURITY.md).
+
 ## Development
 
 ```bash

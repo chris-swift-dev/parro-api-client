@@ -218,6 +218,10 @@ samples. Response schemas list **only fields seen in those samples**. Treat ever
 open: geon adds fields between contract versions. Operations tagged **Unverified** appear in the
 web app's code but were never called.
 
+**A client for this API:** [parro-api-client](https://github.com/chris-swift-dev/parro-api-client),
+a read-only command-line client and MCP server in plain Python
+([download a release](https://github.com/chris-swift-dev/parro-api-client/releases/latest)).
+
 Inspired by [fobatai/parro-mcp](https://github.com/fobatai/parro-mcp), a read-only MCP server for Parro
 whose working login and API calls were the starting point for this specification.
 
