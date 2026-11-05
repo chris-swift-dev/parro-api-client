@@ -1,6 +1,6 @@
 # Plan 4: a README that shows what the project does
 
-*Status: proposal (2026-11-05). Nothing implemented yet.*
+*Status: done (2026-11-05), merged with PR #4. What differs from the plan: see §6.*
 
 **Goal:** a visitor understands within one screen what this is, sees what it looks like, and knows
 how to start. Today the README is 435 lines of text; the first visual is a code block 40 lines down,
@@ -62,13 +62,13 @@ still SVG of the overview says the same.
 
 ## 4. Phases
 
-| # | Phase | Done when |
-| --- | --- | --- |
-| 1 | `tools/make_readme_images.py`: snapshot → terminal SVG (light/dark), images in `docs/images/`; test that they match | SVGs render on GitHub in both themes; test passes in CI |
-| 2 | Swagger screenshot via headless Firefox (`--swagger`), checked by eye | PNG committed, < 300 KB, no personal data |
-| 3 | README restructure: top section, Quick start, badges, "What it looks like", Mermaid diagram(s), MCP example; reference material moved to `docs/` | README ≈ 200 lines; every old section still reachable |
-| 4 | FAQ, `SECURITY.md`, link back from the spec description | done |
-| 5 | Check on github.com (light + dark, mobile width), then your repository settings (item 3.5) | looks right on GitHub |
+| # | Phase | Done when | Status |
+| --- | --- | --- | --- |
+| 1 | `tools/make_readme_images.py`: snapshot → terminal SVG (light/dark), images in `docs/images/`; test that they match | SVGs render on GitHub in both themes; test passes in CI | done |
+| 2 | Swagger screenshot via headless Firefox (`--swagger`), checked by eye | PNG committed, < 300 KB, no personal data | done |
+| 3 | README restructure: top section, Quick start, badges, "What it looks like", Mermaid diagram(s), MCP example; reference material moved to `docs/` | README ≈ 200 lines; every old section still reachable | done (334 lines) |
+| 4 | FAQ, `SECURITY.md`, link back from the spec description | done | done |
+| 5 | Check on github.com (light + dark, mobile width), then your repository settings (item 3.5) | looks right on GitHub | checked on GitHub; settings are yours |
 
 No release needed: this changes documentation only (the spec description change ships with the
 next Pages deploy).
@@ -80,3 +80,22 @@ next Pages deploy).
 2. **Light and dark image variants?** *Recommended* (they look broken in the other theme otherwise).
 3. **Swagger screenshot by script (headless Firefox)** *recommended*, or taken by you once by hand.
 4. **Animated GIF:** skip for now (*recommended*), or add one with VHS.
+
+All four decisions went the recommended way.
+
+## 6. Outcome
+
+- **Phase 1:** three terminal pictures (`overview`, `calendar --details`, `announcements`), light and
+  dark, from `tests/snapshots/`; `tests/test_readme_images.py` keeps them current.
+- **Phase 2:** the screenshot code is its own file, `tools/swagger_screenshots.py`, called by
+  `make_readme_images.py --swagger`. Firefox photographs only the window and too early, so the page
+  holds back its load event until Swagger UI has drawn and reports its height for an exact second
+  shot. The `/calendar/sync` picture shows the description only (no parameters, no "Try it out").
+- **Phase 3:** besides login, API facts and live checks, the configuration table and the
+  development section also moved to `docs/` (`CONFIGURATION.md`, `DEVELOPMENT.md`). The README
+  kept the full command list, the MCP tools table and the config example, so it is 334 lines rather
+  than about 200. The release archives include `docs/LOGIN.md`, `docs/CONFIGURATION.md` and
+  `docs/API-NOTES.md`.
+- **Phase 5:** on github.com the Mermaid diagram renders, every image loads, and the terminal
+  pictures switch to the dark variant in dark mode. Not checked: mobile width. Repository settings
+  (About, topics, social preview, private vulnerability reporting) are left to the owner.
