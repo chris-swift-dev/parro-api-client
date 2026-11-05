@@ -1,0 +1,140 @@
+{
+  "items": [
+    {
+      "dtype": "identity.RHomeGroup",
+      "links": [
+        {
+          "id": 4000000001,
+          "rel": "self",
+          "type": "identity.RHomeGroup",
+          "href": "https://rest-v2.parro.com/rest/v2/homegroup/4000000001"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RHomeGroup:READ:INSTANCE(4000000001)",
+          "type": "identity.RHomeGroup",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(4000000001)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+      "name": "Basisschool De Linde",
+      "schooljaar": 2026,
+      "stamgroep": false,
+      "type": "SCHOOLWIDE",
+      "unreadCount": 0,
+      "memberMuted": false,
+      "memberAbsenceNotificationsMuted": false,
+      "numberOfChildren": 0,
+      "numberOfGuardians": 412,
+      "numberOfTeachers": 38,
+      "childAvatars": [],
+      "lastAnnouncement": {
+        "dtype": "event.RAnnouncementEventPreview",
+        "title": "Studiedag vrijdag 13 november",
+        "date": "2026-11-02T12:28:51.570+01:00"
+      }
+    },
+    {
+      "dtype": "identity.RHomeGroup",
+      "links": [
+        {
+          "id": 4000000002,
+          "rel": "self",
+          "type": "identity.RHomeGroup",
+          "href": "https://rest-v2.parro.com/rest/v2/homegroup/4000000002"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RHomeGroup:READ:INSTANCE(4000000002)",
+          "type": "identity.RHomeGroup",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(4000000002)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+      "name": "Groep 3 - juf Eva",
+      "schooljaar": 2026,
+      "stamgroep": true,
+      "type": "NORMAL",
+      "unreadCount": 2,
+      "memberMuted": false,
+      "memberAbsenceNotificationsMuted": false,
+      "numberOfChildren": 27,
+      "numberOfGuardians": 45,
+      "numberOfTeachers": 2,
+      "childAvatars": [
+        {
+          "dtype": "identity.RAvatar",
+          "id": 3000000002,
+          "roleId": 3000000002,
+          "firstname": "Daan",
+          "surname": "de Vries",
+          "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+        }
+      ],
+      "lastAnnouncement": {
+        "dtype": "event.RAnnouncementEventPreview",
+        "title": "Gym op dinsdag",
+        "date": "2026-10-29T08:10:00.000+01:00"
+      }
+    },
+    {
+      "dtype": "identity.RHomeGroup",
+      "links": [
+        {
+          "id": 4000000003,
+          "rel": "self",
+          "type": "identity.RHomeGroup",
+          "href": "https://rest-v2.parro.com/rest/v2/homegroup/4000000003"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RHomeGroup:READ:INSTANCE(4000000003)",
+          "type": "identity.RHomeGroup",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(4000000003)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+      "name": "Groep 6 - meester Tom",
+      "schooljaar": 2026,
+      "stamgroep": true,
+      "type": "NORMAL",
+      "unreadCount": 0,
+      "memberMuted": false,
+      "memberAbsenceNotificationsMuted": false,
+      "numberOfChildren": 29,
+      "numberOfGuardians": 50,
+      "numberOfTeachers": 2,
+      "childAvatars": [
+        {
+          "dtype": "identity.RAvatar",
+          "id": 3000000001,
+          "roleId": 3000000001,
+          "firstname": "Mila",
+          "surname": "de Vries",
+          "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE"
+        }
+      ]
+    }
+  ]
+}

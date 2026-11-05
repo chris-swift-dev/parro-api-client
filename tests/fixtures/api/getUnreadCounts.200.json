@@ -1,0 +1,47 @@
+{
+  "items": [
+    {
+      "dtype": "identity.RUnreadCount",
+      "numberOfUnreadAnnouncements": 2,
+      "numberOfUnreadCalendarItems": 1,
+      "numberOfUnreadSystemNewsItems": 0,
+      "numberOfUnreadChatRooms": 1,
+      "numberOfUnreadPortalNotifications": 0,
+      "guardian": {
+        "dtype": "identity.RGuardianPrimer",
+        "links": [
+          {
+            "id": 2000000001,
+            "rel": "self",
+            "type": "identity.RGuardianPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/guardianprimer/2000000001"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RGuardianPrimer:READ:INSTANCE(2000000001)",
+            "type": "identity.RGuardianPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2000000001)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-01-19T21:09:45.779+01:00",
+        "firstname": "Sanne",
+        "surname": "de Vries",
+        "role": "GUARDIAN",
+        "accountActive": true,
+        "numberOfExternalIdentities": 1,
+        "numberOfActiveExternalIdentities": 1,
+        "childNames": [
+          "Mila",
+          "Daan"
+        ]
+      }
+    }
+  ]
+}

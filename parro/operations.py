@@ -9,6 +9,7 @@ MCP tool always give identical output.
 
 import json
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 from . import attachments, summaries
@@ -164,11 +165,59 @@ def list_calendar(
     limit: int = 20,
     event_dtype: str | None = None,
     raw: bool = False,
+    details: bool = False,
 ) -> Any:
+    """Calendar items. `details` adds location, description and attachments per shown item:
+    one extra request each, because the list does not include them (spec)."""
     feed = client.collect_feed(event_dtype or CALENDAR_LIST_DTYPE, group_id, limit_per_group=limit)
     if raw:
         return [item.event for item in feed]
-    return summaries.summarize_calendar_feed(feed, limit)
+    agenda = summaries.summarize_calendar_feed(feed, limit)
+    if details:
+        for item in agenda["items"]:
+            item["details"] = calendar_details(client, item)
+    return agenda
+
+
+def calendar_details(client: ParroClient, item: dict[str, Any]) -> dict[str, Any]:
+    """Details of one calendar item: from the cache while the list shows the same version."""
+    event_id = require_id(item.get("id"), "calendar item id")
+    version = (
+        f"{item.get('lastModifiedAt')}|{(item.get('calendarItem') or {}).get('lastModifiedAt')}"
+    )
+    cached = client.cache.get_json("events", f"{event_id}.json")
+    if isinstance(cached, dict) and cached.get("version") == version:
+        return dict(cached.get("details") or {})
+    details = summaries.summarize_calendar_details(client.get_calendar_item(event_id))
+    client.cache.put_json("events", f"{event_id}.json", {"version": version, "details": details})
+    return details
+
+
+# ---------------------------------------------------------------------------- overview
+
+OVERVIEW_ITEMS = 5
+
+
+def show_overview(
+    client: ParroClient, now: datetime | None = None, limit: int = OVERVIEW_ITEMS
+) -> dict[str, Any]:
+    """The app's home screen: unread counts, latest announcements, what is coming up, and chats
+    with unread messages. `now` decides what "coming up" means (tests pass a fixed time)."""
+    moment = now or datetime.now(timezone.utc)
+    groups = client.list_current_group_names()
+    feed = client.collect_feed(ANNOUNCEMENT_LIST_DTYPE, limit_per_group=limit, groups=groups)
+    # The calendar feed starts in the past; look further ahead to find `limit` upcoming items.
+    calendar = client.collect_feed(CALENDAR_LIST_DTYPE, limit_per_group=50, groups=groups)
+    agenda = summaries.summarize_calendar_feed(calendar, limit=len(calendar))
+    upcoming = [item for item in agenda["items"] if not summaries.is_over(item, moment)][:limit]
+    rooms = summaries.summarize_chatrooms(client.list_chatrooms())
+    unread_rooms = [room for room in rooms["chatrooms"] if room.get("unreadCount")]
+    return {
+        "unread": summaries.summarize_unread_counts(client.get_unread_counts()),
+        "announcements": summaries.summarize_announcement_feed(feed, limit),
+        "calendar": {"count": len(upcoming), "items": upcoming},
+        "chats": {"total": len(unread_rooms), "chatrooms": unread_rooms},
+    }
 
 
 # ------------------------------------------------------------------------------ chats
@@ -182,8 +231,11 @@ def list_chatrooms(client: ParroClient, limit: int = 25, raw: bool = False) -> A
 def list_chat_messages(
     client: ParroClient, chatroom_id: int | None, limit: int = 30, raw: bool = False
 ) -> Any:
-    response = client.list_chat_messages(require_id(chatroom_id, "chatroom id"), limit=limit)
-    return response.payload if raw else summaries.summarize_chat_messages(response)
+    room_id = require_id(chatroom_id, "chatroom id")
+    response = client.list_chat_messages(room_id, limit=limit)
+    if raw:
+        return response.payload
+    return {"chatroom_id": room_id, **summaries.summarize_chat_messages(response)}
 
 
 # ------------------------------------------------------------------------- attachments
@@ -269,6 +321,7 @@ def read_one_attachment(
             described.content_type,
             described.size,
             options,
+            cache_key=described.cache_key(),
         )
     except ParroError as problem:
         failed = {
@@ -280,6 +333,26 @@ def read_one_attachment(
     return attachments.AttachmentReading(
         {**reading.summary, "attachment_id": described.attachment_id}, reading.image
     )
+
+
+# ------------------------------------------------------------------------------- cache
+
+
+def cache_info(client: ParroClient) -> dict[str, Any]:
+    """Where the cache is, whether it is on, and how full it is."""
+    info = client.cache.info()
+    return {
+        "directory": info.directory,
+        "enabled": info.enabled,
+        "files": info.files,
+        "bytes": info.bytes,
+        "max_bytes": info.max_bytes,
+        "holds": "attachment files and their text; calendar-item details. Never lists.",
+    }
+
+
+def cache_clear(client: ParroClient) -> dict[str, Any]:
+    return {"directory": str(client.cache.directory), "removed_files": client.cache.clear()}
 
 
 # --------------------------------------------------------------------------- anything

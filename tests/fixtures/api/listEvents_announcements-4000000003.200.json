@@ -1,0 +1,167 @@
+{
+  "items": [
+    {
+      "dtype": "event.RAnnouncementEventPrimer",
+      "links": [
+        {
+          "id": 5000000301,
+          "rel": "self",
+          "type": "event.RAnnouncementEventPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/announcementeventprimer/5000000301"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "event.RAnnouncementEventPrimer:READ:INSTANCE(5000000301)",
+          "type": "event.RAnnouncementEventPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(5000000301)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-27T15:02:00.000+01:00",
+      "createdAt": "2026-10-27T15:02:00.000+01:00",
+      "sortDate": "2026-10-27T15:02:00.000+01:00",
+      "deleted": false,
+      "read": true,
+      "archived": false,
+      "cancelled": false,
+      "liked": false,
+      "realisationReason": "RECIPIENT",
+      "readCount": {
+        "dtype": "event.REventReadCount",
+        "liked": 4,
+        "read": 31,
+        "total": 45
+      },
+      "title": "Excursie Natuurmuseum: hulp gezocht",
+      "contents": "Beste ouders,\n\nOp 12 november gaan we naar het Natuurmuseum. We zoeken nog twee ouders die willen rijden. Wilt u het toestemmingsformulier invullen?\n\nGroet,\nmeester Tom\n",
+      "likeable": true,
+      "attachments": [
+        {
+          "dtype": "attachment.RAnnouncementAttachment",
+          "links": [
+            {
+              "id": 6000000301,
+              "rel": "self",
+              "type": "attachment.RAnnouncementAttachment",
+              "href": "https://rest-v2.parro.com/rest/v2/announcementattachment/6000000301"
+            }
+          ],
+          "permissions": [
+            {
+              "full": "attachment.RAnnouncementAttachment:READ:INSTANCE(6000000301)",
+              "type": "attachment.RAnnouncementAttachment",
+              "operations": [
+                "READ"
+              ],
+              "instances": [
+                "INSTANCE(6000000301)"
+              ]
+            }
+          ],
+          "additionalObjects": {},
+          "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+          "attachmentType": "DOCUMENT",
+          "uploadId": "66666666-7777-4888-8999-000000000000",
+          "entries": [
+            {
+              "dtype": "attachment.RAttachmentDocumentEntry",
+              "links": [
+                {
+                  "id": 6000000302,
+                  "rel": "self",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "href": "https://rest-v2.parro.com/rest/v2/attachmentdocumententry/6000000302"
+                }
+              ],
+              "permissions": [
+                {
+                  "full": "attachment.RAttachmentDocumentEntry:READ:INSTANCE(6000000302)",
+                  "type": "attachment.RAttachmentDocumentEntry",
+                  "operations": [
+                    "READ"
+                  ],
+                  "instances": [
+                    "INSTANCE(6000000302)"
+                  ]
+                }
+              ],
+              "additionalObjects": {},
+              "lastModifiedAt": "2026-10-01T10:00:00.000+02:00",
+              "type": "SOURCE",
+              "url": "https://d111111abcdef8.cloudfront.net/application/00000000000000000000000165a0bd2d/1-00000000000000000000000165a0bd2d.docx",
+              "size": 24576,
+              "contentType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              "filename": "Toestemmingsformulier.docx",
+              "expiresAt": "2027-10-01T10:00:00.000+02:00"
+            }
+          ],
+          "index": 0
+        }
+      ],
+      "owner": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000002,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000002"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000002)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000002)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Tom",
+        "surname": "Smit",
+        "role": "TEACHER"
+      },
+      "lastEditedBy": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000002,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000002"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000002)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000002)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Tom",
+        "surname": "Smit",
+        "role": "TEACHER"
+      },
+      "draft": false,
+      "pinned": false
+    }
+  ]
+}

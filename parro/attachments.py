@@ -66,6 +66,13 @@ class AttachmentFile:
     content_type: str | None
     size: int | None
     url: str | None
+    upload_id: str | None = None
+
+    def cache_key(self) -> str | None:
+        """'<attachment id>-<upload id>-<size>': the same key always means the same bytes."""
+        if self.attachment_id is None or not self.upload_id or self.size is None:
+            return None
+        return f"{self.attachment_id}-{self.upload_id}-{self.size}"
 
 
 def find_attachments(event: dict[str, Any]) -> list[dict[str, Any]]:
@@ -95,6 +102,7 @@ def describe_attachment(attachment: dict[str, Any]) -> AttachmentFile:
         content_type=entry.get("contentType"),
         size=entry.get("size"),
         url=entry.get("url"),
+        upload_id=attachment.get("uploadId"),
     )
 
 
@@ -397,9 +405,14 @@ def read_attachment_file(
     content_type: str | None,
     size_hint: int | None,
     options: ReadOptions,
+    cache_key: str | None = None,
 ) -> AttachmentReading:
-    """Download one attachment and return its text, or the (downscaled) image for photos."""
-    downloaded = download_attachment(client, url, size_hint, content_type)
+    """Download one attachment and return its text, or the (downscaled) image for photos.
+
+    With a `cache_key` (see AttachmentFile.cache_key) the file and its text come from the cache
+    when they are there, and go into it when they are not.
+    """
+    downloaded = download_or_reuse(client, url, size_hint, content_type, cache_key)
     name = filename or filename_from_url(url)
     summary: dict[str, Any] = {
         "filename": name,
@@ -410,8 +423,49 @@ def read_attachment_file(
         summary["saved_to"] = str(save_file(options.save_directory, name, downloaded.data))
     if detect_format(downloaded.content_type, name) == "image":
         return _read_image(client, downloaded, summary, options)
-    extracted = extract_text(downloaded.data, downloaded.content_type, name)
+    extracted = extract_or_reuse(client, downloaded, name, cache_key)
     return AttachmentReading(_text_summary(summary, extracted, url, options.max_chars))
+
+
+def download_or_reuse(
+    client: "ParroClient",
+    url: str,
+    size_hint: int | None,
+    content_type: str | None,
+    cache_key: str | None,
+) -> DownloadedFile:
+    """The file from the cache, or downloaded (and then cached)."""
+    if cache_key:
+        data = client.cache.get_bytes("attachments", f"{cache_key}.bin")
+        meta = client.cache.get_json("attachments", f"{cache_key}.json")
+        if data is not None and isinstance(meta, dict):
+            log.info("attachment taken from the cache")
+            return DownloadedFile(data, str(meta.get("contentType") or content_type or ""))
+    downloaded = download_attachment(client, url, size_hint, content_type)
+    if cache_key:
+        client.cache.put_bytes("attachments", f"{cache_key}.bin", downloaded.data)
+        client.cache.put_json(
+            "attachments", f"{cache_key}.json", {"contentType": downloaded.content_type}
+        )
+    return downloaded
+
+
+def extract_or_reuse(
+    client: "ParroClient", downloaded: DownloadedFile, name: str | None, cache_key: str | None
+) -> ExtractedText:
+    """The text from the cache, or extracted (and then cached). Always the whole text."""
+    if cache_key:
+        cached = client.cache.get_json("attachments", f"{cache_key}.text.json")
+        if isinstance(cached, dict) and isinstance(cached.get("text"), str):
+            return ExtractedText(cached["text"], dict(cached.get("details") or {}))
+    extracted = extract_text(downloaded.data, downloaded.content_type, name)
+    if cache_key:
+        client.cache.put_json(
+            "attachments",
+            f"{cache_key}.text.json",
+            {"text": extracted.text, "details": extracted.details},
+        )
+    return extracted
 
 
 def _read_image(

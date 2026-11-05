@@ -1,7 +1,10 @@
 """Shared pytest setup.
 
-samples/ and openapi/parro.openapi.json hold redacted real-world data and are git-ignored, so they
-are missing in CI. Tests that need them use the fixtures below, which skip instead of failing.
+The tests run on invented API responses in tests/fixtures/api/ (written by
+tests/fixtures/make_api_fixtures.py, committed), so they behave the same locally and in CI.
+
+samples/ and openapi/parro.openapi.json hold redacted real-world data and are git-ignored. Only the
+contract test reads them (load_real_sample), and it skips when they are absent.
 """
 
 import json
@@ -12,8 +15,10 @@ from typing import Any
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "api"
 SAMPLES_DIR = PROJECT_ROOT / "samples"
 FULL_SPEC_PATH = PROJECT_ROOT / "openapi" / "parro.openapi.json"
+PUBLIC_SPEC_PATH = PROJECT_ROOT / "openapi" / "parro.public.openapi.json"
 
 # Make `import parro`, `import parro_cli` and `import parro_mcp` work without installing anything.
 if str(PROJECT_ROOT) not in sys.path:
@@ -21,6 +26,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 
 def load_sample(file_name: str) -> Any:
+    """Parse one invented API response from tests/fixtures/api/. Missing → FileNotFoundError."""
+    return json.loads((FIXTURES_DIR / file_name).read_text(encoding="utf-8"))
+
+
+def load_real_sample(file_name: str) -> Any:
     """Parse one samples/*.json file, or skip the calling test when samples/ is absent."""
     path = SAMPLES_DIR / file_name
     if not path.exists():
@@ -28,7 +38,12 @@ def load_sample(file_name: str) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@pytest.fixture
-def sample() -> Any:
-    """Fixture form of load_sample(), for tests that prefer injection."""
-    return load_sample
+@pytest.fixture(autouse=True)
+def private_home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Every test gets its own empty HOME, so nothing is ever written to the real one.
+
+    The defaults ~/.parro-mcp/tokens.json and ~/.parro/data (cache) resolve inside it.
+    """
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setenv("HOME", str(home))
+    return home

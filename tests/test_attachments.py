@@ -6,6 +6,7 @@ import copy
 import io
 import json
 import logging
+import urllib.parse
 import zipfile
 
 import pytest
@@ -18,8 +19,6 @@ from parro.settings import Settings
 from parro.token_store import TokenStore
 from tests import fakes
 from tests.conftest import load_sample
-
-PDF_URL_IN_SAMPLE_PREFIX = "https://d3jdv0f7ba4m2l.cloudfront.net/application/"
 
 
 def make_pdf(text: str) -> bytes:
@@ -77,7 +76,7 @@ def pdf_url_of_announcement_sample() -> str:
 
 
 def image_url_of_calendar_sample() -> str:
-    event = load_sample("getEvent_attachment.200.json")
+    event = load_sample("getEvent_calendar-7000000301.200.json")
     return str(event["calendarItem"]["attachments"][0]["entries"][0]["url"])
 
 
@@ -85,11 +84,11 @@ def image_url_of_calendar_sample() -> str:
 
 
 def test_calendar_item_attachments_are_found():  # fix 4
-    event = load_sample("getEvent_attachment.200.json")
+    event = load_sample("getEvent_calendar-7000000301.200.json")
     (found,) = attachments.find_attachments(event)
     described = attachments.describe_attachment(found)
     assert described.kind == "IMAGE"
-    assert described.filename == "Screenshot.jpg", "the SOURCE entry, not the thumbnail"
+    assert described.filename == "Route.jpg", "the SOURCE entry, not the thumbnail"
     announcement = load_sample("getEvent_announcement.200.json")
     assert (
         attachments.describe_attachment(attachments.find_attachments(announcement)[0]).kind == "PDF"
@@ -124,7 +123,7 @@ def test_format_is_chosen_by_content_type_first(content_type, filename, expected
 
 
 def test_a_photo_source_entry_with_a_document_dtype_is_read_as_an_image():  # fix 6
-    event = load_sample("getEvent_attachment.200.json")
+    event = load_sample("getEvent_calendar-7000000301.200.json")
     entry = attachments.pick_source_entry(event["calendarItem"]["attachments"][0])
     assert entry["dtype"] == "attachment.RAttachmentDocumentEntry"
     assert attachments.detect_format(entry["contentType"], entry["filename"]) == "image"
@@ -199,29 +198,29 @@ def test_reading_the_announcement_pdf_downloads_without_the_parro_token(tmp_path
     api.attachment_bodies[pdf_url] = ("application/pdf", make_pdf("Beste ouders"))
     client = make_client(tmp_path, api)
 
-    report = operations.read_attachments(client, event_id=11000000000)
+    report = operations.read_attachments(client, event_id=fakes.NEWSLETTER_ID)
 
     assert report.summary["announcement"].startswith("Nieuwsbrief")
     assert "Beste ouders" in report.summary["text"]
-    assert report.summary["format"] == "pdf" and report.summary["attachment_id"] == 11000000000
+    assert report.summary["format"] == "pdf" and report.summary["attachment_id"] == 6000000101
     download = next(r for r in api.requests if r.url == pdf_url)
     assert "Authorization" not in download.headers, "never send the Parro token to the CDN"
     assert not any(h.lower().startswith("parro-") for h in download.headers)
     assert pdf_url not in caplog.text, "fix 7: full attachment URLs are never logged"
     assert pdf_url.split("/application/")[1] not in caplog.text
-    assert "d3jdv0f7ba4m2l.cloudfront.net" in caplog.text, "the host alone is fine"
+    assert urllib.parse.urlsplit(pdf_url).hostname in caplog.text, "the host alone is fine"
 
 
 def test_calendar_item_photo_comes_back_as_an_image(tmp_path):  # fix 4 end to end
-    api = fakes.FakeParroApi(load_sample, calendar_event_ids={11000000000})
+    api = fakes.FakeParroApi(load_sample, calendar_event_ids={fakes.MUSEUM_TRIP_ID})
     image_url = image_url_of_calendar_sample()
     api.attachment_bodies[image_url] = ("image/jpeg", b"\xff\xd8 tiny jpeg")
     client = make_client(tmp_path, api)
 
-    report = operations.read_attachments(client, event_id=11000000000)
+    report = operations.read_attachments(client, event_id=fakes.MUSEUM_TRIP_ID)
 
     assert report.summary["returned_as"] == "image"
-    assert report.summary["announcement"].startswith("Culturele muziekavond")
+    assert report.summary["announcement"].startswith("Excursie Natuurmuseum")
     (image,) = report.images
     assert base64.b64decode(image.base64_data).startswith(b"\xff\xd8")
     probe, calendar = [r for r in api.api_requests() if "/event/" in r.url]
@@ -229,15 +228,15 @@ def test_calendar_item_photo_comes_back_as_an_image(tmp_path):  # fix 4 end to e
 
 
 def test_images_are_left_out_when_not_wanted_and_can_be_saved(tmp_path):
-    api = fakes.FakeParroApi(load_sample, calendar_event_ids={11000000000})
+    api = fakes.FakeParroApi(load_sample, calendar_event_ids={fakes.MUSEUM_TRIP_ID})
     api.attachment_bodies[image_url_of_calendar_sample()] = ("image/jpeg", b"\xff\xd8")
     client = make_client(tmp_path, api)
     options = ReadOptions(include_images=False, save_directory=tmp_path / "saved")
-    report = operations.read_attachments(client, event_id=11000000000, options=options)
+    report = operations.read_attachments(client, event_id=fakes.MUSEUM_TRIP_ID, options=options)
     assert report.images == []
-    assert (tmp_path / "saved" / "Screenshot.jpg").read_bytes() == b"\xff\xd8"
-    again = operations.read_attachments(client, event_id=11000000000, options=options)
-    assert again.summary["saved_to"].endswith("Screenshot (2).jpg"), "never overwrite"
+    assert (tmp_path / "saved" / "Route.jpg").read_bytes() == b"\xff\xd8"
+    again = operations.read_attachments(client, event_id=fakes.MUSEUM_TRIP_ID, options=options)
+    assert again.summary["saved_to"].endswith("Route (2).jpg"), "never overwrite"
 
 
 def test_several_attachments_need_a_choice(tmp_path):
@@ -245,7 +244,7 @@ def test_several_attachments_need_a_choice(tmp_path):
     event = load_sample("getEvent_announcement.200.json")
     second = copy.deepcopy(event["attachments"][0])
     second["links"][0]["id"] = 222
-    second["entries"][0]["url"] = "https://d3jdv0f7ba4m2l.cloudfront.net/application/x/2.txt"
+    second["entries"][0]["url"] = "https://d111111abcdef8.cloudfront.net/application/x/2.txt"
     second["entries"][0]["contentType"] = "text/plain"
     event["attachments"].append(second)
 

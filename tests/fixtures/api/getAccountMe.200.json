@@ -1,0 +1,137 @@
+{
+  "dtype": "auth.RAccount",
+  "links": [
+    {
+      "id": 2000000001,
+      "rel": "self",
+      "type": "auth.RAccount",
+      "href": "https://rest-v2.parro.com/rest/v2/account/2000000001"
+    }
+  ],
+  "permissions": [
+    {
+      "full": "auth.RAccount:READ:INSTANCE(2000000001)",
+      "type": "auth.RAccount",
+      "operations": [
+        "READ"
+      ],
+      "instances": [
+        "INSTANCE(2000000001)"
+      ]
+    }
+  ],
+  "additionalObjects": {},
+  "lastModifiedAt": "2026-08-05T10:55:21.062+02:00",
+  "username": "20000000001",
+  "externalUsername": "svdvries",
+  "email": "sanne@example.com",
+  "organisation": {
+    "dtype": "auth.ROrganisationPrimer",
+    "links": [
+      {
+        "id": 400100,
+        "rel": "self",
+        "type": "auth.ROrganisationPrimer",
+        "href": "https://rest-v2.parro.com/rest/v2/organisationprimer/400100"
+      }
+    ],
+    "permissions": [
+      {
+        "full": "auth.ROrganisationPrimer:READ:INSTANCE(400100)",
+        "type": "auth.ROrganisationPrimer",
+        "operations": [
+          "READ"
+        ],
+        "instances": [
+          "INSTANCE(400100)"
+        ]
+      }
+    ],
+    "additionalObjects": {},
+    "lastModifiedAt": "2026-11-01T04:00:00.000+01:00",
+    "code": "99XX",
+    "name": "Basisschool De Linde",
+    "active": true,
+    "system": false,
+    "pricingPlan": "STANDARD",
+    "pricingPlanStartDate": "2021-08-01",
+    "city": "Voorbeeldstad"
+  },
+  "lastAccountSynchronize": "2026-11-01T20:34:16.631+01:00",
+  "accountType": "GUARDIAN",
+  "identity": {
+    "dtype": "identity.RIdentity",
+    "links": [
+      {
+        "id": 2000000001,
+        "rel": "self",
+        "type": "identity.RIdentity",
+        "href": "https://rest-v2.parro.com/rest/v2/identity/2000000001"
+      }
+    ],
+    "permissions": [
+      {
+        "full": "identity.RIdentity:READ:INSTANCE(2000000001)",
+        "type": "identity.RIdentity",
+        "operations": [
+          "READ"
+        ],
+        "instances": [
+          "INSTANCE(2000000001)"
+        ]
+      }
+    ],
+    "additionalObjects": {},
+    "lastModifiedAt": "2026-01-19T21:09:45.779+01:00",
+    "firstname": "Sanne",
+    "surname": "de Vries",
+    "role": "GUARDIAN",
+    "email": "sanne@example.com",
+    "guardians": [
+      {
+        "dtype": "identity.RGuardianPrimer",
+        "links": [
+          {
+            "id": 2000000001,
+            "rel": "self",
+            "type": "identity.RGuardianPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/guardianprimer/2000000001"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RGuardianPrimer:READ:INSTANCE(2000000001)",
+            "type": "identity.RGuardianPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2000000001)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-01-19T21:09:45.779+01:00",
+        "firstname": "Sanne",
+        "surname": "de Vries",
+        "role": "GUARDIAN",
+        "accountActive": true,
+        "numberOfExternalIdentities": 1,
+        "numberOfActiveExternalIdentities": 1,
+        "childNames": [
+          "Mila",
+          "Daan"
+        ]
+      }
+    ],
+    "children": [],
+    "teachers": []
+  },
+  "avgId": "00000000-0000-4000-8000-000000000001",
+  "capabilities": [],
+  "accountPermissions": [],
+  "portalAccess": false,
+  "state": "ACTIVE",
+  "numberOfExternalIdentities": 1,
+  "numberOfActiveExternalIdentities": 1
+}

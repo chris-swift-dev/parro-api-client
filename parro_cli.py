@@ -23,7 +23,8 @@ from parro import operations
 from parro.api_client import ParroClient
 from parro.attachments import ReadOptions
 from parro.errors import EXIT_OK, EXIT_USAGE_ERROR, ConfigurationError, ParroError
-from parro.settings import LOGIN_METHODS, Settings
+from parro.rendering import RenderOptions, choose_format, render
+from parro.settings import LOGIN_METHODS, OUTPUT_FORMATS, Settings
 
 log = logging.getLogger("parro_cli")
 
@@ -69,10 +70,23 @@ def add_global_options(parser: argparse.ArgumentParser, with_defaults: bool) -> 
         "1 check. auto: password grant, then the form once: up to 2 checks.",
     )
     parser.add_argument(
+        "--format",
+        choices=OUTPUT_FORMATS,
+        default=default(None),
+        help="output: markdown (readable) or json (for scripts). Default: PARRO_FORMAT, else "
+        "auto, which means markdown at a terminal and JSON when the output is piped",
+    )
+    parser.add_argument(
         "--raw", action="store_true", default=default(False), help="print the untouched API JSON"
     )
     parser.add_argument(
         "--compact", action="store_true", default=default(False), help="print JSON on one line"
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        default=default(False),
+        help="do not read or write the cache of attachments and calendar details (PARRO_CACHE=off)",
     )
     parser.add_argument(
         "--verbose",
@@ -120,13 +134,14 @@ def add_login_commands(command: CommandFactory) -> None:
 
 
 def add_reading_commands(command: CommandFactory) -> None:
+    command("overview", "what is new: unread counts, latest announcements, coming up, chats")
     command("me", "the account: name, e-mail, school")
     add_limit(command("children", "the children linked to the account"), 20)
     groups = command("groups", "groups (classes) with the ids other commands need")
     groups.add_argument("--previous", action="store_true", help="last school year instead")
     add_limit(groups, 50)
     command("unread", "unread counts per category")
-    add_limit(command("system-news", "product news from Parro itself"), 20)
+    add_full(add_limit(command("system-news", "product news from Parro itself"), 20))
 
     announcements = command("announcements", "the announcement feed, newest first")
     announcements.add_argument("--group", type=int, help="only this group (see `groups`)")
@@ -134,12 +149,18 @@ def add_reading_commands(command: CommandFactory) -> None:
     announcements.add_argument(
         "--unread-only", action="store_true", help="only announcements not read yet"
     )
+    add_full(announcements)
     announcement = command("announcement", "one announcement in full, with its author")
     announcement.add_argument("id", type=int, help="announcement id")
 
     calendar = command("calendar", "calendar items, soonest first")
     calendar.add_argument("--group", type=int, help="only this group (see `groups`)")
     add_limit(calendar, 20)
+    calendar.add_argument(
+        "--details",
+        action="store_true",
+        help="add location, description and attachments (one extra request per item)",
+    )
 
     add_attachment_command(command)
 
@@ -147,6 +168,9 @@ def add_reading_commands(command: CommandFactory) -> None:
     messages = command("chat-messages", "messages in one chat conversation")
     messages.add_argument("chatroom_id", type=int, help="chatroom id (see `chatrooms`)")
     add_limit(messages, 30)
+
+    cache = command("cache", "show or empty the local cache of attachments and calendar details")
+    cache.add_argument("action", choices=("info", "clear"), help="info (default) or clear")
 
     get = command("get", "GET any API path, e.g. /accountsettings (read-only)")
     get.add_argument("path", help="path below /rest/v2, e.g. /absence/setting")
@@ -176,10 +200,18 @@ def add_attachment_command(command: CommandFactory) -> None:
     )
 
 
-def add_limit(parser: argparse.ArgumentParser, default: int) -> None:
+def add_limit(parser: argparse.ArgumentParser, default: int) -> argparse.ArgumentParser:
     parser.add_argument(
         "--limit", type=int, default=default, help=f"how many items (default {default})"
     )
+    return parser
+
+
+def add_full(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser.add_argument(
+        "--full", action="store_true", help="markdown: show whole texts instead of a preview"
+    )
+    return parser
 
 
 # ------------------------------------------------------------------------------ commands
@@ -239,6 +271,30 @@ def parse_params(pairs: Sequence[str]) -> dict[str, str]:
     return params
 
 
+# The markdown view (parro.rendering) of each command's result.
+COMMAND_VIEWS = {
+    "login": "status",
+    "logout": "logout",
+    "status": "status",
+    "login-url": "login_url",
+    "login-finish": "status",
+    "overview": "overview",
+    "me": "account",
+    "children": "children",
+    "groups": "groups",
+    "unread": "unread",
+    "system-news": "system_news",
+    "announcements": "announcements",
+    "announcement": "announcement",
+    "calendar": "calendar",
+    "attachment": "attachment",
+    "chatrooms": "chatrooms",
+    "chat-messages": "chat_messages",
+    "get": "get",
+    "cache": "cache",
+}
+
+
 class PlainText(str):
     """Marks command output that is printed as is instead of as JSON."""
 
@@ -250,6 +306,7 @@ HANDLERS: dict[str, Handler] = {
     "token": lambda c, a: PlainText(operations.access_token(c)),
     "login-url": lambda c, a: operations.login_url(c),
     "login-finish": lambda c, a: operations.login_finish(c, a.redirect_url),
+    "overview": lambda c, a: operations.show_overview(c),
     "me": lambda c, a: operations.show_account(c, raw=a.raw),
     "children": lambda c, a: operations.list_children(c, a.limit, raw=a.raw),
     "groups": lambda c, a: operations.list_groups(
@@ -261,11 +318,16 @@ HANDLERS: dict[str, Handler] = {
         c, a.group, a.limit, a.unread_only, raw=a.raw
     ),
     "announcement": lambda c, a: operations.show_announcement(c, a.id, raw=a.raw),
-    "calendar": lambda c, a: operations.list_calendar(c, a.group, a.limit, raw=a.raw),
+    "calendar": lambda c, a: operations.list_calendar(
+        c, a.group, a.limit, raw=a.raw, details=a.details
+    ),
     "attachment": run_attachment,
     "chatrooms": lambda c, a: operations.list_chatrooms(c, a.limit, raw=a.raw),
     "chat-messages": lambda c, a: operations.list_chat_messages(
         c, a.chatroom_id, a.limit, raw=a.raw
+    ),
+    "cache": lambda c, a: (
+        operations.cache_clear(c) if a.action == "clear" else operations.cache_info(c)
     ),
     "get": lambda c, a: operations.get_any(
         c, a.path, parse_params(a.param), a.limit, a.offset, raw=a.raw
@@ -289,7 +351,12 @@ def main(
     args = build_parser().parse_args(argv)
     configure_logging(args.verbose)
     try:
-        settings = Settings.from_environment().with_overrides(login_method=args.login_method)
+        settings = Settings.from_environment().with_overrides(
+            login_method=args.login_method,
+            output_format=args.format,
+            cache_enabled=False if args.no_cache else None,
+        )
+        output_format = choose_format(settings.output_format, args.raw, sys.stdout.isatty())
         result = HANDLERS[args.command](make_client(settings), args)
     except ParroError as problem:
         print(f"error: {problem}", file=sys.stderr)
@@ -300,11 +367,19 @@ def main(
     except ValueError as problem:  # e.g. a negative --limit
         print(f"error: {problem}", file=sys.stderr)
         return EXIT_USAGE_ERROR
+    print_result(args, result, output_format)
+    return EXIT_OK
+
+
+def print_result(args: argparse.Namespace, result: Any, output_format: str) -> None:
+    """Plain text as is; otherwise markdown or JSON, as chosen."""
     if isinstance(result, PlainText):
         print(result)
+    elif output_format == "markdown":
+        options = RenderOptions(audience="cli", full_text=getattr(args, "full", False))
+        print(render(COMMAND_VIEWS.get(args.command, "get"), result, options), end="")
     else:
         print(operations.to_json_text(result, compact=args.compact))
-    return EXIT_OK
 
 
 if __name__ == "__main__":

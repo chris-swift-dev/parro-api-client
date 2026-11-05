@@ -1,0 +1,18 @@
+{
+  "dtype": "auth.RAccountSettings",
+  "id": 2000000001,
+  "email": "sanne@example.com",
+  "username": "20000000001",
+  "digestPreference": "DAILY",
+  "translationPreference": {
+    "dtype": "identity.RTranslationPreferenceSettings",
+    "enabled": "DISABLED",
+    "preferredLanguage": "nl"
+  },
+  "digestHour": 7,
+  "active": true,
+  "chatPreference": {
+    "dtype": "identity.RChatPreference",
+    "sendMessagesWithShiftEnter": false
+  }
+}

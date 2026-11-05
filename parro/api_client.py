@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from .authenticator import Authenticator
+from .cache import Cache
 from .errors import ApiError, ConfigurationError, TokenRejected
 from .geon import (
     build_range_header,
@@ -85,6 +86,10 @@ class ParroClient:
         )
         self.authenticator = authenticator or Authenticator(
             settings, self.transport, self.token_store
+        )
+        # Attachments and calendar details only (PLAN-readable-output §3b); lists never.
+        self.cache = Cache(
+            settings.data_dir / "cache", settings.cache_max_bytes, enabled=settings.cache_enabled
         )
         self._account: dict[str, Any] | None = None
         self._role_header: str | None = None
@@ -300,19 +305,24 @@ class ParroClient:
         return names
 
     def collect_feed(
-        self, event_dtype: str, group_id: int | None = None, limit_per_group: int = 20
+        self,
+        event_dtype: str,
+        group_id: int | None = None,
+        limit_per_group: int = 20,
+        groups: dict[int, str | None] | None = None,
     ) -> list[FeedEvent]:
         """Events of one group, or of every current group (the spec: query each group separately).
 
         Events carry the group's name only when several groups were merged. Not sorted: the caller
-        decides the order.
+        decides the order. `groups` ({id: name}) saves the group request when the caller already
+        has them, e.g. the overview, which reads two feeds.
         """
         if group_id is not None:
-            groups: dict[int, str | None] = {int(group_id): None}
+            chosen: dict[int, str | None] = {int(group_id): None}
         else:
-            groups = self.list_current_group_names()
+            chosen = groups if groups is not None else self.list_current_group_names()
         collected: list[FeedEvent] = []
-        for one_group_id, group_name in groups.items():
+        for one_group_id, group_name in chosen.items():
             page = self.list_events(one_group_id, event_dtype, limit=limit_per_group)
             collected.extend(FeedEvent(event, group_name) for event in page.items)
         return collected

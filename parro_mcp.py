@@ -28,6 +28,7 @@ from parro import __version__, operations
 from parro.api_client import ParroClient
 from parro.attachments import ReadOptions
 from parro.errors import ConfigurationError, ParroError
+from parro.rendering import RenderOptions, render
 from parro.settings import LOGIN_METHODS, Settings, parse_login_method
 
 log = logging.getLogger("parro_mcp")
@@ -59,6 +60,13 @@ def schema(properties: dict[str, Any] | None = None, required: list[str] | None 
             "type": "boolean",
             "description": "Give the API's untouched JSON instead of the compact summary.",
         }
+    # Every tool can answer in readable markdown instead of JSON (PLAN-readable-output §2).
+    all_properties["format"] = {
+        "type": "string",
+        "enum": ["json", "markdown"],
+        "default": "json",
+        "description": "json (default) or markdown: a readable view that keeps every id.",
+    }
     result: dict[str, Any] = {"type": "object", "properties": all_properties}
     if required:
         result["required"] = required
@@ -199,6 +207,9 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "group_id": integer(),
                 "limit": integer(default=20),
                 "dtype": text("Event type to list; default event.RCalendarItemEventPrimer."),
+                "details": flag(
+                    "Add location, description and attachments (one extra request per item)."
+                ),
             }
         ),
     },
@@ -236,6 +247,13 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             },
             required=["path"],
         ),
+    },
+    {
+        "name": "parro_overview",
+        "description": "What is new, like the app's home screen: unread counts, the latest "
+        "announcements, what is coming up in the calendar, and chats with unread messages. A "
+        "good first call; use format 'markdown' for a readable summary.",
+        "inputSchema": schema(raw=False),
     },
 ]
 
@@ -311,6 +329,7 @@ TOOL_FUNCTIONS: dict[str, ToolFunction] = {
         integer_argument(a, "limit", 20),
         a.get("dtype"),
         raw=raw(a),
+        details=bool(a.get("details")),
     ),
     "parro_chatrooms": lambda c, a: operations.list_chatrooms(
         c, integer_argument(a, "limit", 25), raw=raw(a)
@@ -319,6 +338,7 @@ TOOL_FUNCTIONS: dict[str, ToolFunction] = {
         c, a.get("chatroom_id"), integer_argument(a, "limit", 30), raw=raw(a)
     ),
     "parro_unread": lambda c, a: operations.show_unread_counts(c, raw=raw(a)),
+    "parro_overview": lambda c, a: operations.show_overview(c),
     "parro_get": lambda c, a: operations.get_any(
         c,
         str(a.get("path") or ""),
@@ -336,14 +356,52 @@ class ToolCallResult:
     is_error: bool
 
 
-def to_content_blocks(result: ToolResult) -> list[dict[str, Any]]:
-    """MCP content: one JSON text block, plus an image block per photo of an attachment."""
+# The markdown view (parro.rendering) of each tool's result.
+TOOL_VIEWS = {
+    "parro_auth_status": "status",
+    "parro_login": "status",
+    "parro_login_url": "login_url",
+    "parro_login_finish": "status",
+    "parro_logout": "logout",
+    "parro_me": "account",
+    "parro_children": "children",
+    "parro_groups": "groups",
+    "parro_announcements": "announcements",
+    "parro_announcement": "announcement",
+    "parro_attachment": "attachment",
+    "parro_calendar": "calendar",
+    "parro_chatrooms": "chatrooms",
+    "parro_chat_messages": "chat_messages",
+    "parro_unread": "unread",
+    "parro_get": "get",
+    "parro_overview": "overview",
+}
+# For a model, whole texts are better than previews; hints name tools, not CLI commands.
+MCP_RENDER_OPTIONS = RenderOptions(audience="mcp", full_text=True)
+
+
+def requested_format(arguments: dict[str, Any]) -> str:
+    """'json' or 'markdown' from the optional `format` argument."""
+    chosen = str(arguments.get("format") or "json").strip().lower()
+    if chosen not in ("json", "markdown"):
+        raise ConfigurationError("`format` must be 'json' or 'markdown'.")
+    if chosen == "markdown" and arguments.get("raw"):
+        raise ConfigurationError("`raw` is the API's own JSON; it cannot be shown as markdown.")
+    return chosen
+
+
+def to_content_blocks(result: ToolResult, view: str, output_format: str) -> list[dict[str, Any]]:
+    """MCP content: one text block (JSON or markdown), plus an image block per photo."""
+    data = result.summary if isinstance(result, operations.AttachmentReport) else result
+    if output_format == "markdown":
+        text = render(view, data, MCP_RENDER_OPTIONS)
+    else:
+        text = operations.to_json_text(data)
+    blocks = [{"type": "text", "text": text}]
     if isinstance(result, operations.AttachmentReport):
-        blocks = [{"type": "text", "text": operations.to_json_text(result.summary)}]
         for image in result.images:
             blocks.append({"type": "image", "data": image.base64_data, "mimeType": image.mime_type})
-        return blocks
-    return [{"type": "text", "text": operations.to_json_text(result)}]
+    return blocks
 
 
 class McpServer:
@@ -368,14 +426,17 @@ class McpServer:
         tool = TOOL_FUNCTIONS.get(name)
         if tool is None:
             return error_result(f"unknown tool: {name}")
+        arguments = dict(arguments or {})
         try:
-            result = tool(self.get_client(), dict(arguments or {}))
+            output_format = requested_format(arguments)
+            result = tool(self.get_client(), arguments)
         except ParroError as problem:
             return error_result(str(problem))
         except Exception as unexpected:  # keep serving: one broken call must not end the session
             log.exception("tool %s failed unexpectedly", name)
             return error_result(f"internal error in {name}: {type(unexpected).__name__}")
-        return ToolCallResult(to_content_blocks(result), is_error=False)
+        content = to_content_blocks(result, TOOL_VIEWS.get(name, "get"), output_format)
+        return ToolCallResult(content, is_error=False)
 
     def handle_request(self, message: dict[str, Any]) -> dict[str, Any] | None:
         """Answer one JSON-RPC message. Notifications (no id) get no answer."""

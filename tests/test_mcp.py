@@ -130,14 +130,23 @@ def server(tmp_path, monkeypatch) -> tuple[parro_mcp.McpServer, fakes.FakeParroA
 # ------------------------------------------------------------------------- tool interface
 
 
-def test_tool_interface_is_unchanged_apart_from_the_login_method():
+FORMAT_ARGUMENT = {"type": "string", "enum": ["json", "markdown"], "default": "json"}
+
+
+def test_tool_interface_only_gains_optional_arguments():
+    """The original, plus `method` (parro_login), `details` (parro_calendar), `format` (all)."""
     expected = json.loads(json.dumps(ORIGINAL_TOOL_INTERFACE))
     expected["parro_login"]["properties"]["method"] = {
         "type": "string",
         "enum": ["login-form", "password-grant", "auto"],
     }
+    expected["parro_calendar"]["properties"]["details"] = {"type": "boolean"}
+    expected["parro_overview"] = {"properties": {}}  # new tool, added at the end
+    for tool in expected.values():
+        tool["properties"]["format"] = FORMAT_ARGUMENT
     assert interface_of(parro_mcp.TOOL_DEFINITIONS) == expected
-    assert list(interface_of(parro_mcp.TOOL_DEFINITIONS)) == list(ORIGINAL_TOOL_INTERFACE)
+    names = list(interface_of(parro_mcp.TOOL_DEFINITIONS))
+    assert names[: len(ORIGINAL_TOOL_INTERFACE)] == list(ORIGINAL_TOOL_INTERFACE), "same order"
 
 
 def test_every_tool_has_an_implementation_and_a_description():
@@ -199,7 +208,7 @@ TOOL_CALLS = [
     ("parro_children", {"limit": "2"}),
     ("parro_groups", {"scope": "previous"}),
     ("parro_announcements", {"limit": 2, "unread_only": True}),
-    ("parro_announcement", {"id": 11000000000}),
+    ("parro_announcement", {"id": fakes.NEWSLETTER_ID}),
     ("parro_calendar", {"limit": 1, "raw": True}),
     ("parro_chatrooms", {}),
     ("parro_chat_messages", {"chatroom_id": 5}),
@@ -250,18 +259,17 @@ def test_unexpected_exceptions_do_not_end_the_session(server, monkeypatch):
 
 def test_attachment_photo_is_returned_as_an_image_block(server):
     mcp, api = server
-    api.calendar_event_ids.add(11000000000)
-    event = load_sample("getEvent_attachment.200.json")
+    event = load_sample("getEvent_calendar-7000000301.200.json")
     api.attachment_bodies[event["calendarItem"]["attachments"][0]["entries"][0]["url"]] = (
         "image/jpeg",
         b"\xff\xd8 jpeg",
     )
-    result = call(mcp, "parro_attachment", {"announcement_id": 11000000000})
+    result = call(mcp, "parro_attachment", {"announcement_id": fakes.MUSEUM_TRIP_ID})
     text_block, image_block = result["content"]
     assert json.loads(text_block["text"])["returned_as"] == "image"
     assert image_block["type"] == "image" and image_block["mimeType"] == "image/jpeg"
     without_images = call(
-        mcp, "parro_attachment", {"announcement_id": 11000000000, "no_images": True}
+        mcp, "parro_attachment", {"announcement_id": fakes.MUSEUM_TRIP_ID, "no_images": True}
     )
     assert len(without_images["content"]) == 1
 
@@ -310,7 +318,7 @@ def test_stdio_session_without_network(tmp_path):
     answers = [json.loads(line) for line in finished.stdout.splitlines()]
     assert [a.get("id") for a in answers] == [1, 2, 3, None]
     assert answers[0]["result"]["protocolVersion"] == "2025-06-18"
-    assert len(answers[1]["result"]["tools"]) == 16
+    assert len(answers[1]["result"]["tools"]) == 17
     status = json.loads(answers[2]["result"]["content"][0]["text"])
     assert status["has_access_token"] is False and "Not logged in" in status["error"]
     assert answers[3]["error"]["code"] == -32700
@@ -319,7 +327,7 @@ def test_stdio_session_without_network(tmp_path):
 
 def test_manual_tools_and_call_commands(tmp_path):
     listed = run_server(tmp_path, "", "tools")
-    assert listed.returncode == 0 and len(listed.stdout.splitlines()) == 16
+    assert listed.returncode == 0 and len(listed.stdout.splitlines()) == 17
     called = run_server(tmp_path, "", "call", "parro_auth_status")
     assert called.returncode == 0
     assert json.loads(called.stdout)["has_access_token"] is False

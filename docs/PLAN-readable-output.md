@@ -1,6 +1,7 @@
 # Plan 3: human-readable output for the CLI and the MCP server
 
-*Status: proposal (2026-11-05). Nothing implemented yet.*
+*Status (2026-11-05): phases 0–5 implemented on the `readable-output` branch; phase 6 (docs, live look,
+release 0.2.0) in progress. Phases 7–8 (archive, 0.3.0) not started.*
 
 **Goal:** besides JSON, `parro_cli.py` and `parro_mcp.py` can show the data the way the Parro app does:
 a feed of announcements with author and photos, an agenda grouped by day, chat conversations, and an
@@ -153,7 +154,7 @@ A local copy of everything the account can see, as files people can read and sea
 ```
 <data dir>/archive/
   announcements/2026-10-22-nieuwsbrief-nr-3-22373384212.md   (+ .json, + attachments/)
-  calendar/2026-11-03-culturele-muziekavond-23011…md
+  calendar/2026-11-11-sint-maartenviering-7000000101.md
   chats/<chatroom title>-<id>.md                              (whole conversation)
   index.md                                                    (newest first, links to all files)
 ```
@@ -188,7 +189,7 @@ A local copy of everything the account can see, as files people can read and sea
 
 | # | Phase | Done when |
 | --- | --- | --- |
-| 0 | **Decisions** (§6) and **two live checks** with you present, read-only, no password if a refresh token is valid: (a) does an announcement sent to several groups come back once per group? (b) in which order are chat messages returned? | answers recorded in this plan and in the spec |
+| 0 | **Decisions** (§6). The two live questions are designed around instead of checked first: (a) the feed is always deduplicated by id, which is right whether or not the API repeats an announcement per group; (b) chat messages are sorted by `createdAt`, whatever order the API sends. Both are confirmed in the live look of phase 6 | done 2026-11-05 |
 | 1 | **Synthetic fixtures** in `tests/fixtures/api/` (invented, committable), and FakeParroApi uses them when `samples/` is absent | CI runs (almost) all tests instead of skipping 119 |
 | 2 | `rendering.py` skeleton, `--format` / `format` plumbing, simple views (`me`, `groups`, `children`, `unread`, `get`) | snapshot tests pass; JSON output unchanged |
 | 3 | Announcements: additive summary fields, deduplication, feed and detail views | snapshot tests; JSON parity apart from the listed additions |
@@ -201,6 +202,19 @@ A local copy of everything the account can see, as files people can read and sea
 
 Snapshot tests: each view is rendered from the synthetic fixtures and compared with a committed
 `.md` file, so a layout change shows up as a readable diff.
+
+### Implementation notes (2026-11-05)
+
+- Additions to the MCP interface: `format` on every tool, `details` on `parro_calendar`, and a new
+  17th tool `parro_overview` (at the end; the original 16 keep their names, arguments and order).
+- JSON additions: `author`, `pinned`, `groups` on feed items; `readCount` on the announcement detail;
+  `chatroom_id` on chat messages; `details` on calendar items with `--details`. The feed and the
+  agenda list each item once. Calendar details never carry download links, cached or fresh.
+- Chat messages are sorted only in the markdown view; JSON keeps the API's order.
+- The group list is not cached (a long-running MCP server would keep it stale); the overview
+  fetches it once per call and passes it to both feeds.
+- `parse_timestamp()` lives in `geon.py` (needed by summaries and rendering) and accepts every
+  fraction length, which Python 3.10's `fromisoformat` does not.
 
 ## 5. Risks
 

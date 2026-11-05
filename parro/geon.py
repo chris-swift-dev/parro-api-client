@@ -7,6 +7,8 @@ the `rel: self` link), `permissions` and often an empty `additionalObjects`. Col
 These functions only reshape data; they never send requests.
 """
 
+import re
+from datetime import datetime
 from typing import Any
 
 # Keys that carry no information for a reader of the data.
@@ -103,3 +105,27 @@ def full_name(person: Any) -> str:
         return ""
     parts = [person.get("firstname"), person.get("surname")]
     return " ".join(part for part in parts if isinstance(part, str) and part)
+
+
+_TIMESTAMP = re.compile(
+    r"^(?P<main>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?)(?:\.(?P<fraction>\d+))?(?P<zone>Z|[+-]\d{2}:?\d{2})?$"
+)
+
+
+def parse_timestamp(text: Any) -> datetime | None:
+    """Parse the API's ISO-8601 timestamps, e.g. '2026-11-02T12:28:51.57+01:00'.
+
+    Python 3.10's fromisoformat() only accepts 3 or 6 fraction digits; the API sends anything from
+    none to 3, so the fraction is padded first. Returns None for anything unparsable.
+    """
+    found = _TIMESTAMP.match(text) if isinstance(text, str) else None
+    if found is None:
+        return None
+    main = found["main"] if found["main"].count(":") == 2 else found["main"] + ":00"
+    fraction = (found["fraction"] or "")[:6].ljust(6, "0")
+    zone = found["zone"] or ""
+    zone = "+00:00" if zone == "Z" else zone
+    try:
+        return datetime.fromisoformat(f"{main}.{fraction}{zone}")
+    except ValueError:
+        return None

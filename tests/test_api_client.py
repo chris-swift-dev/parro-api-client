@@ -42,7 +42,7 @@ def test_collection_request_sends_the_documented_headers(tmp_path, api):
     assert headers["Accept"] == "application/vnd.topicus.geon+json;version=224"  # fix 1
     assert headers["Content-Type"] == headers["Accept"]
     assert headers["parro-app-version"] == "web:2.27.0"  # fix 1
-    assert headers["parro-authorization-role"] == "GUARDIAN:1000000000"
+    assert headers["parro-authorization-role"] == "GUARDIAN:2000000001"
     assert headers["Range"] == "items=0-4"
     assert headers["topicus-Range-Count"] == "Exact"
 
@@ -63,7 +63,7 @@ def test_role_override_skips_account_lookup(tmp_path, api):
 
 
 def test_derive_role_header_from_the_account_sample():
-    assert derive_role_header(load_sample("getAccountMe.200.json")) == "GUARDIAN:1000000000"
+    assert derive_role_header(load_sample("getAccountMe.200.json")) == "GUARDIAN:2000000001"
     assert derive_role_header({"accountType": "GUARDIAN", "identity": {}}) is None
 
 
@@ -138,9 +138,9 @@ def test_merged_feed_queries_each_current_group(tmp_path, api):
     client = make_client(tmp_path, api)
     feed = client.collect_feed("event.RAnnouncementEventPrimer", limit_per_group=1)
     assert [item.group_name for item in feed] == [
-        "Basisschool Voorbeeld",
-        "1/2 Voornaam",
-        "3 Voornaam/Voornaam",
+        "Basisschool De Linde",
+        "Groep 3 - juf Eva",
+        "Groep 6 - meester Tom",
     ]
     single = client.collect_feed("event.RAnnouncementEventPrimer", group_id=5, limit_per_group=2)
     assert len(single) == 2 and single[0].group_name is None

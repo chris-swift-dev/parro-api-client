@@ -1,0 +1,76 @@
+{
+  "items": [
+    {
+      "dtype": "identity.RGroupPrimer",
+      "links": [
+        {
+          "id": 4000000101,
+          "rel": "self",
+          "type": "identity.RGroupPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000101"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RGroupPrimer:READ:INSTANCE(4000000101)",
+          "type": "identity.RGroupPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(4000000101)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+      "name": "Basisschool De Linde",
+      "schooljaar": 2025,
+      "stamgroep": false,
+      "type": "SCHOOLWIDE",
+      "unreadCount": 0,
+      "memberMuted": false,
+      "memberAbsenceNotificationsMuted": false,
+      "numberOfChildren": 0,
+      "numberOfGuardians": 398,
+      "numberOfTeachers": 36,
+      "childAvatars": []
+    },
+    {
+      "dtype": "identity.RGroupPrimer",
+      "links": [
+        {
+          "id": 4000000102,
+          "rel": "self",
+          "type": "identity.RGroupPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/groupprimer/4000000102"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RGroupPrimer:READ:INSTANCE(4000000102)",
+          "type": "identity.RGroupPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(4000000102)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-09-01T08:00:00.000+02:00",
+      "name": "Groep 5 - juf Iris",
+      "schooljaar": 2025,
+      "stamgroep": true,
+      "type": "NORMAL",
+      "unreadCount": 0,
+      "memberMuted": false,
+      "memberAbsenceNotificationsMuted": false,
+      "numberOfChildren": 28,
+      "numberOfGuardians": 47,
+      "numberOfTeachers": 2,
+      "childAvatars": []
+    }
+  ]
+}

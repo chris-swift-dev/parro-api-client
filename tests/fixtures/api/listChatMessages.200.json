@@ -1,0 +1,175 @@
+{
+  "items": [
+    {
+      "dtype": "chat.RChatTextMessage",
+      "links": [
+        {
+          "id": 8100000003,
+          "rel": "self",
+          "type": "chat.RChatTextMessage",
+          "href": "https://rest-v2.parro.com/rest/v2/chattextmessage/8100000003"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatTextMessage:READ:INSTANCE(8100000003)",
+          "type": "chat.RChatTextMessage",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8100000003)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-03T16:28:35.509+01:00",
+      "identity": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000002,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000002"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000002)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000002)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Tom",
+        "surname": "Smit",
+        "role": "TEACHER"
+      },
+      "createdAt": "2026-11-03T16:28:35.509+01:00",
+      "deleted": false,
+      "text": "Top, dan zijn we compleet. Tot de 12e!",
+      "allRead": false
+    },
+    {
+      "dtype": "chat.RChatTextMessage",
+      "links": [
+        {
+          "id": 8100000002,
+          "rel": "self",
+          "type": "chat.RChatTextMessage",
+          "href": "https://rest-v2.parro.com/rest/v2/chattextmessage/8100000002"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatTextMessage:READ:INSTANCE(8100000002)",
+          "type": "chat.RChatTextMessage",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8100000002)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-02T20:15:00.000+01:00",
+      "identity": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2000000001,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2000000001"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2000000001)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2000000001)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Sanne",
+        "surname": "de Vries",
+        "role": "GUARDIAN"
+      },
+      "createdAt": "2026-11-02T20:15:00.000+01:00",
+      "deleted": false,
+      "text": "Ik kan rijden, ik heb plek voor drie kinderen.",
+      "allRead": false
+    },
+    {
+      "dtype": "chat.RChatTextMessage",
+      "links": [
+        {
+          "id": 8100000001,
+          "rel": "self",
+          "type": "chat.RChatTextMessage",
+          "href": "https://rest-v2.parro.com/rest/v2/chattextmessage/8100000001"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatTextMessage:READ:INSTANCE(8100000001)",
+          "type": "chat.RChatTextMessage",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8100000001)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-02T19:02:00.000+01:00",
+      "identity": {
+        "dtype": "identity.RIdentityPrimer",
+        "links": [
+          {
+            "id": 2100000002,
+            "rel": "self",
+            "type": "identity.RIdentityPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/identityprimer/2100000002"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RIdentityPrimer:READ:INSTANCE(2100000002)",
+            "type": "identity.RIdentityPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000002)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Tom",
+        "surname": "Smit",
+        "role": "TEACHER"
+      },
+      "createdAt": "2026-11-02T19:02:00.000+01:00",
+      "deleted": false,
+      "text": "Dag allemaal, wie kan er op 12 november rijden?",
+      "allRead": false
+    }
+  ]
+}

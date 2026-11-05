@@ -1,0 +1,32 @@
+{
+  "dtype": "auth.ROrganisationPrimer",
+  "links": [
+    {
+      "id": 400100,
+      "rel": "self",
+      "type": "auth.ROrganisationPrimer",
+      "href": "https://rest-v2.parro.com/rest/v2/organisationprimer/400100"
+    }
+  ],
+  "permissions": [
+    {
+      "full": "auth.ROrganisationPrimer:READ:INSTANCE(400100)",
+      "type": "auth.ROrganisationPrimer",
+      "operations": [
+        "READ"
+      ],
+      "instances": [
+        "INSTANCE(400100)"
+      ]
+    }
+  ],
+  "additionalObjects": {},
+  "lastModifiedAt": "2026-11-01T04:00:00.000+01:00",
+  "code": "99XX",
+  "name": "Basisschool De Linde",
+  "active": true,
+  "system": false,
+  "pricingPlan": "STANDARD",
+  "pricingPlanStartDate": "2021-08-01",
+  "city": "Voorbeeldstad"
+}

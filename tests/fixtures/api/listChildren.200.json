@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "dtype": "identity.RChildPrimer",
+      "links": [
+        {
+          "id": 3000000001,
+          "rel": "self",
+          "type": "identity.RChildPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/childprimer/3000000001"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RChildPrimer:READ:INSTANCE(3000000001)",
+          "type": "identity.RChildPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(3000000001)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-30T09:58:21.777+01:00",
+      "firstname": "Mila",
+      "surname": "de Vries",
+      "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE",
+      "role": "CHILD",
+      "archived": false,
+      "enrolledSince": "2022-08-29",
+      "numberOfGuardians": 2,
+      "guardianNames": []
+    },
+    {
+      "dtype": "identity.RChildPrimer",
+      "links": [
+        {
+          "id": 3000000002,
+          "rel": "self",
+          "type": "identity.RChildPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/childprimer/3000000002"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "identity.RChildPrimer:READ:INSTANCE(3000000002)",
+          "type": "identity.RChildPrimer",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(3000000002)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-10-30T09:58:21.777+01:00",
+      "firstname": "Daan",
+      "surname": "de Vries",
+      "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=EXAMPLE",
+      "role": "CHILD",
+      "archived": false,
+      "enrolledSince": "2024-08-26",
+      "numberOfGuardians": 2,
+      "guardianNames": []
+    }
+  ]
+}

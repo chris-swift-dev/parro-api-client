@@ -136,14 +136,21 @@ class FakeParnasSys:
 
 GEON_TYPE = "application/vnd.topicus.geon+json;version=224"
 API = "https://rest-v2.parro.com"
+# Ids from tests/fixtures/make_api_fixtures.py.
+SCHOOLWIDE_GROUP, GROUP_3, GROUP_6 = 4000000001, 4000000002, 4000000003
+DEFAULT_GROUP = GROUP_3  # its feed: 2 announcements, 1 calendar item
+NEWSLETTER_ID = 5000000101  # announcement with a PDF
+MUSEUM_TRIP_ID = 7000000301  # calendar item with a photo
+DEFAULT_CALENDAR_EVENT = MUSEUM_TRIP_ID
 
 
 @dataclass
 class FakeParroApi:
-    """rest-v2.parro.com answering from samples/. Unknown routes answer 404.
+    """rest-v2.parro.com answering from the invented fixtures in tests/fixtures/api/.
 
-    `load_sample` is injected so a missing samples/ folder skips the test instead of failing.
-    `unauthorized_tokens` answer 401, like an expired or revoked token.
+    Event lists are per group (`listEvents_announcements-<group>.200.json`), calendar details per
+    event (`getEvent_calendar-<id>.200.json`); an unknown group or id gets a default file. Unknown
+    routes answer 404. `unauthorized_tokens` answer 401, like an expired or revoked token.
     """
 
     load_sample: Callable[[str], Any]
@@ -202,22 +209,34 @@ class FakeParroApi:
             return self._event_list(query, request)
         if path.startswith("/event/"):
             event_id = int(path.rsplit("/", 1)[-1])
-            if (
-                event_id in self.calendar_event_ids
-                and query.get("dtype") != "event.RCalendarItemEvent"
-            ):
+            is_calendar_item = event_id in self.calendar_event_ids or self._has(
+                f"getEvent_calendar-{event_id}.200.json"
+            )
+            if is_calendar_item and query.get("dtype") != "event.RCalendarItemEvent":
                 return HttpResponse(406, {"content-type": GEON_TYPE}, b"{}", request.url)
-            return self._single_event(query.get("dtype"), request.url)
+            return self._single_event(event_id, query.get("dtype"), request.url)
         return HttpResponse(404, {}, b'{"code": 404}', request.url)
 
     def _event_list(self, query: dict[str, str], request: HttpRequest) -> HttpResponse:
-        if query.get("dtype") == "event.RAnnouncementEventPrimer":
-            return self._collection("listEvents_announcements.200.json", request)
-        if query.get("dtype") == "event.RCalendarItemEventPrimer":
-            return self._collection("listEvents_calendar-items.200.json", request)
-        return HttpResponse(406, {"content-type": GEON_TYPE}, b"{}", request.url)
+        kinds = {
+            "event.RAnnouncementEventPrimer": "announcements",
+            "event.RCalendarItemEventPrimer": "calendar",
+        }
+        kind = kinds.get(query.get("dtype", ""))
+        if kind is None:
+            return HttpResponse(406, {"content-type": GEON_TYPE}, b"{}", request.url)
+        specific = f"listEvents_{kind}-{query.get('group')}.200.json"
+        name = specific if self._has(specific) else f"listEvents_{kind}-{DEFAULT_GROUP}.200.json"
+        return self._collection(name, request)
 
-    def _single_event(self, dtype: str | None, url: str) -> HttpResponse:
+    def _has(self, fixture_name: str) -> bool:
+        try:
+            self.load_sample(fixture_name)
+        except FileNotFoundError:
+            return False
+        return True
+
+    def _single_event(self, event_id: int, dtype: str | None, url: str) -> HttpResponse:
         # Spec: no dtype → 406; RAnnouncementEvent → 401 (!); the two concrete types → 200.
         if dtype is None:
             body = json.dumps(self.load_sample("getEvent.406.json")).encode()
@@ -227,7 +246,9 @@ class FakeParroApi:
         if dtype == "event.RAnnouncementEventPrimer":
             return self._one("getEvent_announcement.200.json", url)
         if dtype == "event.RCalendarItemEvent":
-            return self._one("getEvent_attachment.200.json", url)
+            specific = f"getEvent_calendar-{event_id}.200.json"
+            default = f"getEvent_calendar-{DEFAULT_CALENDAR_EVENT}.200.json"
+            return self._one(specific if self._has(specific) else default, url)
         return HttpResponse(406, {"content-type": GEON_TYPE}, b"{}", url)
 
     def _one(self, sample_name: str, url: str) -> HttpResponse:
