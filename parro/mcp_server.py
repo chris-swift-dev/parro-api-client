@@ -589,6 +589,10 @@ def run(program: str = naming.INSTALLED) -> None:
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure is not None:
             reconfigure(encoding="utf-8")
+    # One message per line, ended by "\n" only: Windows would otherwise write "\r\n".
+    reconfigure_stdout = getattr(sys.stdout, "reconfigure", None)
+    if reconfigure_stdout is not None:
+        reconfigure_stdout(newline="\n")
     sys.exit(main())
 
 

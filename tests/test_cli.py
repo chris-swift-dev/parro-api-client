@@ -257,11 +257,10 @@ def test_installed_and_launcher_names(monkeypatch, capsys):
 def test_the_launchers_name_themselves(launcher, first_line, tmp_path):
     """Started as scripts, in a fresh process, from another folder."""
     project = Path(__file__).resolve().parent.parent
-    environment = {
-        "HOME": str(tmp_path),
-        "PATH": os.environ.get("PATH", ""),
-        "PARRO_TOKEN_FILE": str(tmp_path / "t.json"),
-    }
+    # The whole environment (Windows needs SYSTEMROOT to start Python), with a private home.
+    environment = {k: v for k, v in os.environ.items() if not k.startswith("PARRO_")}
+    environment.update(HOME=str(tmp_path), USERPROFILE=str(tmp_path))
+    environment["PARRO_TOKEN_FILE"] = str(tmp_path / "t.json")
     arguments = ["--help"] if first_line else ["call", "parro_auth_status"]
     result = subprocess.run(
         [sys.executable, str(project / launcher), *arguments],
@@ -271,3 +270,39 @@ def test_the_launchers_name_themselves(launcher, first_line, tmp_path):
         assert result.stdout.startswith(first_line)
     else:
         assert "`parro_cli.py login`" in result.stdout, "the MCP launcher's login hint"
+
+
+# --------------------------------------------------------------- Windows-like consoles
+
+
+def windows_console() -> io.TextIOWrapper:
+    """A text stream like a Windows console: legacy code page, "\\n" written as "\\r\\n"."""
+    return io.TextIOWrapper(io.BytesIO(), encoding="cp1252", newline="\r\n")
+
+
+def test_ics_keeps_single_crlf_on_a_windows_console(monkeypatch, tmp_path):
+    token_file = tmp_path / "tokens.json"
+    token_file.write_text(json.dumps({"access_token": fakes.ACCESS_TOKEN, "expires_at": 9e12}))
+    monkeypatch.setenv("PARRO_TOKEN_FILE", str(token_file))
+    console = windows_console()
+    monkeypatch.setattr(sys, "stdout", console)
+    api = fakes.FakeParroApi(load_sample)
+    exit_code = parro_cli.main(
+        ["calendar", "--ics", "-"], make_client=lambda s: ParroClient(s, transport=api)
+    )
+    console.flush()
+    written = console.buffer.getvalue()  # type: ignore[attr-defined]
+    assert exit_code == 0 and written.startswith(b"BEGIN:VCALENDAR\r\n")
+    assert b"\r\r\n" not in written and written.count(b"\r\n") == written.count(b"\n")
+
+
+def test_utf8_output_lets_a_windows_console_print_the_markers(monkeypatch):
+    console = windows_console()
+    monkeypatch.setattr(sys, "stdout", console)
+    monkeypatch.setattr(sys, "stderr", windows_console())
+    with pytest.raises(UnicodeEncodeError):
+        print("● 📌 🙋")  # what an installed command would hit without the switch
+    parro_cli.use_utf8_output()
+    print("● 📌 🙋")
+    console.flush()
+    assert "● 📌 🙋".encode() in console.buffer.getvalue()  # type: ignore[attr-defined]

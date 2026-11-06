@@ -306,7 +306,7 @@ def run_calendar(client: ParroClient, args: argparse.Namespace) -> Any:
         return agenda
     text = icalendar.build_icalendar(agenda, operations.current_time())
     if args.ics == "-":
-        return PlainText(text)
+        return ExactText(text)
     path = Path(args.ics).expanduser()
     write_private_file(path, text.encode("utf-8"))
     return {"ics_file": str(path), "events": agenda["count"], "period": agenda["period"]}
@@ -366,6 +366,11 @@ COMMAND_VIEWS = {
 
 class PlainText(str):
     """Marks command output that is printed as is instead of as JSON."""
+
+
+class ExactText(PlainText):
+    """Plain text whose bytes must not change: iCalendar lines end in CRLF (RFC 5545), and a
+    Windows console stream would turn each of those into CR CR LF."""
 
 
 HANDLERS: dict[str, Handler] = {
@@ -452,7 +457,9 @@ def main(
 
 def print_result(args: argparse.Namespace, result: Any, output_format: str) -> None:
     """Plain text as is; otherwise markdown or JSON, as chosen."""
-    if isinstance(result, PlainText):
+    if isinstance(result, ExactText):
+        write_exact(result)
+    elif isinstance(result, PlainText):
         print(result, end="" if result.endswith("\n") else "\n")
     elif output_format == "markdown":
         options = RenderOptions(audience="cli", full_text=getattr(args, "full", False))
@@ -460,6 +467,17 @@ def print_result(args: argparse.Namespace, result: Any, output_format: str) -> N
         print(render(view, result, options), end="")
     else:
         print(operations.to_json_text(result, compact=args.compact))
+
+
+def write_exact(text: str) -> None:
+    """Write UTF-8 bytes to stdout, past any line-ending translation of the text stream."""
+    sys.stdout.flush()
+    binary = getattr(sys.stdout, "buffer", None)
+    if binary is None:  # a stream without bytes underneath (some test harnesses)
+        sys.stdout.write(text)
+        return
+    binary.write(text.encode("utf-8"))
+    binary.flush()
 
 
 def run(program: str = naming.INSTALLED) -> None:

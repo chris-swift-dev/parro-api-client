@@ -1,0 +1,4 @@
+# Text files stay LF on every system (Windows checkouts would otherwise turn them into CRLF):
+# the snapshots, fixtures, README pictures and release archives must be the same everywhere.
+* text=auto eol=lf
+*.png binary
