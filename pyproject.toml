@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "parro-api-client"
-version = "0.5.0"
+version = "0.5.1"
 description = "Read-only Parro API client: a standalone CLI and an MCP server sharing one core"
 readme = "README.md"
 license = "MIT AND CC-BY-4.0"  # the code is MIT; the README (in every package) and docs CC BY 4.0
