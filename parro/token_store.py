@@ -17,6 +17,8 @@ Rules for this module:
   * Unknown keys in the file are kept as they are.
 """
 
+import base64
+import binascii
 import json
 import logging
 import os
@@ -188,6 +190,26 @@ class TokenStore:
             self.path.unlink(missing_ok=True)
         except OSError as error:
             log.error("could not delete %s: %s", self.path, error.strerror)
+
+
+def token_expiry(token: str | None) -> float | None:
+    """When a JWT expires (its `exp` claim, seconds since the epoch), or None if that is unknown.
+
+    For display only (`status`: until when a login lasts): the token is not verified, and nothing
+    else is read from it. Opaque tokens, and anything that does not decode cleanly, give None.
+    """
+    parts = token.split(".") if token else []
+    if len(parts) != 3:
+        return None
+    payload = parts[1] + "=" * (-len(parts[1]) % 4)
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(payload))
+    except (binascii.Error, ValueError):
+        return None
+    expiry = claims.get("exp") if isinstance(claims, dict) else None
+    return (
+        float(expiry) if isinstance(expiry, (int, float)) and not isinstance(expiry, bool) else None
+    )
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:
