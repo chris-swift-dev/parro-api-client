@@ -1,0 +1,2 @@
+# Release only: builds the wheel and sdist (the package itself needs nothing at run time).
+build==1.6.1

@@ -12,7 +12,7 @@ name = "parro-api-client"
 version = "0.4.0"
 description = "Read-only Parro API client: a standalone CLI and an MCP server sharing one core"
 readme = "README.md"
-license = "MIT"  # the code; the OpenAPI spec and the docs are CC BY 4.0 (see LICENSE)
+license = "MIT AND CC-BY-4.0"  # the code is MIT; the README (in every package) and docs CC BY 4.0
 license-files = ["LICENSE-CODE", "LICENSE"]
 requires-python = ">=3.10"
 dependencies = []

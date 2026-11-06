@@ -90,10 +90,14 @@ Known risks:
 | 1 | Package layout and entry points; shims; UTF-8 in `run()` | `pip install .` in a fresh venv gives working `parro-client` and `parro-client-mcp`; all tests pass unchanged |
 | 2 | Program name in hints; snapshots and pictures | hints say `parro-client …` when installed |
 | 3 | CI on Windows and macOS (tests + wheel install + smoke test); fix what breaks | green on all three systems |
-| 4 | Release workflow: wheel + sdist on the GitHub release; PyPI job with trusted publishing | a test tag (e.g. `v0.5.0rc1`) on TestPyPI installs with `pipx` |
-| 5 | Docs: Quick start, MCP setup, DEPLOY.md, CHANGELOG | README pictures and links checked |
+| 4 | Release workflow: wheel + sdist on the GitHub release; PyPI job with trusted publishing | the release steps work locally (done); the TestPyPI trial runs after merging, see below |
+| 5 | Docs: Quick start, MCP setup, DEPLOY.md, CHANGELOG; README pictures and links absolute, so they also work on the PyPI page | README pictures and links checked |
 | 6 | Install check with you on your machine: `pipx install` from the wheel, `parro-client status`, the MCP server through the new command | works without a password check (existing tokens) |
-| 7 | Release **0.5.0** and the first PyPI publication | `pipx install parro-api-client` works for anyone |
+| 7 | Merge; your one-time setup; TestPyPI trial (*Publish to PyPI* run by hand); then release **0.5.0** and the first PyPI publication | `pipx install parro-api-client` works for anyone |
+
+**Order of publishing.** GitHub runs `publish.yml` (by hand or on a release) only once the file is
+on the default branch, so nothing can reach TestPyPI or PyPI before the merge. After it: your
+setup below, the TestPyPI trial, then tag `v0.5.0`, review the draft, publish it → PyPI.
 
 **What you need to do (once):** create the project on PyPI (and TestPyPI) and add this repository
 as a *trusted publisher*, and add a `pypi` environment in the repository settings (optionally with
