@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-import parro_cli
+from parro import cli as parro_cli
 from parro import operations
 from parro.api_client import ParroClient
 from parro.archive import file_stem, slugify

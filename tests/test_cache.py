@@ -9,8 +9,8 @@ from typing import Any
 
 import pytest
 
-import parro_cli
 from parro import attachments, operations
+from parro import cli as parro_cli
 from parro.api_client import ParroClient
 from parro.cache import Cache, remove_urls
 from parro.errors import ConfigurationError

@@ -9,7 +9,7 @@ import time
 
 import pytest
 
-import parro_cli
+from parro import cli as parro_cli
 from parro.api_client import ParroClient
 from parro.settings import Settings
 from tests import fakes

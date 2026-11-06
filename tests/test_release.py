@@ -3,7 +3,7 @@
 import re
 
 import parro
-import parro_mcp
+from parro import mcp_server as parro_mcp
 from parro.http import USER_AGENT
 from tests.conftest import PROJECT_ROOT
 

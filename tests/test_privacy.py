@@ -11,8 +11,8 @@ from typing import Any
 
 import pytest
 
-import parro_cli
-import parro_mcp
+from parro import cli as parro_cli
+from parro import mcp_server as parro_mcp
 from parro.api_client import ParroClient
 from tests import fakes
 from tests.conftest import load_sample

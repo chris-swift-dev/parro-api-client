@@ -16,7 +16,7 @@ from typing import Any
 
 import pytest
 
-import parro_mcp
+from parro import mcp_server as parro_mcp
 from parro.api_client import ParroClient
 from parro.http import HttpRequest
 from tests import fakes, test_mcp
