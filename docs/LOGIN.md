@@ -27,7 +27,7 @@ password is sent (no form found: clear error, no attempt spent).
 
 When a password is rejected, the client saves that in the token file and **stops logging in on its
 own**. A typo therefore costs one attempt, not one per call. `status` / `parro_auth_status` then
-shows `automatic_login_halted`. Fix the password, then run `parro_cli.py login` (MCP: `parro_login`).
+shows `automatic_login_halted`. Fix the password, then run `parro-client login` (MCP: `parro_login`).
 That explicit call clears the latch and spends exactly one attempt. A response the client cannot
 interpret after the password was sent counts as a rejection too: it is the safe side. A 401 from the
 API never triggers a password login: the client refreshes once, and otherwise reports the error.
@@ -35,7 +35,7 @@ API never triggers a password login: the client refreshes once, and otherwise re
 ## Credentials
 
 * `PARRO_USERNAME` plus `PARRO_PASSWORD_FILE` (preferred) or `PARRO_PASSWORD`;
-* or `parro_cli.py login --prompt` (hidden input, nothing stored);
+* or `parro-client login --prompt` (hidden input, nothing stored);
 * or no password at all: `login-url`, open the URL, log in, then hand the address you land on to
   `login-finish` (MCP: `parro_login_url` / `parro_login_finish`). Copy it promptly: the Parro web app
   also tries to redeem the code, and each code works only once.

@@ -21,11 +21,13 @@ comparison with the original server in `legacy/`) skip without them, as in CI.
 | --- | --- |
 | `tests/` | pytest suite; `tests/fakes.py` has the fake IdP and API |
 | `tools/build_spec.py`, `tools/validate_spec.py`, `tools/build_site.sh` | spec generator, validator, Swagger UI site |
-| `tools/build_release.py` | builds the release archives, checksums and notes |
+| `tools/build_release.py` | builds the release archives, checksums and notes (`--packages`: with the wheel and sdist) |
+| `tools/smoke_test_install.py` | builds the wheel, installs it into a fresh venv with an empty home, runs both commands |
 | `tools/make_readme_images.py`, `tools/swagger_screenshots.py` | the README pictures |
-| `.github/workflows/ci.yml` | lint, types and tests on Python 3.14 and 3.10 |
+| `.github/workflows/ci.yml` | lint and types; tests and the install smoke test on Windows, macOS and Linux, Python 3.10 and 3.14 |
 | `.github/workflows/pages.yml` | validates the spec and deploys Swagger UI to GitHub Pages |
-| `.github/workflows/release.yml` | on a `v*` tag: checks, archives, draft GitHub release |
+| `.github/workflows/release.yml` | on a `v*` tag: checks, archives, wheel and sdist, draft GitHub release |
+| `.github/workflows/publish.yml` | on publishing a release: its wheel and sdist to PyPI; run by hand: a fresh build to TestPyPI |
 
 ## The README pictures
 
@@ -45,8 +47,18 @@ at the result. Pictures only ever show invented data or documentation.
 
 1. Set the version in `parro/__init__.py` and `pyproject.toml`, and add a `## [x.y.z] - date`
    section to `CHANGELOG.md` (a test checks that all three agree).
-2. Optionally check the archives locally: `python3 tools/build_release.py --tag vX.Y.Z` (output in
-   `dist/`).
+2. Optionally check the release locally: `python3 tools/smoke_test_install.py` (the package
+   installs and runs) and `python3 tools/build_release.py --tag vX.Y.Z` (archives in `dist/`).
 3. Tag and push: `git tag -a vX.Y.Z -m "parro-api-client X.Y.Z" && git push origin vX.Y.Z`.
-4. The release workflow creates a **draft** release with the archives, `SHA256SUMS` and the changelog
-   section as notes. Review it on GitHub and press *Publish*.
+4. The release workflow creates a **draft** release with the archives, the wheel and sdist,
+   `SHA256SUMS` and the changelog section as notes. Review it on GitHub and press *Publish*.
+5. Publishing starts `publish.yml`: it checks the wheel and sdist against `SHA256SUMS` and uploads
+   them to PyPI (after your approval, if the `pypi` environment requires one). A version can be
+   yanked on PyPI but never uploaded again, so check the draft first.
+
+**One-time setup for PyPI** (trusted publishing, no token stored anywhere): on pypi.org and
+test.pypi.org, add a *pending trusted publisher* for the project `parro-api-client`: owner
+`chris-swift-dev`, repository `parro-api-client`, workflow `publish.yml`, environment `pypi` (on
+TestPyPI: `testpypi`). In the repository settings, create the environments `pypi` and `testpypi`,
+optionally with yourself as required reviewer. A trial on TestPyPI: Actions → *Publish to PyPI* →
+Run workflow (it builds from the chosen branch; TestPyPI takes each version once).

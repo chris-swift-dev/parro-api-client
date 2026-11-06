@@ -1,6 +1,6 @@
 # Plan 6: install it like a normal command
 
-*Status: planned (2026-11-05); decisions taken as recommended (§5). Nothing implemented yet.*
+*Status: phases 1–5 done (2026-11-06), on branch `installation`; the install check with you and release 0.5.0 (with the first PyPI publication) are next. Decisions taken as recommended (§5).*
 
 **Goal:** on Windows, macOS and Linux, one install command, after which the client is a normal
 command: `parro-client announcements` instead of `python3 parro_cli.py announcements` from an

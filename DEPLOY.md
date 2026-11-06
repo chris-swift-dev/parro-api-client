@@ -1,4 +1,15 @@
-## Docker image: copy `parro/` too
+## Docker image
+
+Since 0.5.0 the simplest image installs the package, and runs the command it provides:
+
+```dockerfile
+RUN pip install --no-cache-dir "parro-api-client[attachments]"
+CMD ["parro-client-mcp"]
+```
+
+The setup below (copying the files) keeps working too.
+
+### Copying the files: copy `parro/` too
 
 `parro_mcp.py` is no longer a single file: it imports the `parro/` package next to it. The
 Dockerfile (not in this folder) must copy both, for example:
@@ -21,6 +32,7 @@ Check after a rebuild:
 
 ```bash
 docker exec <container> /opt/venv/bin/python /app/parro_mcp.py tools   # lists 19 tools
+docker exec <container> parro-client-mcp tools                         # (installed package)
 ```
 
 ## Logging in to Parro itself

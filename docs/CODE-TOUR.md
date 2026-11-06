@@ -1,10 +1,10 @@
 # Code tour
 
-A first read of the client code. It follows one request, `parro_cli.py announcements --limit 5`,
+A first read of the client code. It follows one request, `parro-client announcements --limit 5`,
 through the modules. The MCP tool `parro_announcements` takes the same path from step 2 on.
 
 ```
-parro_cli.py / parro_mcp.py      entry points: parse arguments, print the result
+parro/cli.py / parro/mcp_server.py   entry points: parse arguments, print the result
         │                    └── parro/rendering.py   markdown views of the same result
 parro/operations.py              one function per command, shared by both entry points
         │            │
@@ -20,12 +20,18 @@ parro/http.py                    the only place a request leaves the process
 
 ## 1. The entry point
 
-`parro_cli.py` builds an argparse parser. `main()` reads the settings once with
+The commands `parro-client` and `parro-client-mcp` (from `[project.scripts]` in `pyproject.toml`)
+call `run()` in `parro/cli.py` and `parro/mcp_server.py`. `run()` switches the output to UTF-8 (a
+Windows console cannot print the markers otherwise), records the program's name for help and hints
+(`parro/naming.py`), and calls `main()`. In a source folder or a release archive the launchers
+`parro_cli.py` and `parro_mcp.py` call the same `run()`, naming the program `parro_cli.py`.
+
+`parro/cli.py` builds an argparse parser. `main()` reads the settings once with
 `Settings.from_environment()` (`parro/settings.py`). Command-line flags such as `--login-method`
 override them through `Settings.with_overrides()`. It creates a `ParroClient` and calls the handler
 for the command, here `operations.list_announcements(client, group_id=None, limit=5, ...)`.
 
-`parro_mcp.py` does the same per `tools/call` message. `McpServer.call_tool()` looks the tool up in
+`parro/mcp_server.py` does the same per `tools/call` message. `McpServer.call_tool()` looks the tool up in
 `TOOL_FUNCTIONS` and calls the same `operations` function. That is why CLI output and MCP output are
 always identical.
 
@@ -103,7 +109,7 @@ sign-ups may not change that value. Lists are never cached, and neither are the 
 
 ## 9. The archive
 
-`parro_cli.py sync` calls `operations.sync_archive()`. It reads every list in full
+`parro-client sync` calls `operations.sync_archive()`. It reads every list in full
 (`read_all_pages()`), skips items whose version (`lastModifiedAt`) is already archived, and for the
 others writes markdown (`rendering.render_archived_*`) and JSON through `parro/archive.py`.
 `Archive` knows the file names, the YAML header, renames, `index.md` and the state file
@@ -114,7 +120,7 @@ are there, otherwise downloaded once (`store_attachment()`).
 
 | …you want to | look at |
 | --- | --- |
-| add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro_cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` in `parro_mcp.py` |
+| add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro/cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` in `parro/mcp_server.py` |
 | change how something looks | `parro/rendering.py`, then `UPDATE_SNAPSHOTS=1 .venv/bin/pytest tests/test_rendering.py` and read the diff in `tests/snapshots/` |
 | call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`) |
 | change output fields | `parro/summaries.py` (keep existing field names: clients depend on them) |
