@@ -58,3 +58,18 @@ No password check: the stored refresh token was used. Personal data is left out 
 | **Found and fixed** | School-wide helper requests have their own type, `SCHOOLWIDE_VOLUNTEER`; the client only knew `VOLUNTEER`, so they were not marked and their details were cached. Now every type ending in `VOLUNTEER` counts |
 | `calendar --details` | Every helper item has slots: one each for `VOLUNTEER`, four for the school-wide one (e.g. 10 wanted, 4 signed up); some also need an RSVP. The agenda marked 6 *helpers wanted* and 4 *helpers: full*, with 13 slot lines; the overview marked 5 |
 | Cache | Helper items are fetched fresh on every run and their cache entries are neither read nor rewritten (entries from before 0.4.0 stay unused until `cache clear` or the size limit removes them) |
+
+## Live check (2026-11-06, release 0.5.0: installing as a command)
+
+One password check, at the start (the stored login had expired; see the last row).
+
+| Check | Result |
+| --- | --- |
+| TestPyPI | 0.5.0 (wheel and sdist) uploaded by *Publish to PyPI*, run by hand on `main`. `pipx install --index-url https://test.pypi.org/simple/` fails on a fresh pipx (it upgrades its own pip from that index); `--pip-args="--extra-index-url …"` works, now in the docs |
+| Installed with pipx (TestPyPI) | `parro-client` and `parro-client-mcp` on the PATH; the wheel identical to TestPyPI's |
+| `parro-client login --prompt` | OK on the first try: 1 password check |
+| `status`, `overview`, `privacy`, `calendar` | OK; hints name `parro-client`, never `parro_cli.py` |
+| `parro-client-mcp` | 19 tools; `parro_auth_status`, `parro_overview` (markdown) and a stdio session (`initialize`, then a tool call) OK |
+| Release draft | All four files equal the release job's output; the wheel is byte-identical to the TestPyPI wheel tested above; sdists differ only in timestamps (setuptools stamps the build time) |
+| PyPI | After publishing: wheel and sdist byte-identical to the GitHub release; `pipx install parro-api-client` works; all 13 pictures on the project page load |
+| **How long a login lasts** | The previous login (5 Nov) was refused on 6 Nov: "Token has expired". The new refresh token (a JWT) expires **8 hours after the login**; after a refresh, the new one keeps the same `iat` and expiry, only `refresh_count` goes up. So a login lasts at most 8 hours, `offline_access` or not. The docs said "far longer"; corrected |

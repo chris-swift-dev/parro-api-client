@@ -39,8 +39,8 @@ posted, changed or deleted.
 
 Logging in: set PARRO_USERNAME plus PARRO_PASSWORD_FILE (or PARRO_PASSWORD) and run `login`,
 or run `login --prompt` to type the password, or use the browser flow: `login-url`, log in in
-a browser, then `login-finish '<the address you landed on>'`. After that, tokens refresh on
-their own (stored in ~/.parro-mcp/tokens.json).
+a browser, then `login-finish '<the address you landed on>'`. A login lasts up to 8 hours
+(tokens stored in ~/.parro-mcp/tokens.json); after that, log in again.
 
 The ParnasSys IdP locks the account after a few failed logins. After one rejected password,
 nothing logs in automatically any more until you run `login` yourself."""

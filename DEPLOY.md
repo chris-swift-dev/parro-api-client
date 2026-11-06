@@ -42,7 +42,8 @@ Two separate logins live here: one into *this server* (above), and one into
 
 The container ships no Parro credentials. Call `parro_login_url`, open the URL,
 log in, and hand the redirect URL to `parro_login_finish`. Tokens land in
-`/data/parro-tokens.json` and refresh themselves.
+`/data/parro-tokens.json` and refresh themselves, but a login lasts at most 8 hours; then the
+browser flow is needed again.
 
 For unattended login instead, set `PARRO_USERNAME` and point
 `PARRO_PASSWORD_FILE` at a file on the `/data` volume holding the password.

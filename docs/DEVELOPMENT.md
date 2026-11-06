@@ -61,4 +61,11 @@ test.pypi.org, add a *pending trusted publisher* for the project `parro-api-clie
 `chris-swift-dev`, repository `parro-api-client`, workflow `publish.yml`, environment `pypi` (on
 TestPyPI: `testpypi`). In the repository settings, create the environments `pypi` and `testpypi`,
 optionally with yourself as required reviewer. A trial on TestPyPI: Actions → *Publish to PyPI* →
-Run workflow (it builds from the chosen branch; TestPyPI takes each version once).
+Run workflow (it builds from the chosen branch; TestPyPI takes each version once), then:
+
+```bash
+pipx install --pip-args="--extra-index-url https://test.pypi.org/simple/" parro-api-client
+```
+
+Use `--extra-index-url`, not `--index-url`: pipx passes the arguments to its own pip upgrade too,
+and pip is not on TestPyPI.

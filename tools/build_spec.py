@@ -250,8 +250,9 @@ There is no dynamic client registration or device grant, and loopback redirects 
 * **Authorization code + PKCE (S256)**: browser login. Copy the `code` from the redirect URL quickly,
   because the web app also tries to redeem it and a code works only once.
 * **Password grant**: `grant_type=password`, enabled for this client.
-* Scope `openid offline_access` gives a long-lived refresh token. The web client asks only for `openid`,
-  and its refresh token then expires after about 8 hours.
+* A login lasts at most **8 hours**: the refresh token expires 8 hours after the login, also with scope
+  `openid offline_access`, and a refresh returns a new refresh token with the same expiry (measured
+  2026-11-06). The access token lasts 1 hour.
 * The IdP **locks the account after a few failed logins**. Never retry a rejected password automatically.
 
 ## Attachments
@@ -537,7 +538,7 @@ def build(samples_dir, public=False):
             q("response_type", s(enum=["code"]), "", True),
             q("redirect_uri", s(format="uri", example="https://talk.parro.com/oauth2"),
               "Must be exactly the registered URI; loopback URIs are rejected (`invalid_client`).", True),
-            q("scope", s(example="openid offline_access"), "Add `offline_access` for a long-lived refresh token.", True),
+            q("scope", s(example="openid offline_access"), "`openid`; `offline_access` is granted but does not lengthen the 8-hour login.", True),
             q("state", s(), "Random value, echoed back.", True),
             q("code_challenge", s(), "base64url(SHA-256(code_verifier)).", True),
             q("code_challenge_method", s(enum=["S256", "plain"]), "Use `S256`.", True)],
@@ -681,11 +682,11 @@ def build(samples_dir, public=False):
                                            "authorizationUrl": "https://inloggen.parnassys.net/idp/oauth2/authorize",
                                            "tokenUrl": "https://inloggen.parnassys.net/idp/oauth2/token",
                                            "scopes": {"openid": "OpenID Connect",
-                                                      "offline_access": "Long-lived refresh token"}},
+                                                      "offline_access": "Granted; the refresh token still expires 8 hours after the login"}},
                                        "password": {
                                            "tokenUrl": "https://inloggen.parnassys.net/idp/oauth2/token",
                                            "scopes": {"openid": "OpenID Connect",
-                                                      "offline_access": "Long-lived refresh token"}}}}},
+                                                      "offline_access": "Granted; the refresh token still expires 8 hours after the login"}}}}},
             "parameters": {
                 "AppVersion": {"name": "parro-app-version", "in": "header", "required": False,
                                "schema": {"type": "string", "example": APP_VERSION},

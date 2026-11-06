@@ -35,7 +35,7 @@ attachments**), the calendar, chats and class info.
    Or `uv tool install parro-api-client`. To read PDF newsletters as text, install
    `"parro-api-client[attachments]"` instead. Straight from GitHub:
    `pipx install git+https://github.com/chris-swift-dev/parro-api-client`.
-2. Log in once. You type the password; from then on the tokens refresh themselves:
+2. Log in. You type the password; the login then lasts up to 8 hours:
    ```bash
    parro-client login --prompt
    ```
@@ -119,7 +119,7 @@ marked *helpers wanted*; with `--details` you see how many signed up, and whethe
 
 ```bash
 parro-client --help
-parro-client login --prompt              # type the password once; tokens then refresh themselves
+parro-client login --prompt              # type the password; the login lasts up to 8 hours
 parro-client status
 parro-client overview                    # what is new, like the app's home screen
 parro-client announcements --limit 5 --unread-only
@@ -218,7 +218,9 @@ everything else works, and the attachment tool says what to install. Running it 
 
 Logging in is OAuth2 against the ParnasSys login server. By default the client does exactly what a
 browser does (the login form); tokens are stored in `~/.parro-mcp/tokens.json` (mode 0600) and
-refresh themselves for a long time, so the password is rarely checked again.
+refresh themselves, but **a login lasts at most 8 hours**: the login server's limit, however often
+the client refreshes. After that, log in again. With `PARRO_USERNAME` and a password file set, the
+client (and the MCP server) logs in again on its own when needed: one password check per 8 hours.
 
 > **The login server locks the account after a few failed logins.** When a password is rejected,
 > the client stops logging in on its own, so a typo costs one attempt, not one per call. `status`
