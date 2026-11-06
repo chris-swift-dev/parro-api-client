@@ -6,6 +6,11 @@ section of a version as its GitHub release notes, so write each section for user
 
 ## [Unreleased]
 
+### Added
+- `status` (MCP `parro_auth_status`) says until when the login lasts and what happens then, e.g.
+  `Login: valid until Fri 6 Nov 2026 19:37 (7 h 40 min left); then log in again`. JSON:
+  `login_valid_until`, `login_expires_in_seconds`.
+
 ### Fixed
 - The docs, the help text and the spec promised that a login with `offline_access` lasts "far
   longer" than the web app's 8 hours. Measured: a login lasts at most 8 hours, however often it is

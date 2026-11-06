@@ -77,6 +77,11 @@ def summarize_login_status(status: LoginStatus, scope: str, base_uri: str) -> di
     if status.access_token_expires_in_seconds is not None:
         summary["access_token_expires_in_seconds"] = status.access_token_expires_in_seconds
         summary["access_token_valid"] = status.access_token_expires_in_seconds > 0
+    if status.login_expires_at is not None and status.login_expires_in_seconds is not None:
+        # The login ends when the refresh token expires: then a new password check is needed.
+        valid_until = datetime.fromtimestamp(status.login_expires_at).astimezone()
+        summary["login_valid_until"] = valid_until.isoformat(timespec="seconds")
+        summary["login_expires_in_seconds"] = status.login_expires_in_seconds
     return summary
 
 

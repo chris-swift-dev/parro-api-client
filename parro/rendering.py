@@ -157,6 +157,9 @@ def render_status(status: dict[str, Any], options: RenderOptions) -> str:
         lines.append(f"- Logged in as: {who.get('name')} ({who.get('email')}), {account}")
         lines.append(f"- Role header: {who.get('role_header')}")
     lines.append(f"- Access token: {describe_access_token(status)}")
+    login_line = describe_login_expiry(status)
+    if login_line:
+        lines.append(f"- Login: {login_line}")
     credentials = "yes" if status.get("credentials_in_env") else "no"
     lines.append(f"- Login method: {status.get('login_method')} · password set: {credentials}")
     lines.append(f"- Token file: {status.get('token_file')}")
@@ -179,6 +182,28 @@ def describe_access_token(status: dict[str, Any]) -> str:
             state += f" for {expires // 60} min"
     refresh = "yes" if status.get("has_refresh_token") else "no"
     return f"{state} · refresh token: {refresh}"
+
+
+def describe_login_expiry(status: dict[str, Any]) -> str:
+    """'valid until Fri 6 Nov 2026 20:37 (7 h 40 min left); then log in again' ('' if unknown).
+
+    A login lasts at most 8 hours; with a password configured, the client logs in again itself.
+    """
+    until = parse_timestamp(status.get("login_valid_until"))
+    left = status.get("login_expires_in_seconds")
+    if until is None or not isinstance(left, int):
+        return ""
+    when = f"{format_day(until)} {format_time(until)}"
+    if left <= 0:
+        return f"expired at {when}; log in again: {naming.cli_command('login --prompt')}"
+    hours, minutes = divmod(left // 60, 60)
+    remaining = f"{hours} h {minutes} min" if hours else f"{minutes} min"
+    after = (
+        "then the client logs in again on its own (one password check)"
+        if status.get("credentials_in_env")
+        else "then log in again"
+    )
+    return f"valid until {when} ({remaining} left); {after}"
 
 
 def render_login_url(result: dict[str, Any], options: RenderOptions) -> str:

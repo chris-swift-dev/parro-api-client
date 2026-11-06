@@ -36,7 +36,7 @@ from .http import HttpTransport
 from .naming import cli_command
 from .pkce import create_pkce_pair, create_state
 from .settings import LoginMethod, Settings
-from .token_store import PendingBrowserLogin, TokenSet, TokenStore
+from .token_store import PendingBrowserLogin, TokenSet, TokenStore, token_expiry
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +59,9 @@ class LoginStatus:
     has_access_token: bool
     has_refresh_token: bool
     access_token_expires_in_seconds: int | None
+    # When the refresh token expires, which ends the login (at most 8 hours after it, measured).
+    login_expires_at: float | None
+    login_expires_in_seconds: int | None
     credentials_configured: bool
     login_method: LoginMethod
     login_halted_reason: str | None
@@ -275,14 +278,18 @@ class Authenticator:
 
     def get_login_status(self) -> LoginStatus:
         tokens = self.token_store.get_tokens()
-        expires_in = (
-            int(tokens.expires_at - self.clock()) if tokens.expires_at is not None else None
-        )
+        now = self.clock()
+        expires_in = int(tokens.expires_at - now) if tokens.expires_at is not None else None
+        login_expires_at = token_expiry(tokens.refresh_token)
         return LoginStatus(
             token_file=str(self.token_store.path),
             has_access_token=bool(tokens.access_token),
             has_refresh_token=bool(tokens.refresh_token),
             access_token_expires_in_seconds=expires_in,
+            login_expires_at=login_expires_at,
+            login_expires_in_seconds=(
+                int(login_expires_at - now) if login_expires_at is not None else None
+            ),
             credentials_configured=self.settings.has_credentials(),
             login_method=self.settings.login_method,
             login_halted_reason=self.token_store.get_login_halted_reason(),

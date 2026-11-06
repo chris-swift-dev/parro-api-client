@@ -12,6 +12,10 @@ time; only `refresh_count` goes up). So refreshing does not extend a login, and 
 scope `offline_access`, which the client asks for and the IdP grants. An earlier version of this
 page said otherwise.
 
+`status` (MCP: `parro_auth_status`) shows until when the current login lasts, read from the refresh
+token's `exp` claim (for display only; the token is not verified, printed or logged):
+`- Login: valid until Fri 6 Nov 2026 19:37 (7 h 40 min left); then log in again`.
+
 After 8 hours:
 * with `PARRO_USERNAME` and a password (file) set, the next call logs in again on its own, which is
   one password check per 8 hours; a rejected password stops it (the latch below);

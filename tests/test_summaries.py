@@ -174,6 +174,8 @@ def test_login_status_summary_mentions_the_latch_without_secrets():
         has_access_token=True,
         has_refresh_token=True,
         access_token_expires_in_seconds=-5,
+        login_expires_at=None,
+        login_expires_in_seconds=None,
         credentials_configured=True,
         login_method="login-form",
         login_halted_reason="wrong password",

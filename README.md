@@ -221,6 +221,7 @@ browser does (the login form); tokens are stored in `~/.parro-mcp/tokens.json` (
 refresh themselves, but **a login lasts at most 8 hours**: the login server's limit, however often
 the client refreshes. After that, log in again. With `PARRO_USERNAME` and a password file set, the
 client (and the MCP server) logs in again on its own when needed: one password check per 8 hours.
+`parro-client status` (MCP: `parro_auth_status`) shows until when the current login lasts.
 
 > **The login server locks the account after a few failed logins.** When a password is rejected,
 > the client stops logging in on its own, so a typo costs one attempt, not one per call. `status`
