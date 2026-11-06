@@ -4,7 +4,9 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
-## [Unreleased]
+## [0.5.1] - 2026-11-06
+
+Know how long you stay logged in: a login lasts at most 8 hours, and `status` now says until when.
 
 ### Added
 - `status` (MCP `parro_auth_status`) says until when the login lasts and what happens then, e.g.
