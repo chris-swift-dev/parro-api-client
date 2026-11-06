@@ -4,6 +4,14 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [Unreleased]
+
+### Fixed
+- The docs, the help text and the spec promised that a login with `offline_access` lasts "far
+  longer" than the web app's 8 hours. Measured: a login lasts at most 8 hours, however often it is
+  refreshed. They now say so, and what happens after 8 hours.
+- The TestPyPI install command in the docs (`--extra-index-url`, as pipx needs it).
+
 ## [0.5.0] - 2026-11-06
 
 Install it like any other command, on Windows, macOS and Linux: `pipx install parro-api-client`

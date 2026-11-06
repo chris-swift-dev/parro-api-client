@@ -31,7 +31,8 @@ DEFAULT_APP_VERSION = "web:2.27.0"
 # The public OAuth client of talk.parro.com. It only accepts this exact redirect URI.
 DEFAULT_CLIENT_ID = "MQygAaSBUcAgPU2WInKt"
 DEFAULT_REDIRECT_URI = "https://talk.parro.com/oauth2"
-# offline_access gives a long-lived refresh token; the web app asks only for openid (8 hours).
+# offline_access is granted, but does not lengthen a login: the refresh token still expires 8 hours
+# after the login, however often it is used (measured 2026-11-06, docs/LOGIN.md).
 DEFAULT_SCOPE = "openid offline_access"
 # Same path as the original MCP server, so existing logins keep working.
 DEFAULT_CACHE_MAX_MB = 500

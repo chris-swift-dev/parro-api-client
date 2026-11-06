@@ -1,6 +1,6 @@
 # Plan 6: install it like a normal command
 
-*Status: phases 1–5 done (2026-11-06), on branch `installation`; the install check with you and release 0.5.0 (with the first PyPI publication) are next. Decisions taken as recommended (§5).*
+*Status: done (2026-11-06). Released as 0.5.0 and published on PyPI (PR #6). Decisions taken as recommended (§5); what differs from the plan: §6.*
 
 **Goal:** on Windows, macOS and Linux, one install command, after which the client is a normal
 command: `parro-client announcements` instead of `python3 parro_cli.py announcements` from an
@@ -113,3 +113,19 @@ name; versions can be yanked but not reused.
 3. **Standalone binaries:** not now (*recommended*), or later for people without Python.
 4. **Code layout:** move the CLI and server into the package with shims (*recommended*), or keep
    the top-level modules and list them as `py-modules` (less change, but an odd package layout).
+
+## 6. Outcome
+
+- **Phases 1–5** as planned: the package with `parro-client` / `parro-client-mcp`, the command name
+  in help and hints (`parro/naming.py`), CI on Windows, macOS and Linux with an install smoke test,
+  wheel and sdist on releases with trusted publishing, install-first docs with absolute links.
+- **Found on the way:** the sdist bundled tests without their fixtures (now excluded); the licence
+  is `MIT AND CC-BY-4.0` (the README ships in every package); `twine check` only renders the
+  README with `readme_renderer[md]` installed; four Windows risks, fixed before CI ever ran there.
+- **Publishing order:** `publish.yml` only runs once it is on `main`, so the TestPyPI trial moved
+  after the merge (phase 7).
+- **Phase 6, the install check:** done from TestPyPI with pipx, live with one password check. The
+  TestPyPI command needed `--pip-args="--extra-index-url …"`, now in the docs.
+- **Phase 7:** 0.5.0 released and on PyPI; PyPI's files are byte-identical to the GitHub release.
+- **Measured afterwards:** a login lasts at most 8 hours (docs/LOGIN.md); the docs had promised
+  far longer.

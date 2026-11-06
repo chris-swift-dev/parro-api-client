@@ -4,10 +4,19 @@ How the client logs in to Parro, and what keeps your account from being locked. 
 is in the [README](../README.md#logging-in).
 
 Everything is OAuth2 against the ParnasSys IdP. Tokens are stored in `~/.parro-mcp/tokens.json`
-(mode 0600) and refreshed automatically. The scope is `openid offline_access`. The web app asks only
-for `openid`, which is why its refresh token expires after 8 hours. With `offline_access` a login
-lasts far longer, so later runs only refresh and the password is not checked again until the
-refresh token dies.
+(mode 0600) and refreshed automatically: the access token lasts 1 hour.
+
+**A login lasts at most 8 hours.** Measured on 2026-11-06: the refresh token expires 8 hours after the
+login, and a refresh returns a new refresh token with the *same* expiry (its `iat` stays the login
+time; only `refresh_count` goes up). So refreshing does not extend a login, and neither does the
+scope `offline_access`, which the client asks for and the IdP grants. An earlier version of this
+page said otherwise.
+
+After 8 hours:
+* with `PARRO_USERNAME` and a password (file) set, the next call logs in again on its own, which is
+  one password check per 8 hours; a rejected password stops it (the latch below);
+* without them, `status` and every call say "not logged in" (exit code 3) and nothing is retried:
+  run `login --prompt` again, or use the browser flow.
 
 ## Login methods (`PARRO_LOGIN_METHOD`, CLI `--login-method`, MCP `method`)
 

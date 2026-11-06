@@ -9,8 +9,9 @@ name: Publish to PyPI
 #   new build.
 # * Running this workflow by hand (Actions → Publish to PyPI → Run workflow, on any branch) builds
 #   the packages and uploads them to TestPyPI, to try an installation first:
-#       pipx install --index-url https://test.pypi.org/simple/ parro-api-client
-#   TestPyPI accepts each version only once.
+#       pipx install --pip-args="--extra-index-url https://test.pypi.org/simple/" parro-api-client
+#   (--extra-index-url, not --index-url: pipx also upgrades its own pip with these arguments, and
+#   pip is not on TestPyPI.) TestPyPI accepts each version only once.
 #
 # One-time setup on pypi.org and test.pypi.org: add this repository as a trusted publisher for the
 # project `parro-api-client` (workflow publish.yml, environments `pypi` and `testpypi`).
