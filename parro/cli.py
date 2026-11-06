@@ -9,7 +9,7 @@ around parro.operations, so the output is the same as that of the matching MCP t
 Exit codes: 0 ok, 1 API or network error, 2 usage error, 3 not logged in, 4 login halted (a
 password was rejected earlier; run `login` once the password is fixed).
 
-Run `parro_cli.py --help` or `parro_cli.py <command> --help` for the commands.
+Run `parro-client --help` or `parro-client <command> --help` for the commands.
 Inspired by fobatai/parro-mcp; independent implementation.
 """
 
@@ -21,7 +21,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from parro import icalendar, operations
+from parro import icalendar, naming, operations
 from parro.api_client import ParroClient
 from parro.attachments import ReadOptions
 from parro.cache import write_private_file
@@ -47,11 +47,11 @@ nothing logs in automatically any more until you run `login` yourself."""
 
 EPILOG = """\
 examples:
-  parro_cli.py login --prompt
-  parro_cli.py announcements --limit 5 --unread-only
-  parro_cli.py attachment 11000000000 --text
-  parro_cli.py get /accountsettings
-  parro_cli.py token          # paste into Swagger UI → Authorize → bearerToken
+  {cli} login --prompt
+  {cli} announcements --limit 5 --unread-only
+  {cli} attachment 11000000000 --text
+  {cli} get /accountsettings
+  {cli} token          # paste into Swagger UI → Authorize → bearerToken
 exit codes: 0 ok, 1 API/network error, 2 usage, 3 not logged in, 4 login halted"""
 
 
@@ -102,9 +102,9 @@ def add_global_options(parser: argparse.ArgumentParser, with_defaults: bool) -> 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="parro_cli.py",
+        prog=naming.cli_name(),
         description=DESCRIPTION,
-        epilog=EPILOG,
+        epilog=EPILOG.format(cli=naming.cli_name()),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     add_global_options(parser, with_defaults=True)
@@ -462,11 +462,13 @@ def print_result(args: argparse.Namespace, result: Any, output_format: str) -> N
         print(operations.to_json_text(result, compact=args.compact))
 
 
-def run() -> None:
+def run(program: str = naming.INSTALLED) -> None:
     """The `parro-client` command: UTF-8 output on every system, then main()'s exit code.
 
     Windows consoles default to a legacy code page, which cannot print markers such as ● and 📌.
+    `program` is the name help and hints use: `parro_cli.py` when started with the launcher.
     """
+    naming.set_cli_name(program)
     use_utf8_output()
     sys.exit(main())
 

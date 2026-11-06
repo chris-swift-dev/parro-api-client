@@ -41,20 +41,20 @@ class Picture:
 PICTURES = [
     Picture(
         "overview",
-        "python3 parro_cli.py overview",
-        "Terminal output of parro_cli.py overview: unread counts, the latest announcements, "
+        "parro-client overview",
+        "Terminal output of parro-client overview: unread counts, the latest announcements, "
         "the coming calendar items and chats with unread messages (invented example data).",
     ),
     Picture(
         "calendar-details",
-        "python3 parro_cli.py calendar --details",
-        "Terminal output of parro_cli.py calendar --details: the agenda per day, with locations, "
+        "parro-client calendar --details",
+        "Terminal output of parro-client calendar --details: the agenda per day, with locations, "
         "descriptions and attachments (invented example data).",
     ),
     Picture(
         "announcements",
-        "python3 parro_cli.py announcements",
-        "Terminal output of parro_cli.py announcements: each announcement with its author, groups, "
+        "parro-client announcements",
+        "Terminal output of parro-client announcements: each announcement with its author, groups, "
         "date, a preview and its attachments (invented example data).",
     ),
 ]

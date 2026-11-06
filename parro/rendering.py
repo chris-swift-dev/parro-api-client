@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 
+from . import naming
 from .attachments import extract_html_text, tidy_whitespace
 from .errors import ConfigurationError
 from .geon import parse_timestamp
@@ -141,7 +142,7 @@ def document(*blocks: str | None) -> str:
 
 def hint(options: RenderOptions, cli_command: str, mcp_call: str) -> str:
     """A follow-up hint written for the reader: a CLI command or an MCP tool call."""
-    text = f"parro_cli.py {cli_command}" if options.audience == "cli" else mcp_call
+    text = naming.cli_command(cli_command) if options.audience == "cli" else mcp_call
     return f"→ {text}"
 
 
@@ -831,7 +832,7 @@ def render_ics_export(result: dict[str, Any], options: RenderOptions) -> str:
         f"- File: {result.get('ics_file')}",
         f"- {plural(result.get('events', 0), 'event')} ({period})",
         "- Import it into your calendar app. Importing a newer export updates the same events.",
-        "- For a calendar that updates by itself: parro_cli.py calendar-link",
+        f"- For a calendar that updates by itself: {naming.cli_command('calendar-link')}",
     ]
     return document("# Calendar exported", "\n".join(lines))
 

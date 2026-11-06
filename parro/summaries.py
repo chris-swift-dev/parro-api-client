@@ -12,6 +12,7 @@ from .api_client import ApiResponse, FeedEvent
 from .attachments import can_extract_text, describe_attachment, find_attachments
 from .authenticator import LoginStatus
 from .geon import full_name, get_object_id, parse_timestamp, strip_geon_metadata
+from .naming import cli_command
 
 READ_ATTACHMENT_HINT = "Use parro_attachment with this announcement id to read the attachment text."
 
@@ -69,7 +70,7 @@ def summarize_login_status(status: LoginStatus, scope: str, base_uri: str) -> di
     if status.login_halted_reason:
         summary["automatic_login_halted"] = status.login_halted_reason
         summary["how_to_resume"] = (
-            "Fix the password first. Then log in explicitly (CLI: `parro_cli.py login`, MCP: "
+            f"Fix the password first. Then log in explicitly (CLI: `{cli_command('login')}`, MCP: "
             "parro_login), which spends exactly one attempt. Nothing retries on its own, so the "
             "account cannot get locked."
         )

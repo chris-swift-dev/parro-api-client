@@ -1,4 +1,4 @@
-"""The local archive written by `parro_cli.py sync` (PLAN-readable-output §3b, release 0.3.0).
+"""The local archive written by the `sync` command (PLAN-readable-output §3b, release 0.3.0).
 
     <archive>/
       announcements/2026-10-22-nieuwsbrief-nr-3-5000000101.md   (+ .json)
@@ -184,7 +184,7 @@ def front_matter(entry: ArchiveEntry) -> str:
         f"date: {json.dumps(entry.date)}",
         f"groups: {json.dumps(entry.groups, ensure_ascii=False)}",
         f"version: {json.dumps(entry.version)}",
-        "source: Parro, archived with parro_cli.py sync",
+        "source: Parro, archived with parro-api-client (sync)",
         "---",
         "",
     ]

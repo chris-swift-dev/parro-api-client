@@ -9,5 +9,6 @@ The server itself is parro/mcp_server.py; installed (pipx, uv, pip), the same se
 
 if __name__ == "__main__":
     from parro.mcp_server import run
+    from parro.naming import FROM_SOURCE
 
-    run()
+    run(program=FROM_SOURCE)

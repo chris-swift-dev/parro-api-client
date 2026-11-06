@@ -5,16 +5,16 @@ archive, `python3 parro_mcp.py` starts the same server.
 
 A drop-in replacement for the original server: the same 16 tool names, argument schemas and PARRO_*
 environment variables (parro_login gained an optional `method`). All work is done by the shared
-core in parro/ (via parro.operations), so tool output equals the matching parro_cli.py command's.
+core in parro/ (via parro.operations), so tool output equals the matching CLI command's.
 
 The protocol layer is hand-written with the standard library: handle_request() routes one JSON-RPC
 message, list_tools() describes the tools, call_tool() runs one. stdout carries only protocol
 messages; logs go to stderr.
 
 Manual use without an MCP client:
-    python parro_mcp.py tools
-    python parro_mcp.py call parro_auth_status
-    python parro_mcp.py call parro_attachment '{"announcement_id": 123, "max_chars": 2000}'
+    parro-client-mcp tools                          (or: python3 parro_mcp.py tools)
+    parro-client-mcp call parro_auth_status
+    parro-client-mcp call parro_attachment '{"announcement_id": 123, "max_chars": 2000}'
 
 Inspired by fobatai/parro-mcp; independent implementation.
 """
@@ -26,7 +26,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from parro import __version__, operations
+from parro import __version__, naming, operations
 from parro.api_client import ParroClient
 from parro.attachments import ReadOptions
 from parro.errors import ConfigurationError, ParroError
@@ -453,7 +453,7 @@ class McpServer:
         """The shared client, created on first use (so a settings error is a tool error)."""
         if self._client is None:
             self._client = self.make_client(Settings.from_environment())
-        # Pick up logins done meanwhile by parro_cli.py or another server process.
+        # Pick up logins done meanwhile by the CLI or another server process.
         self._client.token_store.reload()
         return self._client
 
@@ -578,8 +578,13 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def run() -> None:
-    """The `parro-client-mcp` command. JSON-RPC is UTF-8 on every system (MCP stdio transport)."""
+def run(program: str = naming.INSTALLED) -> None:
+    """The `parro-client-mcp` command. JSON-RPC is UTF-8 on every system (MCP stdio transport).
+
+    `program` is the CLI command that messages name (login hints): `parro_cli.py` when started
+    with the launcher from a source folder or a release archive.
+    """
+    naming.set_cli_name(program)
     for stream in (sys.stdin, sys.stdout, sys.stderr):
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure is not None:

@@ -9,5 +9,6 @@ The program itself is parro/cli.py; installed (pipx, uv, pip), the same program 
 
 if __name__ == "__main__":
     from parro.cli import run
+    from parro.naming import FROM_SOURCE
 
-    run()
+    run(program=FROM_SOURCE)

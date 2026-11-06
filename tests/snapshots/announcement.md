@@ -11,4 +11,4 @@ administratie
 
 ## Attachments
 - 📎 Nieuwsbrief-3.pdf · 1.5 MB · #6000000101
-→ parro_cli.py attachment 5000000101
+→ parro-client attachment 5000000101
