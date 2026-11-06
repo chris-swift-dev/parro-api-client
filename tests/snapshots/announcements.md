@@ -13,7 +13,7 @@ Lotte Bakker → Basisschool De Linde · Sat 31 Oct 2026 18:39 · #5000000103
 Wat een mooie herfstwandeling hebben we gemaakt! Hierbij een paar foto's.
 
 🖼 3 photos
-→ parro_cli.py attachment 5000000103 --all  (or --attachment-id ID, --save-to DIR)
+→ parro-client attachment 5000000103 --all  (or --attachment-id ID, --save-to DIR)
 
 ## Gym op dinsdag ● new
 Eva Jansen → Groep 3 - juf Eva · Thu 29 Oct 2026 08:10 · #5000000201
@@ -30,7 +30,7 @@ Op 12 november gaan we naar het Natuurmuseum. We zoeken nog twee ouders die will
 Groet, …
 
 📎 Toestemmingsformulier.docx · 25 KB
-→ parro_cli.py attachment 5000000301
+→ parro-client attachment 5000000301
 
 ## Nieuwsbrief nr. 3
 Lotte Bakker → Basisschool De Linde · Thu 22 Oct 2026 11:25 · #5000000101
@@ -40,4 +40,4 @@ In de bijlage vindt u nieuwsbrief nr. 3 met de agenda tot de kerstvakantie.
 Met vriendelijke groet, …
 
 📎 Nieuwsbrief-3.pdf · 1.5 MB
-→ parro_cli.py attachment 5000000101
+→ parro-client attachment 5000000101

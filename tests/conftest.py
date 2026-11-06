@@ -21,7 +21,7 @@ SAMPLES_DIR = PROJECT_ROOT / "samples"
 FULL_SPEC_PATH = PROJECT_ROOT / "openapi" / "parro.openapi.json"
 PUBLIC_SPEC_PATH = PROJECT_ROOT / "openapi" / "parro.public.openapi.json"
 
-# Make `import parro`, `import parro_cli` and `import parro_mcp` work without installing anything.
+# Make `import parro` work without installing anything.
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -41,12 +41,14 @@ def load_real_sample(file_name: str) -> Any:
 
 @pytest.fixture(autouse=True)
 def private_home(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Every test gets its own empty HOME, so nothing is ever written to the real one.
+    """Every test gets its own empty home folder, so nothing is ever written to the real one.
 
-    The defaults ~/.parro-mcp/tokens.json and ~/.parro/data (cache) resolve inside it.
+    The defaults ~/.parro-mcp/tokens.json and ~/.parro/data (cache) resolve inside it. Windows
+    finds the home folder through USERPROFILE, the other systems through HOME: both are set.
     """
     home = tmp_path_factory.mktemp("home")
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
     return home
 
 

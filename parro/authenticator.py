@@ -33,17 +33,22 @@ from .errors import (
     ParroError,
 )
 from .http import HttpTransport
+from .naming import cli_command
 from .pkce import create_pkce_pair, create_state
 from .settings import LoginMethod, Settings
 from .token_store import PendingBrowserLogin, TokenSet, TokenStore
 
 log = logging.getLogger(__name__)
 
-HOW_TO_LOG_IN = (
-    "Log in first: set PARRO_USERNAME and PARRO_PASSWORD_FILE (or PARRO_PASSWORD) and run "
-    "`parro_cli.py login` / call parro_login, or use the browser flow: `parro_cli.py login-url` "
-    "then `parro_cli.py login-finish <redirect-url>` (MCP: parro_login_url, parro_login_finish)."
-)
+
+def how_to_log_in() -> str:
+    """The ways to log in, naming the command as the user starts it."""
+    return (
+        "Log in first: set PARRO_USERNAME and PARRO_PASSWORD_FILE (or PARRO_PASSWORD) and run "
+        f"`{cli_command('login')}` / call parro_login, or use the browser flow: "
+        f"`{cli_command('login-url')}` then `{cli_command('login-finish <redirect-url>')}` "
+        "(MCP: parro_login_url, parro_login_finish)."
+    )
 
 
 @dataclass(frozen=True)
@@ -89,7 +94,7 @@ class Authenticator:
         if refreshed is not None:
             return refreshed
         if not allow_password_login:
-            raise NotLoggedIn(f"No valid token. {HOW_TO_LOG_IN}")
+            raise NotLoggedIn(f"No valid token. {how_to_log_in()}")
         return self._log_in_automatically()
 
     def refresh_after_unauthorized(self) -> str | None:
@@ -116,7 +121,7 @@ class Authenticator:
 
     def _log_in_automatically(self) -> str:
         if not self.settings.has_credentials():
-            raise NotLoggedIn(f"Not logged in to Parro. {HOW_TO_LOG_IN}")
+            raise NotLoggedIn(f"Not logged in to Parro. {how_to_log_in()}")
         self.refuse_if_login_halted()
         log.info("logging in automatically with method %s", self.settings.login_method)
         tokens = self._log_in_once(self.settings.login_method, self._require_credentials())
@@ -130,7 +135,8 @@ class Authenticator:
             raise LoginHalted(
                 f"Automatic login is halted: the last login was rejected ({reason}). "
                 "The IdP locks the account after a few failed attempts, so nothing is retried. "
-                "Fix the password, then run `parro_cli.py login` (MCP: parro_login) to try once."
+                f"Fix the password, then run `{cli_command('login')}` (MCP: parro_login) to try "
+                "once."
             )
 
     # ------------------------------------------------------------------------ explicit login
@@ -163,7 +169,7 @@ class Authenticator:
             raise ConfigurationError(
                 "PARRO_USERNAME and a password (PARRO_PASSWORD_FILE or PARRO_PASSWORD) are not "
                 "both set. Use the browser flow (login-url / login-finish) instead, or "
-                "`parro_cli.py login --prompt`."
+                f"`{cli_command('login --prompt')}`."
             )
         return self.settings.username, password
 
@@ -185,7 +191,7 @@ class Authenticator:
             self.token_store.halt_logins(str(rejection))
             raise CredentialsRejected(
                 f"Login rejected: {rejection}. Automatic logins are now halted so the account "
-                "cannot be locked; fix the password, then run `parro_cli.py login` "
+                f"cannot be locked; fix the password, then run `{cli_command('login')}` "
                 "(MCP: parro_login) to try once more."
             ) from None
         self.token_store.clear_login_halt()

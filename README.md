@@ -10,12 +10,12 @@ attachments**), the calendar, chats and class info.
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)
 ![Standard library only](https://img.shields.io/badge/dependencies-none-brightgreen)
 ![Read-only](https://img.shields.io/badge/API_access-read--only-blue)
-[![Code: MIT](https://img.shields.io/badge/code-MIT-yellow)](LICENSE-CODE)
-[![Spec: CC BY 4.0](https://img.shields.io/badge/spec-CC_BY_4.0-lightgrey)](LICENSE)
+[![Code: MIT](https://img.shields.io/badge/code-MIT-yellow)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE-CODE)
+[![Spec: CC BY 4.0](https://img.shields.io/badge/spec-CC_BY_4.0-lightgrey)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/terminal-overview-dark.svg">
-  <img src="docs/images/terminal-overview-light.svg" alt="Terminal output of parro_cli.py overview: unread counts, the latest announcements with author and date, the coming calendar items and chats with unread messages. Invented example data.">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-overview-dark.svg">
+  <img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-overview-light.svg" alt="Terminal output of parro-client overview: unread counts, the latest announcements with author and date, the coming calendar items and chats with unread messages. Invented example data.">
 </picture>
 
 <sub>All pictures in this README show invented example data from the test suite.</sub>
@@ -26,17 +26,27 @@ attachments**), the calendar, chats and class info.
 
 ## Quick start
 
-1. Download the latest release from the
-   [Releases page](https://github.com/chris-swift-dev/parro-api-client/releases) and unpack it.
-   Nothing to install: Python 3.10 or newer is enough.
+1. Install it, on Windows, macOS or Linux (Python 3.10 or newer). [pipx](https://pipx.pypa.io)
+   or [uv](https://docs.astral.sh/uv/) keep it in its own environment and put the commands on your
+   PATH:
+   ```bash
+   pipx install parro-api-client
+   ```
+   Or `uv tool install parro-api-client`. To read PDF newsletters as text, install
+   `"parro-api-client[attachments]"` instead. Straight from GitHub:
+   `pipx install git+https://github.com/chris-swift-dev/parro-api-client`.
 2. Log in once. You type the password; from then on the tokens refresh themselves:
    ```bash
-   python3 parro_cli.py login --prompt
+   parro-client login --prompt
    ```
 3. See what is new:
    ```bash
-   python3 parro_cli.py overview
+   parro-client overview
    ```
+
+Update with `pipx upgrade parro-api-client`. **Without installing anything:** download a release
+from the [Releases page](https://github.com/chris-swift-dev/parro-api-client/releases), unpack it,
+and run `python3 parro_cli.py` wherever this README says `parro-client`.
 
 For Claude and other MCP clients, see [MCP server](#mcp-server). **API explorers:** the spec is
 browsable in **[Swagger UI](https://chris-swift-dev.github.io/parro-api-client/)**.
@@ -45,8 +55,8 @@ browsable in **[Swagger UI](https://chris-swift-dev.github.io/parro-api-client/)
 
 | | |
 | --- | --- |
-| `parro_cli.py` | a command-line client: readable markdown at a terminal, JSON when piped (`jq`) |
-| `parro_mcp.py` | an MCP server over stdio for Claude and other MCP clients |
+| `parro-client` | a command-line client: readable markdown at a terminal, JSON when piped (`jq`) |
+| `parro-client-mcp` | an MCP server over stdio for Claude and other MCP clients |
 | `parro/` | the library both use: login, API calls, summaries, attachments |
 | `openapi/parro.public.openapi.json` | the OpenAPI 3.0.3 description of the API (contract version 224) |
 
@@ -68,8 +78,8 @@ and Pillow (photo downscaling) are optional.
 
 ```mermaid
 flowchart LR
-  you([You, at a terminal]) --> cli[parro_cli.py]
-  claude([Claude or another MCP client]) --> mcp[parro_mcp.py]
+  you([You, at a terminal]) --> cli[parro-client]
+  claude([Claude or another MCP client]) --> mcp[parro-client-mcp]
   cli --> core["parro/<br>login · API calls · summaries · markdown"]
   mcp --> core
   core -- "GET only" --> api[(Parro REST API)]
@@ -89,8 +99,8 @@ marked *helpers wanted*; with `--details` you see how many signed up, and whethe
 <summary><b>The agenda</b>: <code>calendar --details</code></summary>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/terminal-calendar-details-dark.svg">
-  <img src="docs/images/terminal-calendar-details-light.svg" alt="Terminal output of parro_cli.py calendar --details: the agenda per day with times, groups, locations, descriptions, an attachment and RSVP markers. Invented example data.">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-calendar-details-dark.svg">
+  <img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-calendar-details-light.svg" alt="Terminal output of parro-client calendar --details: the agenda per day with times, groups, locations, descriptions, an attachment and RSVP markers. Invented example data.">
 </picture>
 </details>
 
@@ -98,30 +108,30 @@ marked *helpers wanted*; with `--details` you see how many signed up, and whethe
 <summary><b>Announcements</b>: <code>announcements</code></summary>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/terminal-announcements-dark.svg">
-  <img src="docs/images/terminal-announcements-light.svg" alt="Terminal output of parro_cli.py announcements: each announcement with author, groups, date, a three-line preview and its attachments. Invented example data.">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-announcements-dark.svg">
+  <img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-announcements-light.svg" alt="Terminal output of parro-client announcements: each announcement with author, groups, date, a three-line preview and its attachments. Invented example data.">
 </picture>
 </details>
 
-[`tests/snapshots/`](tests/snapshots/) holds the output of every view.
+[`tests/snapshots/`](https://github.com/chris-swift-dev/parro-api-client/tree/main/tests/snapshots) holds the output of every view.
 
 ## Command line
 
 ```bash
-python3 parro_cli.py --help
-python3 parro_cli.py login --prompt              # type the password once; tokens then refresh themselves
-python3 parro_cli.py status
-python3 parro_cli.py overview                    # what is new, like the app's home screen
-python3 parro_cli.py announcements --limit 5 --unread-only
-python3 parro_cli.py attachment <announcement-id> --text
-python3 parro_cli.py calendar --details          # agenda with location, description and helper slots
-python3 parro_cli.py calendar-link               # Parro's own link to subscribe from Google/Apple/Outlook
-python3 parro_cli.py calendar --ics parro.ics --details   # or: an .ics file to import
-python3 parro_cli.py sync                        # keep a local archive (repeat to update)
-python3 parro_cli.py privacy                     # can you still change your children's privacy choices?
-python3 parro_cli.py announcements --format json | jq '.announcements[].title'
-python3 parro_cli.py get /accountsettings
-python3 parro_cli.py token                       # paste into Swagger UI → Authorize → bearerToken
+parro-client --help
+parro-client login --prompt              # type the password once; tokens then refresh themselves
+parro-client status
+parro-client overview                    # what is new, like the app's home screen
+parro-client announcements --limit 5 --unread-only
+parro-client attachment <announcement-id> --text
+parro-client calendar --details          # agenda with location, description and helper slots
+parro-client calendar-link               # Parro's own link to subscribe from Google/Apple/Outlook
+parro-client calendar --ics parro.ics --details # or: an .ics file to import
+parro-client sync                        # keep a local archive (repeat to update)
+parro-client privacy                     # can you still change your children's privacy choices?
+parro-client announcements --format json | jq '.announcements[].title'
+parro-client get /accountsettings
+parro-client token                       # paste into Swagger UI → Authorize → bearerToken
 ```
 
 Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-finish <url>`,
@@ -171,31 +181,38 @@ Ask Claude about school, and it reads Parro for you. An illustration with the in
 
 Every tool takes an optional `format`: `json` (default) or `markdown`, a readable view that keeps
 every id. The first 16 tools have the same names and arguments as the original server, so existing
-MCP configurations keep working. `parro_mcp.py` needs the `parro/` folder next to it.
+MCP configurations keep working.
+
+With the package installed (Quick start), Claude Code:
 
 ```bash
-claude mcp add parro -s user -- python3 /path/to/parro-api-client/parro_mcp.py
+claude mcp add parro -s user -- parro-client-mcp
 ```
 
-Or in `claude_desktop_config.json`:
+Claude Desktop (`claude_desktop_config.json`) does not see your shell's PATH, so give the full path
+of the command: `which parro-client-mcp` (Windows: `where parro-client-mcp`) prints it.
 
 ```json
 {
   "mcpServers": {
     "parro": {
-      "command": "python3",
-      "args": ["/path/to/parro-api-client/parro_mcp.py"],
+      "command": "/Users/you/.local/bin/parro-client-mcp",
       "env": { "PARRO_USERNAME": "you@example.com", "PARRO_PASSWORD_FILE": "/path/to/password-file" }
     }
   }
 }
 ```
 
-Testing without an MCP client: `python3 parro_mcp.py tools`, then
-`python3 parro_mcp.py call parro_announcements '{"limit": 5}'`. PDF text needs **PyMuPDF** or
-**pypdf**, photo downscaling **Pillow** (`python3 -m pip install pymupdf pillow`); without them
+Without installing it first, [uv](https://docs.astral.sh/uv/) can start it on demand:
+`"command": "uvx", "args": ["--from", "parro-api-client", "parro-client-mcp"]` (also with the full
+path of `uvx` for Claude Desktop). From an unpacked release:
+`"command": "python3", "args": ["/path/to/parro-api-client/parro_mcp.py"]`.
+
+Testing without an MCP client: `parro-client-mcp tools`, then
+`parro-client-mcp call parro_announcements '{"limit": 5}'`. PDF text needs **PyMuPDF** or
+**pypdf**, photo downscaling **Pillow** (installed with `"parro-api-client[attachments]"`); without them
 everything else works, and the attachment tool says what to install. Running it in Docker:
-[DEPLOY.md](DEPLOY.md).
+[DEPLOY.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/DEPLOY.md).
 
 ## Logging in
 
@@ -205,12 +222,12 @@ refresh themselves for a long time, so the password is rarely checked again.
 
 > **The login server locks the account after a few failed logins.** When a password is rejected,
 > the client stops logging in on its own, so a typo costs one attempt, not one per call. `status`
-> then shows `automatic_login_halted`; fix the password and run `parro_cli.py login` once.
+> then shows `automatic_login_halted`; fix the password and run `parro-client login` once.
 
 Credentials: `PARRO_USERNAME` plus `PARRO_PASSWORD_FILE` (or `PARRO_PASSWORD`), or
 `login --prompt`, or no password at all with `login-url` / `login-finish`. Login methods, the
-lockout latch and why there is no automatic browser redirect: **[docs/LOGIN.md](docs/LOGIN.md)**.
-Every environment variable: **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)**.
+lockout latch and why there is no automatic browser redirect: **[docs/LOGIN.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/LOGIN.md)**.
+Every environment variable: **[docs/CONFIGURATION.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CONFIGURATION.md)**.
 
 ## The agenda in your own calendar app
 
@@ -227,14 +244,14 @@ Every environment variable: **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)**.
 ## Your children's privacy choices
 
 Schools ask parents every year what they may do with photos and data of their children.
-`parro_cli.py privacy` shows per child whether you can still change those choices, and when and by
+`parro-client privacy` shows per child whether you can still change those choices, and when and by
 whom they were last changed. The choices themselves are not in the API: `privacy --link CHILD_ID`
 prints the link to the ParnasSys page where you set them. **That link is a secret too**: it opens
 the page without logging in.
 
 ## Your own archive: `sync`
 
-`parro_cli.py sync` keeps a local copy of everything your account can see, as files that stay
+`parro-client sync` keeps a local copy of everything your account can see, as files that stay
 readable without Parro:
 
 ```
@@ -265,9 +282,9 @@ archive. `cache info` shows its size, `cache clear` empties it, `--no-cache` swi
 
 ## The OpenAPI specification
 
-<a href="https://chris-swift-dev.github.io/parro-api-client/"><img src="docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
+<a href="https://chris-swift-dev.github.io/parro-api-client/"><img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
 
-[`openapi/parro.public.openapi.json`](openapi/parro.public.openapi.json) describes the API as
+[`openapi/parro.public.openapi.json`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/parro.public.openapi.json) describes the API as
 observed from the web client: 18 operations of the Parro API (account, children and their privacy
 settings, groups, announcements, calendar items, chats, unread counts, system news, absence and
 photo-export settings, the agenda subscription link), each called at least once, and the login
@@ -278,14 +295,14 @@ polymorphism, and where attachments live.
 <details>
 <summary>An operation in Swagger UI: <code>GET /calendar/sync</code></summary>
 
-<img src="docs/images/swagger-calendar-sync.png" width="800" alt="Swagger UI with GET /calendar/sync expanded: what the subscription link looks like, that it is a secret, and what was checked live.">
+<img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-calendar-sync.png" width="800" alt="Swagger UI with GET /calendar/sync expanded: what the subscription link looks like, that it is a secret, and what was checked live.">
 </details>
 
 - Response schemas contain **only fields seen in real responses**; the published spec carries no
-  example payloads. [`openapi/README.md`](openapi/README.md) explains how it is generated and
-  published; [docs/API-NOTES.md](docs/API-NOTES.md) lists the facts the client relies on.
+  example payloads. [`openapi/README.md`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/README.md) explains how it is generated and
+  published; [docs/API-NOTES.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/API-NOTES.md) lists the facts the client relies on.
 - **"Try it out"** works once you paste an access token into **Authorize → bearerToken**
-  (`python3 parro_cli.py token` prints one).
+  (`parro-client token` prints one).
 - **Don't log in through Swagger UI.** The code flow can't complete there, and failed password
   attempts count toward the account lockout.
 
@@ -305,7 +322,7 @@ and download links are never written to a log.
 
 **Can a wrong password lock my account?** The login server locks an account after a few failed
 attempts, so the client never retries: after one rejected password it stops logging in until you
-run `login` yourself. See [docs/LOGIN.md](docs/LOGIN.md#the-lockout-latch).
+run `login` yourself. See [docs/LOGIN.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/LOGIN.md#the-lockout-latch).
 
 **What leaves my computer?** Only requests to Parro, its login server and its attachment CDN. There
 is no telemetry. Note that with the MCP server, whatever a tool returns (school news, your
@@ -314,7 +331,7 @@ children's names, documents) goes to the AI assistant you use, and so to its pro
 **Does it work for every school?** It was tested with one parent account. The calendar
 subscription link is part of the paid *Parro Ouderapp*, so it may not work everywhere; the rest uses
 the same calls as the web app. Parro can change its API at any time; if something breaks, please
-open an issue. Security problems: please report them privately, see [SECURITY.md](SECURITY.md).
+open an issue. Security problems: please report them privately, see [SECURITY.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/SECURITY.md).
 
 ## Development
 
@@ -325,9 +342,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-test.txt
 ```
 
 Repository layout, snapshots, the README pictures and making a release:
-[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). A walk through the code:
-[docs/CODE-TOUR.md](docs/CODE-TOUR.md). How each release was checked against the real API:
-[docs/LIVE-CHECKS.md](docs/LIVE-CHECKS.md).
+[docs/DEVELOPMENT.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DEVELOPMENT.md). A walk through the code:
+[docs/CODE-TOUR.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CODE-TOUR.md). How each release was checked against the real API:
+[docs/LIVE-CHECKS.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/LIVE-CHECKS.md).
 
 ## Credits
 
@@ -337,10 +354,10 @@ client here is an independent implementation based on the OpenAPI specification 
 
 ## License
 
-- **Code** (`parro/`, `parro_cli.py`, `parro_mcp.py`, `tests/`, `tools/`): [MIT](LICENSE-CODE).
+- **Code** (`parro/`, `parro_cli.py`, `parro_mcp.py`, `tests/`, `tools/`): [MIT](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE-CODE).
 - **Specification and documentation** (`openapi/`, `docs/`, the README files):
   [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)
-  (see [`LICENSE`](LICENSE)). You may share and adapt them for any purpose, provided you give
+  (see [`LICENSE`](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE)). You may share and adapt them for any purpose, provided you give
   appropriate credit (link to this repository), indicate the license and note any changes you made.
 
 "Parro", "ParnasSys" and "Topicus" are names of their respective owners. They are used here only to

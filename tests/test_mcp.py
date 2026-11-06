@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-import parro_mcp
+from parro import mcp_server as parro_mcp
 from parro.api_client import ParroClient
 from tests import fakes
 from tests.conftest import PROJECT_ROOT, load_sample
@@ -300,6 +300,7 @@ def test_logins_by_the_cli_are_picked_up(server, tmp_path):
 def run_server(tmp_path, stdin_text: str, *arguments: str) -> subprocess.CompletedProcess[str]:
     environment = {k: v for k, v in os.environ.items() if not k.startswith("PARRO_")}
     environment["PARRO_TOKEN_FILE"] = str(tmp_path / "no-tokens.json")
+    environment["PARRO_DATA_DIR"] = str(tmp_path / "data")
     return subprocess.run(
         [sys.executable, str(PROJECT_ROOT / "parro_mcp.py"), *arguments],
         input=stdin_text,

@@ -4,6 +4,35 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.5.0] - 2026-11-06
+
+Install it like any other command, on Windows, macOS and Linux: `pipx install parro-api-client`
+(or `uv tool install parro-api-client`), then `parro-client overview`.
+
+### Added
+- **The commands `parro-client` and `parro-client-mcp`**, from the Python package
+  `parro-api-client` on PyPI. pipx and uv put them on your PATH (on Windows as `.exe` files) and
+  update them with one command. The MCP server can also run without an install step:
+  `uvx --from parro-api-client parro-client-mcp`.
+- Releases carry the wheel and sdist next to the archives, all in `SHA256SUMS`. Publishing a
+  release uploads exactly those two files to PyPI, with trusted publishing (no token stored).
+- Tested on Windows, macOS and Linux, Python 3.10 and 3.14, including installing the package and
+  running both commands.
+
+### Changed
+- Help, hints and messages name the command as you started it: `parro-client …` when installed,
+  `parro_cli.py …` from a release archive. `python3 parro_cli.py` and `parro_mcp.py` keep working,
+  so existing MCP configurations need no change.
+- The code of the CLI and the MCP server moved into the package (`parro/cli.py`,
+  `parro/mcp_server.py`).
+- Archived files say `archived with parro-api-client (sync)` in their header.
+- The README's links and pictures are absolute, so they also work on the PyPI page.
+
+### Fixed
+- On Windows: output is UTF-8 (the console could not print markers such as ● and 📌),
+  `calendar --ics -` keeps single CRLF line endings, and the MCP server ends each message with a
+  plain line feed.
+
 ## [0.4.0] - 2026-11-05
 
 Helper requests in the agenda, your children's privacy choices, and a spec without guesses: every

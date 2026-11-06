@@ -3,10 +3,13 @@
 
     python3 tools/build_release.py                 # version from parro/__init__.py
     python3 tools/build_release.py --tag v0.1.0    # also check that the tag matches that version
+    python3 tools/build_release.py --packages      # also list the wheel and sdist in SHA256SUMS
 
 Writes to dist/:
     parro-api-client-<version>.zip and .tar.gz   what a user needs to run the CLI or the MCP server
-    SHA256SUMS                                     checksums of both archives
+    SHA256SUMS                                     checksums of both archives (and, with
+                                                   --packages, of the wheel and sdist that
+                                                   `python -m build --outdir dist` wrote there)
     release-notes.md                               the CHANGELOG.md section of this version
 
 Archive *contents* are reproducible: with SOURCE_DATE_EPOCH set (the release workflow uses the commit
@@ -117,9 +120,26 @@ def build_tar_gz(target: Path, prefix: str, files: list[Path], timestamp: int) -
             packed.write(buffer.getvalue())
 
 
+def python_packages(version: str) -> list[Path]:
+    """The wheel and sdist of this version in dist/, for pipx / uv / pip and PyPI."""
+    packages = [
+        DIST / f"parro_api_client-{version}-py3-none-any.whl",
+        DIST / f"parro_api_client-{version}.tar.gz",
+    ]
+    missing = [path.name for path in packages if not path.exists()]
+    if missing:
+        sys.exit(f"error: {', '.join(missing)} not in dist/: run `python -m build --outdir dist`")
+    return packages
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--tag", help="the git tag being released, e.g. v0.1.0")
+    parser.add_argument(
+        "--packages",
+        action="store_true",
+        help="include the wheel and sdist already in dist/ (built by `python -m build`)",
+    )
     args = parser.parse_args()
 
     version = read_version()
@@ -135,6 +155,8 @@ def main() -> None:
     build_zip(archives[0], prefix, files, timestamp)
     build_tar_gz(archives[1], prefix, files, timestamp)
 
+    if args.packages:
+        archives += python_packages(version)
     checksums = "".join(
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n" for path in archives
     )

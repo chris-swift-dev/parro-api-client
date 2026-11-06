@@ -17,4 +17,4 @@ Lotte Bakker → Basisschool De Linde · Sat 31 Oct 2026 18:39 · #5000000103
 Wat een mooie herfstwandeling hebben we gemaakt! Hierbij een paar foto's.
 
 🖼 3 photos
-→ parro_cli.py attachment 5000000103 --all  (or --attachment-id ID, --save-to DIR)
+→ parro-client attachment 5000000103 --all  (or --attachment-id ID, --save-to DIR)

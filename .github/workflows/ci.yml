@@ -1,6 +1,7 @@
 name: Client checks
 
-# Lint, type-check and test the Python client. Also called by release.yml before a release.
+# Lint, type-check and test the Python client, and install it as a package on Windows, macOS and
+# Linux (Python 3.10 and 3.14). Also called by release.yml before a release.
 # samples/, legacy/ and the full spec are not in the repository, so the tests that need them skip.
 
 on:
@@ -43,19 +44,29 @@ jobs:
       - name: Release archives build
         run: python3 tools/build_release.py
 
-  oldest-python:
-    name: Tests on Python 3.10, standard library only
-    runs-on: ubuntu-latest
+  systems:
+    name: Tests and install, ${{ matrix.os }}, Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.14"]
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python }}
 
       # Only pytest: proves the client runs without the optional PDF and image libraries.
       - name: Install pytest
-        run: pip install pytest
+        run: python -m pip install pytest
 
       - name: Pytest
-        run: pytest
+        run: python -m pytest
+
+      # Build the wheel, install it into a fresh venv with an empty home folder, and run
+      # parro-client and parro-client-mcp as a user would (PLAN-installation phase 3).
+      - name: Install and run the commands
+        run: python tools/smoke_test_install.py

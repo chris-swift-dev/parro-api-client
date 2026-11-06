@@ -14,7 +14,7 @@
   We vertrekken om 8.45 uur met de auto. Neem een lunchpakket mee.
   🙋 Rijden naar het museum: 1 of 2 signed up
   🖼 Route.jpg · 1.3 MB · #6000000401
-  → parro_cli.py attachment 7000000301
+  → parro-client attachment 7000000301
 
 ## Tue 17 Nov 2026
 - 15:00-19:00  Oudergesprekken groep 3 · Groep 3 - juf Eva · RSVP needed · ● new · #7000000201

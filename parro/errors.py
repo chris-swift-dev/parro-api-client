@@ -1,6 +1,6 @@
 """Every error this package raises, as one small class hierarchy.
 
-Each class carries the process exit code the CLI uses for it, so parro_cli.py can map an error to
+Each class carries the process exit code the CLI uses for it, so the CLI can map an error to
 an exit code without a lookup table. Messages are written for the person running the tool: they
 say what went wrong and what to do next.
 

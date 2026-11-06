@@ -16,7 +16,8 @@ links, or names and messages from a real Parro account. Use invented data, like 
 
 ## What is in scope
 
-- This repository: `parro/`, `parro_cli.py`, `parro_mcp.py`, the release archives, the GitHub
+- This repository: `parro/`, `parro_cli.py`, `parro_mcp.py`, the release archives, the packages on
+  PyPI (`parro-api-client`), the GitHub
   Actions workflows and the published OpenAPI spec.
 - For example: a token, password or download link that ends up in a log, a file or an error
   message; files written with permissions that are too open; anything that makes the client write

@@ -1,19 +1,44 @@
-# Dev tooling only. The client itself needs nothing beyond the Python 3.10+ standard library;
-# PyMuPDF / pypdf / Pillow are optional extras for reading attachments.
+# The package `parro-api-client`: install it with `pipx install .` (or uv / pip) to get the
+# commands `parro-client` and `parro-client-mcp`. It needs nothing beyond the Python 3.10+ standard
+# library at run time; PyMuPDF / pypdf / Pillow are optional extras for reading attachments.
+# setuptools is needed only to build the package.
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "parro-api-client"
-version = "0.4.0"
+version = "0.5.0"
 description = "Read-only Parro API client: a standalone CLI and an MCP server sharing one core"
 readme = "README.md"
-license = "MIT"  # the code; the OpenAPI spec and the docs are CC BY 4.0 (see LICENSE)
+license = "MIT AND CC-BY-4.0"  # the code is MIT; the README (in every package) and docs CC BY 4.0
 license-files = ["LICENSE-CODE", "LICENSE"]
 requires-python = ">=3.10"
 dependencies = []
+keywords = ["parro", "parnassys", "school", "cli", "mcp", "openapi"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.14",
+]
+
+[project.scripts]
+parro-client = "parro.cli:run"
+parro-client-mcp = "parro.mcp_server:run"
 
 [project.urls]
 Repository = "https://github.com/chris-swift-dev/parro-api-client"
 Documentation = "https://chris-swift-dev.github.io/parro-api-client/"
+
+[tool.setuptools]
+packages = ["parro"]  # the client; parro_cli.py / parro_mcp.py are only for release archives
 
 [project.optional-dependencies]
 attachments = ["pymupdf", "pypdf", "pillow"]

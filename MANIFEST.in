@@ -1,0 +1,3 @@
+# The sdist holds what the wheel is built from (parro/, pyproject.toml, README, licences). The tests
+# need fixtures and helpers that live only in the repository, so they stay there.
+prune tests

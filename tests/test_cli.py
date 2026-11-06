@@ -4,12 +4,15 @@ import getpass
 import io
 import json
 import os
+import subprocess
 import sys
 import time
+from pathlib import Path
 
 import pytest
 
-import parro_cli
+from parro import authenticator, naming, rendering
+from parro import cli as parro_cli
 from parro.api_client import ParroClient
 from parro.settings import Settings
 from tests import fakes
@@ -226,4 +229,80 @@ def test_help_reads_well(capsys):
     for command in parro_cli.HANDLERS:
         with pytest.raises(SystemExit):
             parro_cli.main([command, "--help"])
-        assert "usage: parro_cli.py " + command in capsys.readouterr().out
+        assert "usage: parro-client " + command in capsys.readouterr().out
+
+
+# ------------------------------------------------------------------- the program's name
+
+
+def test_installed_and_launcher_names(monkeypatch, capsys):
+    """Installed it is `parro-client`; the launchers (archives, source) say `parro_cli.py`."""
+    with pytest.raises(SystemExit):
+        parro_cli.main(["--help"])
+    assert capsys.readouterr().out.startswith("usage: parro-client ")
+    monkeypatch.setattr(naming, "_name", naming.FROM_SOURCE)
+    with pytest.raises(SystemExit):
+        parro_cli.main(["--help"])
+    text = capsys.readouterr().out
+    assert text.startswith("usage: parro_cli.py ") and "  parro_cli.py login --prompt" in text
+    assert "`parro_cli.py login`" in authenticator.how_to_log_in()
+    hint = rendering.hint(rendering.RenderOptions(), "announcements", "parro_announcements()")
+    assert hint == "→ parro_cli.py announcements"
+
+
+@pytest.mark.parametrize(
+    ("launcher", "first_line"),
+    [("parro_cli.py", "usage: parro_cli.py "), ("parro_mcp.py", None)],
+)
+def test_the_launchers_name_themselves(launcher, first_line, tmp_path):
+    """Started as scripts, in a fresh process, from another folder."""
+    project = Path(__file__).resolve().parent.parent
+    # The whole environment (Windows needs SYSTEMROOT to start Python), with a private home.
+    environment = {k: v for k, v in os.environ.items() if not k.startswith("PARRO_")}
+    environment.update(HOME=str(tmp_path), USERPROFILE=str(tmp_path))
+    environment["PARRO_TOKEN_FILE"] = str(tmp_path / "t.json")
+    arguments = ["--help"] if first_line else ["call", "parro_auth_status"]
+    result = subprocess.run(
+        [sys.executable, str(project / launcher), *arguments],
+        capture_output=True, text=True, cwd=tmp_path, env=environment, timeout=60, check=False,
+    )  # fmt: skip
+    if first_line:
+        assert result.stdout.startswith(first_line)
+    else:
+        assert "`parro_cli.py login`" in result.stdout, "the MCP launcher's login hint"
+
+
+# --------------------------------------------------------------- Windows-like consoles
+
+
+def windows_console() -> io.TextIOWrapper:
+    """A text stream like a Windows console: legacy code page, "\\n" written as "\\r\\n"."""
+    return io.TextIOWrapper(io.BytesIO(), encoding="cp1252", newline="\r\n")
+
+
+def test_ics_keeps_single_crlf_on_a_windows_console(monkeypatch, tmp_path):
+    token_file = tmp_path / "tokens.json"
+    token_file.write_text(json.dumps({"access_token": fakes.ACCESS_TOKEN, "expires_at": 9e12}))
+    monkeypatch.setenv("PARRO_TOKEN_FILE", str(token_file))
+    console = windows_console()
+    monkeypatch.setattr(sys, "stdout", console)
+    api = fakes.FakeParroApi(load_sample)
+    exit_code = parro_cli.main(
+        ["calendar", "--ics", "-"], make_client=lambda s: ParroClient(s, transport=api)
+    )
+    console.flush()
+    written = console.buffer.getvalue()  # type: ignore[attr-defined]
+    assert exit_code == 0 and written.startswith(b"BEGIN:VCALENDAR\r\n")
+    assert b"\r\r\n" not in written and written.count(b"\r\n") == written.count(b"\n")
+
+
+def test_utf8_output_lets_a_windows_console_print_the_markers(monkeypatch):
+    console = windows_console()
+    monkeypatch.setattr(sys, "stdout", console)
+    monkeypatch.setattr(sys, "stderr", windows_console())
+    with pytest.raises(UnicodeEncodeError):
+        print("● 📌 🙋")  # what an installed command would hit without the switch
+    parro_cli.use_utf8_output()
+    print("● 📌 🙋")
+    console.flush()
+    assert "● 📌 🙋".encode() in console.buffer.getvalue()  # type: ignore[attr-defined]

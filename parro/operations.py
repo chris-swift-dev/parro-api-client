@@ -1,4 +1,4 @@
-"""One function per user-facing command, shared by parro_cli.py and parro_mcp.py.
+"""One function per user-facing command, shared by the CLI (parro/cli.py) and the MCP server.
 
 Each function fetches with ParroClient, shapes the result with summaries, and returns plain
 JSON-ready data. Because both entry points call these same functions, a CLI command and the matching
@@ -25,6 +25,7 @@ from .api_client import (
 )
 from .errors import AttachmentError, ConfigurationError, ParroError
 from .geon import get_object_id, strip_geon_metadata
+from .naming import cli_command
 from .settings import LoginMethod
 
 # With unread_only, look further back per group than `limit`, so older unread items are not missed.
@@ -48,7 +49,7 @@ def auth_status(client: ParroClient) -> dict[str, Any]:
         status, client.settings.scope, client.settings.api_base_uri
     )
     if not (status.has_access_token or status.has_refresh_token):
-        summary["error"] = "Not logged in. Run `parro_cli.py login` (MCP: parro_login)."
+        summary["error"] = f"Not logged in. Run `{cli_command('login')}` (MCP: parro_login)."
         return summary
     try:
         account = client.get_account(allow_password_login=False)

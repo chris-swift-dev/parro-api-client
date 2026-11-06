@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1089" height="917" viewBox="0 0 1089 917" role="img" aria-labelledby="title">
-  <title id="title">Terminal output of parro_cli.py announcements: each announcement with its author, groups, date, a preview and its attachments (invented example data).</title>
+  <title id="title">Terminal output of parro-client announcements: each announcement with its author, groups, date, a preview and its attachments (invented example data).</title>
   <rect x="0.5" y="0.5" width="1088" height="916" rx="8" fill="#ffffff" stroke="#d1d9e0"/>
   <path d="M0.5 32 V8.5 a8 8 0 0 1 8 -8 H1080.5 a8 8 0 0 1 8 8 V32 Z" fill="#f6f8fa" stroke="#d1d9e0"/>
   <circle cx="18" cy="16" r="6" fill="#ff5f57"/><circle cx="38" cy="16" r="6" fill="#febc2e"/><circle cx="58" cy="16" r="6" fill="#28c840"/>
   <text x="544.5" y="20" text-anchor="middle" fill="#6e7781" font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="12">parro-api-client</text>
   <g font-family="ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace" font-size="13" fill="#1f2328" xml:space="preserve">
-  <text x="18" y="63"><tspan fill="#116329" font-weight="bold">$</tspan> python3 parro_cli.py announcements</text>
+  <text x="18" y="63"><tspan fill="#116329" font-weight="bold">$</tspan> parro-client announcements</text>
   <text x="18" y="101"><tspan fill="#0550ae" font-weight="bold"># Announcements (5)</tspan></text>
   <text x="18" y="139"><tspan fill="#8250df" font-weight="bold">## 📌 Studiedag vrijdag 13 november ● new</tspan></text>
   <text x="18" y="158">Lotte Bakker → Basisschool De Linde, Groep 3 - juf Eva<tspan fill="#6e7781"> · </tspan>Mon 2 Nov 2026 12:28<tspan fill="#6e7781"> · </tspan><tspan fill="#6e7781">#5000000102</tspan></text>
@@ -16,7 +16,7 @@
   <text x="18" y="291">Lotte Bakker → Basisschool De Linde<tspan fill="#6e7781"> · </tspan>Sat 31 Oct 2026 18:39<tspan fill="#6e7781"> · </tspan><tspan fill="#6e7781">#5000000103</tspan></text>
   <text x="18" y="329">Wat een mooie herfstwandeling hebben we gemaakt! Hierbij een paar foto's.</text>
   <text x="18" y="367">🖼 3 photos</text>
-  <text x="18" y="386"><tspan fill="#116329">→ parro_cli.py attachment 5000000103 --all  (or --attachment-id ID, --save-to DIR)</tspan></text>
+  <text x="18" y="386"><tspan fill="#116329">→ parro-client attachment 5000000103 --all  (or --attachment-id ID, --save-to DIR)</tspan></text>
   <text x="18" y="424"><tspan fill="#8250df" font-weight="bold">## Gym op dinsdag ● new</tspan></text>
   <text x="18" y="443">Eva Jansen → Groep 3 - juf Eva<tspan fill="#6e7781"> · </tspan>Thu 29 Oct 2026 08:10<tspan fill="#6e7781"> · </tspan><tspan fill="#6e7781">#5000000201</tspan></text>
   <text x="18" y="481">Hallo allemaal,</text>
@@ -28,13 +28,13 @@
   <text x="18" y="633">Op 12 november gaan we naar het Natuurmuseum. We zoeken nog twee ouders die willen rijden. Wilt u het toestemmingsformulier invullen?</text>
   <text x="18" y="652">Groet, …</text>
   <text x="18" y="690">📎 Toestemmingsformulier.docx<tspan fill="#6e7781"> · </tspan>25 KB</text>
-  <text x="18" y="709"><tspan fill="#116329">→ parro_cli.py attachment 5000000301</tspan></text>
+  <text x="18" y="709"><tspan fill="#116329">→ parro-client attachment 5000000301</tspan></text>
   <text x="18" y="747"><tspan fill="#8250df" font-weight="bold">## Nieuwsbrief nr. 3</tspan></text>
   <text x="18" y="766">Lotte Bakker → Basisschool De Linde<tspan fill="#6e7781"> · </tspan>Thu 22 Oct 2026 11:25<tspan fill="#6e7781"> · </tspan><tspan fill="#6e7781">#5000000101</tspan></text>
   <text x="18" y="804">Beste ouders en verzorgers,</text>
   <text x="18" y="823">In de bijlage vindt u nieuwsbrief nr. 3 met de agenda tot de kerstvakantie.</text>
   <text x="18" y="842">Met vriendelijke groet, …</text>
   <text x="18" y="880">📎 Nieuwsbrief-3.pdf<tspan fill="#6e7781"> · </tspan>1.5 MB</text>
-  <text x="18" y="899"><tspan fill="#116329">→ parro_cli.py attachment 5000000101</tspan></text>
+  <text x="18" y="899"><tspan fill="#116329">→ parro-client attachment 5000000101</tspan></text>
   </g>
 </svg>
