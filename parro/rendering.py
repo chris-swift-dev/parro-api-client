@@ -406,7 +406,17 @@ def render_announcement(item: dict[str, Any], options: RenderOptions) -> str:
         f"# {announcement_title(item)}\n{announcement_byline(item, [read_by, likes])}",
         str(item.get("contents") or "").strip(),
         attachment_list(item, options),
+        read_state_line(item),
     )
+
+
+def read_state_line(result: dict[str, Any]) -> str | None:
+    """After --mark-read / mark-read: what changed. None when nothing was asked."""
+    if "marked_read" not in result:
+        return None
+    if result["marked_read"]:
+        return "✓ Marked as read. The school can see that you read it."
+    return "Already read: nothing changed."
 
 
 def attachment_list(item: dict[str, Any], options: RenderOptions) -> str | None:
@@ -613,7 +623,8 @@ def render_conversation(result: dict[str, Any], options: RenderOptions) -> str:
     shown = plural(len(messages), "message") + (f" of {total}" if total > len(messages) else "")
     name = result.get("title") or join_parts(["Chat", object_id(result.get("chatroom_id"))])
     heading = f"# {name.replace(' · ', ' ')} ({shown})"
-    return document(heading, *blocks) if blocks else document(heading, "No messages.")
+    body = blocks or ["No messages."]
+    return document(heading, *body, read_state_line(result))
 
 
 def message_text(message: dict[str, Any]) -> str:
@@ -751,12 +762,17 @@ def archived_helper_lines(item: dict[str, Any], details: dict[str, Any]) -> list
 
 
 def render_overview(result: dict[str, Any], options: RenderOptions) -> str:
-    """The app's home screen in four short sections, each with the command that shows more."""
+    """The app's home screen in four short sections, each with the command that shows more.
+
+    By default only unread announcements and unread calendar items; `overview --all` (MCP:
+    all=true) shows the latest announcements and everything coming up.
+    """
+    unread_only = bool(result.get("unread_only"))
     return document(
         "# Overview",
         overview_unread(result.get("unread") or []),
-        overview_announcements(result.get("announcements") or {}, options),
-        overview_calendar(result.get("calendar") or {}, options),
+        overview_announcements(result.get("announcements") or {}, options, unread_only),
+        overview_calendar(result.get("calendar") or {}, options, unread_only),
         overview_chats(result.get("chats") or {}, options),
     )
 
@@ -769,8 +785,14 @@ def overview_unread(counts_per_guardian: list[dict[str, Any]]) -> str:
     return "## Unread\n" + "\n".join(lines or ["Nothing unread."])
 
 
-def overview_announcements(feed: dict[str, Any], options: RenderOptions) -> str:
+def overview_announcements(
+    feed: dict[str, Any], options: RenderOptions, unread_only: bool = False
+) -> str:
     lines = [f"- {overview_announcement_line(item)}" for item in feed.get("announcements", [])]
+    if unread_only:
+        more = hint(options, "announcements --unread-only", "parro_announcements(unread_only=true)")
+        empty = ["Nothing unread.", hint(options, "overview --all", "parro_overview(all=true)")]
+        return "## Unread announcements\n" + "\n".join([*lines, more] if lines else empty)
     more = hint(options, "announcements", "parro_announcements()")
     return "## Latest announcements\n" + "\n".join([*lines, more] if lines else ["None."])
 
@@ -782,7 +804,9 @@ def overview_announcement_line(item: dict[str, Any]) -> str:
     )
 
 
-def overview_calendar(agenda: dict[str, Any], options: RenderOptions) -> str:
+def overview_calendar(
+    agenda: dict[str, Any], options: RenderOptions, unread_only: bool = False
+) -> str:
     lines = []
     for item in agenda.get("items", []):
         start = parse_timestamp((item.get("calendarItem") or {}).get("startDate"))
@@ -790,7 +814,32 @@ def overview_calendar(agenda: dict[str, Any], options: RenderOptions) -> str:
         entry = agenda_entry(item, RenderOptions(audience=options.audience)).split("\n")[0]
         lines.append(f"- {day}, {entry.removeprefix('- ')}")
     more = hint(options, "calendar --details", "parro_calendar(details=true)")
+    if unread_only:
+        return "## New in the calendar\n" + "\n".join([*lines, more] if lines else ["Nothing new."])
     return "## Coming up\n" + "\n".join([*lines, more] if lines else ["Nothing planned."])
+
+
+def render_chat_members(result: dict[str, Any], options: RenderOptions) -> str:
+    """'- Sanne de Vries · parent of Mila, Daan · admin'."""
+    lines = []
+    for member in result.get("members", []):
+        children = member.get("children") or []
+        role = member.get("role") or ""
+        if role == "parent" and children:
+            role = f"parent of {', '.join(children)}"
+        lines.append(
+            "- "
+            + join_parts(
+                [
+                    member.get("name") or "(no name)",
+                    role,
+                    "admin" if member.get("admin") else "",
+                    "left the chat" if member.get("active") is False else "",
+                ]
+            )
+        )
+    heading = f"# Members of chat {object_id(result.get('chatroom_id'))} ({len(lines)})"
+    return document(heading, "\n".join(lines) if lines else "No members.")
 
 
 def overview_chats(chats: dict[str, Any], options: RenderOptions) -> str:
@@ -912,6 +961,34 @@ def render_cache(result: dict[str, Any], options: RenderOptions) -> str:
     return document("# Cache", "\n".join(lines))
 
 
+def render_mark_read(result: dict[str, Any], options: RenderOptions) -> str:
+    """'# Marked as read: Studiedag vrijdag' with what the school sees."""
+    kinds = {"announcement": "Announcement", "calendar": "Calendar item", "chat": "Chat"}
+    what = join_parts([kinds.get(result.get("kind", ""), "Item"), object_id(result.get("id"))])
+    title = result.get("title") or what
+    if not result.get("marked_read"):
+        return document(f"# Already read: {title}", f"{what}: nothing changed.")
+    return document(f"# Marked as read: {title}", f"{what}. {result.get('note', '')}".strip())
+
+
+def render_mark_group_read(result: dict[str, Any], options: RenderOptions) -> str:
+    """The count and titles first; the command that marks them, or what was marked."""
+    group = result.get("group") or f"group {object_id(result.get('group_id'))}"
+    count = plural(result.get("unread", 0), "unread announcement")
+    titles = "\n".join(f"- {title}" for title in result.get("titles", []))
+    if result.get("marked_read"):
+        return document(f"# Marked as read: {count} in {group}", titles, result.get("note"))
+    if not result.get("unread"):
+        return document(f"# No unread announcements in {group}", "Nothing to mark.")
+    command = f"mark-read group {result.get('group_id')} --yes"
+    return document(
+        f"# {count} in {group}",
+        titles,
+        f"Nothing marked yet. {result.get('note', '')}".strip(),
+        "To mark them all as read:\n" + hint(options, command, command),
+    )
+
+
 # ---------------------------------------------------------------------------------- render
 
 Renderer = Callable[[Any, RenderOptions], str]
@@ -930,6 +1007,9 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "calendar": render_agenda,
     "chatrooms": render_chatrooms,
     "chat_messages": render_conversation,
+    "chat_members": render_chat_members,
+    "mark_read": render_mark_read,
+    "mark_group_read": render_mark_group_read,
     "attachment": render_attachment,
     "cache": render_cache,
     "overview": render_overview,

@@ -73,3 +73,18 @@ One password check, at the start (the stored login had expired; see the last row
 | Release draft | All four files equal the release job's output; the wheel is byte-identical to the TestPyPI wheel tested above; sdists differ only in timestamps (setuptools stamps the build time) |
 | PyPI | After publishing: wheel and sdist byte-identical to the GitHub release; `pipx install parro-api-client` works; all 13 pictures on the project page load |
 | **How long a login lasts** | The previous login (5 Nov) was refused on 6 Nov: "Token has expired". The new refresh token (a JWT) expires **8 hours after the login**; after a refresh, the new one keeps the same `iat` and expiry, only `refresh_count` goes up. So a login lasts at most 8 hours, `offline_access` or not. The docs said "far longer"; corrected |
+
+## Live check (2026-11-07, release 0.6.0: marking as read)
+
+With the account owner present, who picked the item to mark. **No password check**: the existing
+login was refreshed with its refresh token. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| `overview` | OK: only the unread announcements (3); calendar "Nothing new.", no unread chats |
+| `mark-read announcement <id>` (picked by the owner) | OK: one `PUT /event/{id}/read`, answered 204; "Marked as read" |
+| the same again | OK: "Already read", no PUT |
+| `unread` / `overview` afterwards | OK: Parro's own count went from 3 to 2 unread announcements; the item is gone from the overview |
+| Parro app | OK: the owner saw the item shown as read in the app |
+| `mark-read calendar <id>` / `mark-read chat <id>` | OK: found and already read, nothing sent (2 GETs each, no PUT). `GET /chatroom/{id}` works with the chat's own id. Nothing was unread, so `PUT /event/{id}/read` for a calendar item and `PUT /chatroom/{id}/read` are **not checked live yet**; both are the calls the web app sends (captures) |
+| `mark-read group <id>` without `--yes` | OK: the count (2) and the titles, nothing marked (3 GETs, no PUT). Bulk marking was not run |

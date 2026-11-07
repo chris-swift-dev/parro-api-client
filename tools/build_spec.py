@@ -211,15 +211,17 @@ def poly(*names, dtypes=None):
 
 # --------------------------------------------------------------- hand-written parts
 DESCRIPTION = """\
-Read-only description of the REST API behind **talk.parro.com**, the Dutch parent–school
-communication app by Topicus (ParnasSys). The API is a Topicus *geon* API.
+Description of the REST API behind **talk.parro.com**, the Dutch parent–school
+communication app by Topicus (ParnasSys). The API is a Topicus *geon* API. Every operation reads,
+except the three under **Read state**, which mark items as read.
 This spec was derived from the web client's traffic: a captured browser session and sanitized response
 samples. Response schemas list **only fields seen in those samples**. Treat every object as
 open: geon adds fields between contract versions. Every operation here was called at least once;
 two paths from the web app's code, `/conversations` and `/timeslot`, answered `404` and are left out.
 
 **A client for this API:** [parro-api-client](https://github.com/chris-swift-dev/parro-api-client),
-a read-only command-line client and MCP server in plain Python
+a command-line client and MCP server in plain Python that reads, and marks items as read only when
+you ask
 ([download a release](https://github.com/chris-swift-dev/parro-api-client/releases/latest)).
 
 Inspired by [fobatai/parro-mcp](https://github.com/fobatai/parro-mcp), a read-only MCP server for Parro
@@ -442,7 +444,9 @@ def build(samples_dir, public=False):
                  "**Multi-day calendar items come once per day**: each day is its own entry with its "
                  "own event id, `dayNumber` (1..`numberOfDays`) and `sortDate`, all sharing one "
                  "`calendarItem` (same id, `startDate`, `endDate`, `dayDates`). In that check one 40-day "
-                 "item gave 40 entries. Merge by `calendarItem` id.",
+                 "item gave 40 entries. Merge by `calendarItem` id.\n\n"
+                 "**No read filter:** `read=false` is accepted and ignored (live check 2026-11-07: the same "
+                 "36 announcements with and without it, 3 of them unread). Filter on `read` yourself.",
             params=[q("dtype", {"type": "string", "enum": ["event.RAnnouncementEventPrimer",
                                                            "event.RCalendarItemEventPrimer"]},
                       "Which event type to list.", required=True),
@@ -515,16 +519,115 @@ def build(samples_dir, public=False):
             ref("MediaExportSettings"), ["getMediaExportSettings.200.json"])},
         "/chatroom": {"get": op(
             "listChatrooms", "Chat", "Chat conversations", ref("ChatRoomPrimer"),
-            ["listChatrooms.200.json"], coll=True)},
+            ["listChatrooms.200.json", "listChatrooms_archived.200.json",
+             "listChatrooms_schoolyear.200.json", "listChatrooms_type-group.200.json"], coll=True,
+            desc="**The chat room's id is its `rel: self` link.** The first link is `koppeling` (your "
+                 "membership); using that id answers `403 CHAT_NOT_ACTIVE_MEMBER` on every chat call.\n\n"
+                 "Filters (live check 2026-11-07): `chatRoom.type`, `read`, `archived` and "
+                 "`chatRoom.createdInSchoolyear`; an unknown enum value answers `400`.",
+            params=[
+                q("chatRoom.type", {"type": "string", "enum": ["SINGLE", "BOT", "CALENDAR", "GROUP", "FAMILY"]},
+                  "Only chats of this type."),
+                q("read", {"type": "boolean"}, "`false`: only chats with unread messages."),
+                q("archived", {"type": "string", "enum": ["FALSE", "TRUE", "BOTH"], "default": "FALSE"},
+                  "Uppercase only (`true` answers `400`). Without it: the chats that are not archived."),
+                q("chatRoom.createdInSchoolyear", {"type": "integer", "example": 2025},
+                  "Chats created in this school year (`GET /chatroom/schoolyears` lists them)."),
+            ])},
+        "/chatroom/schoolyears": {"get": op(
+            "listChatSchoolyears", "Chat", "School years that have chats",
+            collection(ref("Schoolyear")), ["listChatSchoolyears.200.json"],
+            desc="The values `chatRoom.createdInSchoolyear` accepts, newest first. A plain list: "
+                 "answered with `200` and no `Content-Range`.")},
+        "/chatroom/{id}": {"get": op(
+            "getChatroom", "Chat", "One chat conversation", ref("ChatRoom"), ["getChatroom.200.json"],
+            desc="The full chat room, with its members.",
+            params=[dict(id_param, description="Chatroom id: the `rel: self` link of `GET /chatroom`.")],
+            extra={"403": {"description": "`CHAT_NOT_ACTIVE_MEMBER`: not a member, or the membership "
+                                          "(`koppeling`) id was used instead of the chat room's own id."}})},
+        "/chatroom/{id}/chatroommember": {"get": op(
+            "listChatroomMembers", "Chat", "Members of one chat conversation", ref("ChatRoomMember"),
+            ["listChatroomMembers.200.json"], coll=True,
+            desc="Each member is a guardian or a teacher, with `admin`, `active`, `muted` and its own "
+                 "`unreadCount`.",
+            params=[dict(id_param, description="Chatroom id from `GET /chatroom`."),
+                    q("isActive", {"type": "boolean"}, "Only active (or only former) members.")])},
+        "/chatroom/{id}/scheduledchatmessage": {"get": op(
+            "listScheduledChatMessages", "Chat", "Your messages scheduled for later in a chat",
+            {"$ref": REF + "GeonObject"}, ["listScheduledChatMessages.200.json"], coll=True,
+            desc="Empty in every capture, so the item type is unknown.",
+            params=[dict(id_param, description="Chatroom id from `GET /chatroom`."),
+                    q("state", {"type": "string", "enum": ["SCHEDULED"]}, "The web app asks for `SCHEDULED`.")])},
         "/chatroom/{id}/chatmessage": {"get": op(
             "listChatMessages", "Chat", "Messages in one chat conversation", ref("ChatTextMessage"),
             ["listChatMessages.200.json"], coll=True,
-            desc="Only `chat.RChatTextMessage` has been observed; other message types (e.g. with files) "
-                 "probably exist.\n\n**Order: newest first** (live check 2026-11-05: `Range: items=0-29` "
-                 "returned the newest 30 of 89 messages). Reverse them for reading order.",
-            params=[dict(id_param, description="Chatroom id from `GET /chatroom`.")])},
+            desc="Without `sort`, only `chat.RChatTextMessage` comes back, **newest first** (live check "
+                 "2026-11-05: `Range: items=0-29` returned the newest 30 of 89 messages). Reverse them for "
+                 "reading order.\n\n"
+                 "With `sort` (what the web app sends), status messages (`chat.RChatStatusMessage`, e.g. "
+                 "someone joining) come back as well, and the names are the **opposite** of what they say: "
+                 "`desc-stream` is oldest first, `asc-stream` newest first (live check 2026-11-07).\n\n"
+                 "`createdSince` / `modifiedSince` (ISO 8601 with `Z`) return only messages created or "
+                 "changed since then: what the web app uses to fetch only new messages.",
+            params=[dict(id_param, description="Chatroom id from `GET /chatroom`."),
+                    q("sort", {"type": "string", "enum": ["desc-stream", "asc-stream"]},
+                      "`desc-stream`: oldest first; `asc-stream`: newest first. Both add status messages."),
+                    q("createdSince", {"type": "string", "format": "date-time"}, "Only messages created since."),
+                    q("modifiedSince", {"type": "string", "format": "date-time"}, "Only messages changed since.")])},
+        "/chatroom/{id}/chatmessage/{messageId}": {"get": op(
+            "getChatMessage", "Chat", "One chat message", ref("ChatTextMessage"), ["getChatMessage.200.json"],
+            params=[dict(id_param, description="Chatroom id from `GET /chatroom`."),
+                    {"name": "messageId", "in": "path", "required": True,
+                     "schema": {"type": "integer", "format": "int64"},
+                     "description": "Message id from `GET /chatroom/{id}/chatmessage`."}])},
+        "/identity/{id}": {"get": op(
+            "getIdentity", "Account", "One identity (a parent, teacher or child)", ref("Identity"),
+            ["getIdentity.200.json"],
+            desc="Called with your own identity id (from `GET /account/me`). The web app also uses it for "
+                 "the people you can start a chat with.",
+            params=[dict(id_param, description="Identity id, e.g. `identity` in `GET /account/me`.")])},
+        "/event/{id}/attachment/{attachmentId}": {"get": op(
+            "getEventAttachment", "Events", "One attachment of an announcement",
+            ref("AnnouncementAttachment"), ["getEventAttachment.200.json"],
+            desc="Like `GET /event/{id}` it needs `dtype`: without it the API answers `406 EVENT_BAD_TYPE`. "
+                 "The path `…/attachment/{id}/attachmententry/{id}` from the web app's code answered `404` "
+                 "(with `dtype`) and `406` (without) in the live check, so it is not described.",
+            params=[dict(id_param, description="Announcement id."),
+                    {"name": "attachmentId", "in": "path", "required": True,
+                     "schema": {"type": "integer", "format": "int64"},
+                     "description": "Attachment id from the announcement's `attachments`."},
+                    q("dtype", {"type": "string", "enum": ["event.RAnnouncementEventPrimer"]},
+                      "The event type, as for `GET /event/{id}`.", required=True)],
+            extra={"406": {"description": "Missing `dtype`."}})},
     }
 
+
+    # ---- Read state: the only operations that change anything (captured 2026-11-07)
+    read_state_note = (
+        "\n\n⚠️ **Others see it.** Read state is shared: the item is no longer marked new in the Parro "
+        "app on your phone, and the school sees it as read (announcements show teachers how many "
+        "parents read them; chats have read receipts). Mark an item only once you have read it.")
+
+    def mark_read(op_id, summary, desc, params):
+        return {"tags": ["Read state"], "operationId": op_id, "summary": summary,
+                "description": desc + read_state_note,
+                "parameters": [{"$ref": "#/components/parameters/AppVersion"},
+                               {"$ref": "#/components/parameters/Role"}, *params],
+                "responses": {"204": {"description": "Marked as read. No body."}, **std_err}}
+
+    paths["/event/{id}/read"] = {"put": mark_read(
+        "markEventRead", "Mark one announcement or calendar item as read",
+        "No request body. Answered `204` in the capture (an announcement).",
+        [dict(id_param, description="Event id (`links[rel=self].id` from `GET /event`).")])}
+    paths["/event/markannouncementsasread"] = {"put": mark_read(
+        "markGroupAnnouncementsRead", "Mark all announcements of a group as read",
+        "No request body. Answered `204` in the capture. It marks **every** announcement of the group, "
+        "not only the ones you have seen.",
+        [q("group", {"type": "integer", "format": "int64"}, "Group id from `GET /group`.", required=True)])}
+    paths["/chatroom/{id}/read"] = {"put": mark_read(
+        "markChatroomRead", "Mark a chat conversation as read",
+        "No request body. Answered `204` in the capture. The id is the chat room's `rel: self` link.",
+        [dict(id_param, description="Chatroom id from `GET /chatroom`.")])}
 
     # ---- IdP
     idp = [{"url": "https://inloggen.parnassys.net/idp", "description": "ParnasSys IdP"}]
@@ -647,7 +750,7 @@ def build(samples_dir, public=False):
 
     spec = {
         "openapi": "3.0.3",
-        "info": {"title": "Parro REST API (unofficial, read-only)", "version": CONTRACT,
+        "info": {"title": "Parro REST API (unofficial)", "version": CONTRACT,
                  "description": DESCRIPTION + ("\n## About this build\nPublic build: response and property "
                                                "examples taken from samples are left out.\n" if public else ""),
                  "license": {"name": "CC BY 4.0", "url": "https://creativecommons.org/licenses/by/4.0/"},
@@ -662,7 +765,9 @@ def build(samples_dir, public=False):
             {"name": "Groups", "description": "Classes and school-wide groups."},
             {"name": "Events", "description": "Announcements (mededelingen) and calendar items, incl. attachments."},
             {"name": "Chat", "description": "Conversations with teachers."},
-            {"name": "Misc", "description": "System news, absence and photo-export settings."}],
+            {"name": "Misc", "description": "System news, absence and photo-export settings."},
+            {"name": "Read state", "description": "Mark announcements, calendar items and chats as "
+                                                  "read: the only operations that change anything."}],
         "security": [{"bearerToken": []}, {"parnassysOAuth": ["openid"]}],
         "paths": paths,
         "components": {

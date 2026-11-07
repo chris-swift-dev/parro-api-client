@@ -143,7 +143,16 @@ def test_tool_interface_only_gains_optional_arguments():
     }
     expected["parro_calendar"]["properties"]["details"] = {"type": "boolean"}
     expected["parro_calendar"]["properties"]["past"] = {"type": "boolean"}
-    expected["parro_overview"] = {"properties": {}}  # new tools, added at the end
+    expected["parro_chatrooms"]["properties"].update(
+        unread={"type": "boolean"},
+        archived={"type": "string", "enum": ["exclude", "only", "include"], "default": "exclude"},
+        type={"type": "string", "enum": ["single", "bot", "calendar", "group", "family"]},
+        schoolyear={"type": "integer"},
+    )
+    expected["parro_chat_messages"]["properties"]["since"] = {"type": "string"}
+    expected["parro_overview"] = {
+        "properties": {"all": {"type": "boolean"}}
+    }  # new tools, at the end
     expected["parro_calendar_link"] = {"properties": {}}
     expected["parro_privacy"] = {
         "properties": {
@@ -151,6 +160,14 @@ def test_tool_interface_only_gains_optional_arguments():
             "link": {"type": "boolean", "default": False},
             "raw": {"type": "boolean"},
         }
+    }
+    expected["parro_chat_members"] = {
+        "properties": {
+            "chatroom_id": {"type": "integer"},
+            "include_former": {"type": "boolean"},
+            "raw": {"type": "boolean"},
+        },
+        "required": ["chatroom_id"],
     }
     for tool in expected.values():
         tool["properties"]["format"] = FORMAT_ARGUMENT
@@ -160,8 +177,9 @@ def test_tool_interface_only_gains_optional_arguments():
 
 
 def test_every_tool_has_an_implementation_and_a_description():
-    assert set(parro_mcp.TOOL_FUNCTIONS) == {t["name"] for t in parro_mcp.TOOL_DEFINITIONS}
-    for tool in parro_mcp.TOOL_DEFINITIONS:
+    every_tool = [*parro_mcp.TOOL_DEFINITIONS, parro_mcp.MARK_READ_TOOL]
+    assert set(parro_mcp.TOOL_FUNCTIONS) == {t["name"] for t in every_tool}
+    for tool in every_tool:
         assert len(tool["description"]) > 30
 
 
@@ -221,7 +239,7 @@ TOOL_CALLS = [
     ("parro_announcement", {"id": fakes.NEWSLETTER_ID}),
     ("parro_calendar", {"limit": 1, "raw": True}),
     ("parro_chatrooms", {}),
-    ("parro_chat_messages", {"chatroom_id": 5}),
+    ("parro_chat_messages", {"chatroom_id": 8000000001}),
     ("parro_unread", {}),
     ("parro_get", {"path": "/systemnews", "limit": 1, "params": {}}),
     ("parro_login_url", {}),
@@ -329,7 +347,7 @@ def test_stdio_session_without_network(tmp_path):
     answers = [json.loads(line) for line in finished.stdout.splitlines()]
     assert [a.get("id") for a in answers] == [1, 2, 3, None]
     assert answers[0]["result"]["protocolVersion"] == "2025-06-18"
-    assert len(answers[1]["result"]["tools"]) == 19
+    assert len(answers[1]["result"]["tools"]) == 20
     status = json.loads(answers[2]["result"]["content"][0]["text"])
     assert status["has_access_token"] is False and "Not logged in" in status["error"]
     assert answers[3]["error"]["code"] == -32700
@@ -338,7 +356,7 @@ def test_stdio_session_without_network(tmp_path):
 
 def test_manual_tools_and_call_commands(tmp_path):
     listed = run_server(tmp_path, "", "tools")
-    assert listed.returncode == 0 and len(listed.stdout.splitlines()) == 19
+    assert listed.returncode == 0 and len(listed.stdout.splitlines()) == 20
     called = run_server(tmp_path, "", "call", "parro_auth_status")
     assert called.returncode == 0
     assert json.loads(called.stdout)["has_access_token"] is False

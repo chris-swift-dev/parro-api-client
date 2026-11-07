@@ -23,7 +23,7 @@ import venv
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-EXPECTED_TOOLS = 19
+EXPECTED_TOOLS = 20
 
 
 def main(argv: list[str] | None = None) -> int:

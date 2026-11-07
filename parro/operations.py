@@ -22,6 +22,7 @@ from .api_client import (
     ApiResponse,
     FeedEvent,
     ParroClient,
+    ReadStateKind,
 )
 from .errors import AttachmentError, ConfigurationError, ParroError
 from .geon import get_object_id, strip_geon_metadata
@@ -165,9 +166,21 @@ def list_announcements(
     return summaries.summarize_announcement_feed(feed, limit, unread_only)
 
 
-def show_announcement(client: ParroClient, announcement_id: int | None, raw: bool = False) -> Any:
-    event = client.get_announcement(require_id(announcement_id, "announcement id"))
-    return event if raw else summaries.summarize_announcement_detail(event)
+def show_announcement(
+    client: ParroClient, announcement_id: int | None, raw: bool = False, mark_read: bool = False
+) -> Any:
+    """One announcement; with `mark_read`, marked as read once it has been fetched to show."""
+    event_id = require_id(announcement_id, "announcement id")
+    event = client.get_announcement(event_id)
+    marked = (
+        mark_if_unread(client, "announcement", event_id, event.get("read")) if mark_read else None
+    )
+    if raw:
+        return event
+    result = summaries.summarize_announcement_detail(event)
+    if marked is not None:
+        result["marked_read"] = marked
+    return result
 
 
 CALENDAR_PAGE_SIZE = 50
@@ -331,21 +344,33 @@ OVERVIEW_ITEMS = 5
 
 
 def show_overview(
-    client: ParroClient, now: datetime | None = None, limit: int = OVERVIEW_ITEMS
+    client: ParroClient,
+    now: datetime | None = None,
+    limit: int = OVERVIEW_ITEMS,
+    unread_only: bool = True,
 ) -> dict[str, Any]:
-    """The app's home screen: unread counts, latest announcements, what is coming up, and chats
-    with unread messages. `now` decides what "coming up" means (tests pass a fixed time)."""
+    """The app's home screen: unread counts, announcements, what is coming up, and chats with unread
+    messages. `now` decides what "coming up" means (tests pass a fixed time).
+
+    By default only what you have not read yet: unread announcements and unread calendar items
+    (the API has no read filter, so this filters itself, before the limit). `unread_only=False`
+    shows the latest announcements and everything coming up instead.
+    """
     moment = now or current_time()
     groups = client.list_current_group_names()
-    feed = client.collect_feed(ANNOUNCEMENT_LIST_DTYPE, limit_per_group=limit, groups=groups)
+    per_group = max(limit, UNREAD_SCAN_PAGE_SIZE) if unread_only else limit
+    feed = client.collect_feed(ANNOUNCEMENT_LIST_DTYPE, limit_per_group=per_group, groups=groups)
     calendar = collect_calendar(client, None, None, groups, moment, False, limit)
     agenda = summaries.summarize_calendar_feed(calendar, limit=len(calendar))
+    if unread_only:
+        agenda["items"] = [item for item in agenda["items"] if item.get("read") is False]
     upcoming = choose_period(agenda, moment, past=False, limit=limit)["items"]
     rooms = summaries.summarize_chatrooms(client.list_chatrooms())
     unread_rooms = [room for room in rooms["chatrooms"] if room.get("unreadCount")]
     return {
+        "unread_only": unread_only,
         "unread": summaries.summarize_unread_counts(client.get_unread_counts()),
-        "announcements": summaries.summarize_announcement_feed(feed, limit),
+        "announcements": summaries.summarize_announcement_feed(feed, limit, unread_only),
         "calendar": {"count": len(upcoming), "items": upcoming},
         "chats": {"total": len(unread_rooms), "chatrooms": unread_rooms},
     }
@@ -354,19 +379,102 @@ def show_overview(
 # ------------------------------------------------------------------------------ chats
 
 
-def list_chatrooms(client: ParroClient, limit: int = 25, raw: bool = False) -> Any:
-    response = client.list_chatrooms(limit=limit)
-    return response.payload if raw else summaries.summarize_chatrooms(response)
+CHAT_TYPES = ("single", "bot", "calendar", "group", "family")
+# How archived chats are treated → the API's `archived` value (spec: an uppercase enum).
+ARCHIVED_CHOICES = {"exclude": None, "only": "TRUE", "include": "BOTH"}
+
+
+@dataclass(frozen=True)
+class ChatFilter:
+    """Which chats to list. The default is the API's own: every chat that is not archived."""
+
+    unread: bool = False
+    archived: str = "exclude"
+    chat_type: str | None = None
+    schoolyear: int | None = None
+
+    def as_params(self) -> dict[str, str]:
+        if self.archived not in ARCHIVED_CHOICES:
+            raise ConfigurationError("`archived` must be 'exclude', 'only' or 'include'.")
+        params: dict[str, str] = {}
+        if self.unread:
+            params["read"] = "false"
+        if ARCHIVED_CHOICES[self.archived]:
+            params["archived"] = str(ARCHIVED_CHOICES[self.archived])
+        if self.chat_type:
+            if self.chat_type.lower() not in CHAT_TYPES:
+                raise ConfigurationError(f"The chat type must be one of: {', '.join(CHAT_TYPES)}.")
+            params["chatRoom.type"] = self.chat_type.upper()
+        if self.schoolyear is not None:
+            params["chatRoom.createdInSchoolyear"] = str(int(self.schoolyear))
+        return params
+
+
+def list_chatrooms(
+    client: ParroClient, limit: int = 25, raw: bool = False, chats: ChatFilter | None = None
+) -> Any:
+    """Chats, filtered by the API. `unread` is also checked here: the live check could not see
+    the API's `read` filter at work (there were no unread chats)."""
+    chosen = chats or ChatFilter()
+    response = client.list_chatrooms(limit=limit, filters=chosen.as_params())
+    if raw:
+        return response.payload
+    result = summaries.summarize_chatrooms(response)
+    if chosen.unread:
+        result["chatrooms"] = [room for room in result["chatrooms"] if room.get("unreadCount")]
+        result["total"] = len(result["chatrooms"])
+    return result
 
 
 def list_chat_messages(
-    client: ParroClient, chatroom_id: int | None, limit: int = 30, raw: bool = False
+    client: ParroClient,
+    chatroom_id: int | None,
+    limit: int = 30,
+    raw: bool = False,
+    since: str | None = None,
+    mark_read: bool = False,
 ) -> Any:
+    """Messages of one chat; with `since` (a date or an ISO time) only those written since then.
+    With `mark_read` the chat is marked as read once the messages have been fetched to show."""
     room_id = require_id(chatroom_id, "chatroom id")
-    response = client.list_chat_messages(room_id, limit=limit)
+    created_since = api_time(since) if since else None
+    response = client.list_chat_messages(room_id, limit=limit, created_since=created_since)
+    marked = None
+    if mark_read:
+        unread = client.get_chatroom(room_id).get("unreadCount")
+        marked = mark_if_unread(client, "chat", room_id, not unread)
     if raw:
         return response.payload
-    return {"chatroom_id": room_id, **summaries.summarize_chat_messages(response)}
+    result = {"chatroom_id": room_id, **summaries.summarize_chat_messages(response)}
+    if created_since:
+        result["since"] = created_since
+    if marked is not None:
+        result["marked_read"] = marked
+    return result
+
+
+def api_time(text: str) -> str:
+    """A date (local midnight) or an ISO time, in the API's UTC form: '2026-09-30T22:00:00.000Z'."""
+    try:
+        moment = datetime.fromisoformat(text.strip().replace("Z", "+00:00"))
+    except ValueError:
+        raise ConfigurationError(
+            f"Not a date or time: {text!r}. Use e.g. 2026-10-01 or 2026-10-01T08:00."
+        ) from None
+    if moment.tzinfo is None:
+        moment = moment.astimezone()  # a date or time without offset: the local time zone
+    return moment.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+
+def list_chat_members(
+    client: ParroClient, chatroom_id: int | None, include_former: bool = False, raw: bool = False
+) -> Any:
+    """Who is in a chat: name, parent or teacher, children, admin (spec: chatroommember)."""
+    room_id = require_id(chatroom_id, "chatroom id")
+    response = client.list_chatroom_members(room_id, active_only=not include_former)
+    if raw:
+        return response.payload
+    return {"chatroom_id": room_id, **summaries.summarize_chat_members(response)}
 
 
 # ------------------------------------------------------------------------- attachments
@@ -502,6 +610,81 @@ def get_any(
         raise ConfigurationError("Give a path, e.g. /accountsettings or /absence/setting.")
     response = client.get(path, params, limit=limit, offset=offset, count_total=True)
     return summaries.summarize_any_response(response, raw=raw)
+
+
+# ----------------------------------------------------------------------- marking as read
+# The only writes (PLAN-read-state-and-filters §2): never automatic, always on request.
+
+MARK_READ_KINDS = ("announcement", "calendar", "chat")
+READ_STATE_NOTE = (
+    "The school sees this: teachers see who read an announcement, and chats show read receipts. "
+    "The Parro app shows it as read too."
+)
+
+
+def mark_if_unread(client: ParroClient, kind: ReadStateKind, item_id: int, is_read: Any) -> bool:
+    """Mark as read unless it already is. True when this call marked it."""
+    if is_read is True:
+        return False
+    client.mark_read(kind, item_id)
+    return True
+
+
+def mark_read(client: ParroClient, kind: str, item_id: int | None) -> dict[str, Any]:
+    """Mark one announcement, calendar item or chat as read.
+
+    The item is fetched first, so a wrong id or the wrong kind is an error and not a write, and
+    an item that is already read is left alone.
+    """
+    if kind not in MARK_READ_KINDS:
+        raise ConfigurationError(f"Mark what as read? One of: {', '.join(MARK_READ_KINDS)}.")
+    identifier = require_id(item_id, f"{kind} id")
+    if kind == "announcement":
+        event = client.get_announcement(identifier)
+        title, is_read = event.get("title"), event.get("read")
+        marked = mark_if_unread(client, "announcement", identifier, is_read)
+    elif kind == "calendar":
+        event = client.get_calendar_item(identifier)
+        title, is_read = (event.get("calendarItem") or {}).get("title"), event.get("read")
+        marked = mark_if_unread(client, "calendar", identifier, is_read)
+    else:
+        room = client.get_chatroom(identifier)
+        title, is_read = room.get("title"), not room.get("unreadCount")
+        marked = mark_if_unread(client, "chat", identifier, is_read)
+    return {
+        "kind": kind,
+        "id": identifier,
+        "title": title,
+        "marked_read": marked,
+        "already_read": not marked,
+        "note": READ_STATE_NOTE,
+    }
+
+
+def mark_group_announcements_read(
+    client: ParroClient, group_id: int | None, confirmed: bool = False
+) -> dict[str, Any]:
+    """All unread announcements of one group: counted first, marked only when `confirmed`."""
+    identifier = require_id(group_id, "group id")
+    groups = client.list_current_group_names()
+    if identifier not in groups:
+        raise ConfigurationError(f"Group #{identifier} is not one of your current groups.")
+    feed = client.collect_feed(
+        ANNOUNCEMENT_LIST_DTYPE, identifier, limit_per_group=UNREAD_SCAN_PAGE_SIZE
+    )
+    unread = [item.event for item in feed if item.event.get("read") is False]
+    result: dict[str, Any] = {
+        "group_id": identifier,
+        "group": groups[identifier],
+        "unread": len(unread),
+        "titles": [str(event.get("title") or "") for event in unread],
+        "marked_read": False,
+        "note": READ_STATE_NOTE,
+    }
+    if confirmed and unread:
+        client.mark_read("group-announcements", identifier)
+        result["marked_read"] = True
+    return result
 
 
 def require_id(value: Any, what: str) -> int:
@@ -688,7 +871,11 @@ def sync_calendar_item(
 
 def sync_chats(client: ParroClient, target: archive.Archive, progress: SyncProgress) -> None:
     """Every chat as one file; the messages are fetched only when the chat changed."""
-    rooms = read_all_pages(lambda offset: client.list_chatrooms(SYNC_PAGE_SIZE, offset))
+    # The API leaves archived chats out unless asked (spec: `archived`); the archive keeps them all.
+    everything = {"archived": "BOTH"}
+    rooms = read_all_pages(
+        lambda offset: client.list_chatrooms(SYNC_PAGE_SIZE, offset, filters=everything)
+    )
     for room in rooms:
         room_id = get_object_id(room)
         if room_id is None:

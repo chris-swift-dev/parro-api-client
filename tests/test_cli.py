@@ -67,7 +67,7 @@ COMMANDS_WITH_JSON_OUTPUT = [
     ["announcement", "5000000101"],
     ["calendar", "--limit", "1"],
     ["chatrooms"],
-    ["chat-messages", "5", "--limit", "1"],
+    ["chat-messages", "8000000001", "--limit", "1"],
     ["get", "/accountsettings"],
     ["get", "/event", "--param", "dtype=event.RAnnouncementEventPrimer", "--param", "group=1"],
     ["login-url"],
@@ -224,7 +224,14 @@ def test_help_reads_well(capsys):
         parro_cli.main(["--help"])
     assert stop.value.code == 0
     text = capsys.readouterr().out
-    for expected in ("Read-only client for Parro", "announcements", "attachment", "exit codes"):
+    for expected in (
+        "Client for Parro",
+        "the school can see that",
+        "mark-read",
+        "announcements",
+        "attachment",
+        "exit codes",
+    ):
         assert expected in text
     for command in parro_cli.HANDLERS:
         with pytest.raises(SystemExit):

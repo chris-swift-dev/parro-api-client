@@ -777,6 +777,62 @@ CHATROOMS = [
         ),
     ),
 ]
+# The real API puts the membership link ("koppeling") first and the chat room's own link second;
+# only the second is the chat room's id (PLAN-read-state-and-filters, probe results).
+for _room in CHATROOMS:
+    _own_id = _room["links"][0]["id"]
+    _room["links"].insert(
+        0,
+        {
+            "id": _own_id + 500,
+            "rel": "koppeling",
+            "type": "chat.RChatRoomPrimer",
+            "href": f"{API}/chatroommember/{_own_id + 500}",
+        },
+    )
+
+
+def chat_member(
+    member_id: int, person: dict[str, Any], admin: bool = False, active: bool = True
+) -> dict[str, Any]:
+    """One member of a chat: a parent (key `guardian`) or a teacher (key `teacher`)."""
+    key = "teacher" if person["role"] == "TEACHER" else "guardian"
+    if key == "teacher":  # inside a chat member the API sends the full identity.RTeacher
+        person = {**person, "dtype": "identity.RTeacher"}
+    return geon(
+        "chat.RChatRoomMember",
+        member_id,
+        lastModifiedAt="2026-11-03T16:28:35.509+01:00",
+        muted=False,
+        todo=False,
+        unreadCount=0,
+        admin=admin,
+        active=active,
+        archived=False,
+        createdAt="2026-10-27T15:05:00.000+01:00",
+        **{key: person},
+    )
+
+
+def guardian_with_children(
+    person_id: int, first: str, last: str, children: list[str]
+) -> dict[str, Any]:
+    guardian = person("identity.RGuardianPrimer", person_id, first, last, "GUARDIAN")
+    guardian.update(accountActive=True, childNames=children)
+    return guardian
+
+
+# The carpool chat of the museum trip: the teacher (admin) and three parents; one has left.
+CHAT_MEMBERS = [
+    chat_member(8200000001, TEACHER_TOM, admin=True),
+    chat_member(8200000002, guardian_with_children(GUARDIAN_ID, "Sanne", "de Vries", ["Daan"])),
+    chat_member(8200000003, guardian_with_children(2000000003, "Joris", "Peters", ["Sem"])),
+    chat_member(8200000004, guardian_with_children(2000000004, "Fatima", "Yilmaz", ["Noor"])),
+    chat_member(
+        8200000005, guardian_with_children(2000000005, "Kees", "Visser", ["Lotte"]), active=False
+    ),
+]
+
 # Delivered newest first on purpose: the conversation view must sort them itself.
 CHAT_MESSAGES = [
     chat_message(
@@ -1006,6 +1062,7 @@ def files() -> dict[str, Any]:
         "listSystemNews.200.json": {"items": SYSTEM_NEWS},
         "getAbsenceSetting.200.json": {"items": []},
         "listChatrooms.200.json": {"items": CHATROOMS},
+        "listChatroomMembers.200.json": {"items": CHAT_MEMBERS},
         "listChatMessages.200.json": {"items": CHAT_MESSAGES},
         # Shape of GET /calendar/sync (captured 2026-11-05); id, token and noCache are invented.
         "getCalendarSync.200.json": {

@@ -2,8 +2,9 @@
 
 Samples come from real captures and are sanitized by hand; this scan checks that it was done.
 Every value under a name or address field must be a placeholder, and every signed or secret link
-must end in a placeholder. A finding names the place (file, JSON path, length), never the value,
-so the scan's own output cannot leak what it found.
+must end in a placeholder. So must every link field (`url`, `…Url`, `avatar`), an organisation's
+`code`, `uploadId`, and the text of a chat message. A finding names the place (file, JSON path,
+length), never the value, so the scan's own output cannot leak what it found.
 
 In an OpenAPI document only the examples are checked for names (that is where sample data ends
 up); links are checked everywhere.
@@ -43,6 +44,17 @@ SECRET_LINKS = {
 }
 PLACEHOLDER_LINK = re.compile(r"^(REDACTED|<|[\d/]*1a111111)")
 
+# Other values that must be placeholders (PLAN-read-state-and-filters phase 2). Each kind has its
+# own test of what counts as a placeholder.
+#   link:   any `url`, `…Url` or `avatar` field (download and avatar links carry access keys);
+#   code:   an organisation's `code` (identifies the school);
+#   upload: `uploadId` (identifies a file);
+#   text:   the `text` of a chat message (written by people, stored verbatim).
+LINK_FIELDS = re.compile(r"^(url|.*Url|avatar)$")
+PLACEHOLDER_LINK_VALUE = re.compile(r"(?i)redacted|example|<|123456|000000|abcdef")
+PLACEHOLDER_CODE = re.compile(r"^00[A-Z]{2}$")
+PLACEHOLDER_UPLOAD = re.compile(r"(?i)^0{8}-0{4}-|redacted|example")
+
 
 def is_placeholder(value: str) -> bool:
     return bool(PLACEHOLDER_WORD.search(value) or PLACEHOLDER_NUMBER.match(value)) or not value
@@ -62,6 +74,37 @@ def walk(value: Any, path: str = "") -> Iterator[tuple[str, str]]:
     elif isinstance(value, list):
         for index, item in enumerate(value):
             yield from walk(item, f"{path}/{index}")
+
+
+def other_values(value: Any, path: str = "") -> Iterator[tuple[str, str, str]]:
+    """(json path, kind, string) for every link, school code, upload id and chat text."""
+    if isinstance(value, dict):
+        dtype = str(value.get("dtype") or "")
+        for key, item in value.items():
+            here = f"{path}/{key}"
+            if not isinstance(item, str):
+                yield from other_values(item, here)
+            elif LINK_FIELDS.match(key):
+                yield here, "link", item
+            elif key == "code" and "organisation" in path.lower():
+                yield here, "code", item
+            elif key == "uploadId":
+                yield here, "upload", item
+            elif key == "text" and dtype.startswith("chat.") and dtype.endswith("Message"):
+                yield here, "text", item
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            yield from other_values(item, f"{path}/{index}")
+
+
+def other_is_placeholder(kind: str, value: str) -> bool:
+    tests = {
+        "link": PLACEHOLDER_LINK_VALUE.search,
+        "code": PLACEHOLDER_CODE.match,
+        "upload": PLACEHOLDER_UPLOAD.search,
+        "text": PLACEHOLDER_WORD.search,
+    }
+    return not value or bool(tests[kind](value))
 
 
 def example_values(spec: Any, path: str = "") -> Iterator[tuple[str, Any]]:
@@ -93,6 +136,11 @@ def scan_text(text: str, source: str) -> list[str]:
     for path, value in names:
         if not is_placeholder(value):
             findings.append(f"{source}: {path}: not a placeholder ({len(value)} characters)")
+    others = [(f"{root}{path}", kind, value) for root, part in roots
+              for path, kind, value in other_values(part)]  # fmt: skip
+    for path, kind, value in others:
+        if not other_is_placeholder(kind, value):
+            findings.append(f"{source}: {path}: {kind} not a placeholder ({len(value)} characters)")
     for label, pattern in SECRET_LINKS.items():
         for match in pattern.finditer(text):
             if not PLACEHOLDER_LINK.match(match.group(1)):

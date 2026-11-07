@@ -1,4 +1,5 @@
-"""The MCP server: read-only, for Parro (talk.parro.com), speaking JSON-RPC over stdio.
+"""The MCP server for Parro (talk.parro.com), speaking JSON-RPC over stdio. Its tools read;
+parro_mark_read, the one that changes something, exists only with PARRO_ALLOW_MARK_READ=1.
 
 Installed, it is the `parro-client-mcp` command (`run()`); from a source folder or a release
 archive, `python3 parro_mcp.py` starts the same server.
@@ -219,14 +220,37 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "parro_chatrooms",
-        "description": "Chat conversations with teachers and other parents.",
-        "inputSchema": schema({"limit": integer(default=25)}),
+        "description": "Chat conversations with teachers and other parents. Archived chats only "
+        "with archived 'only' or 'include'.",
+        "inputSchema": schema(
+            {
+                "limit": integer(default=25),
+                "unread": flag("Only chats with unread messages."),
+                "archived": {
+                    "type": "string",
+                    "enum": ["exclude", "only", "include"],
+                    "default": "exclude",
+                    "description": "Leave out archived chats, show only them, or include them.",
+                },
+                "type": {
+                    "type": "string",
+                    "enum": ["single", "bot", "calendar", "group", "family"],
+                    "description": "Only this kind of chat.",
+                },
+                "schoolyear": integer("Only chats started in this school year, e.g. 2025."),
+            }
+        ),
     },
     {
         "name": "parro_chat_messages",
         "description": "Messages of one chat conversation (ids from parro_chatrooms).",
         "inputSchema": schema(
-            {"chatroom_id": integer(), "limit": integer(default=30)}, required=["chatroom_id"]
+            {
+                "chatroom_id": integer(),
+                "limit": integer(default=30),
+                "since": text("Only messages since then: a date (2026-10-01) or an ISO time."),
+            },
+            required=["chatroom_id"],
         ),
     },
     {
@@ -256,8 +280,12 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "name": "parro_overview",
         "description": "What is new, like the app's home screen: unread counts, the latest "
         "announcements, what is coming up in the calendar, and chats with unread messages. A "
-        "good first call; use format 'markdown' for a readable summary.",
-        "inputSchema": schema(raw=False),
+        "good first call; use format 'markdown' for a readable summary. By default only what "
+        "is not read yet; all=true shows the latest announcements and everything coming up.",
+        "inputSchema": schema(
+            {"all": flag("The latest announcements and everything coming up, read or not.")},
+            raw=False,
+        ),
     },
     {
         "name": "parro_calendar_link",
@@ -284,7 +312,55 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             }
         ),
     },
+    {
+        "name": "parro_chat_members",
+        "description": "Who is in one chat conversation: parents (with their children) and "
+        "teachers, and who is admin (ids from parro_chatrooms).",
+        "inputSchema": schema(
+            {
+                "chatroom_id": integer(),
+                "include_former": flag("Also members who left the chat."),
+            },
+            required=["chatroom_id"],
+        ),
+    },
 ]
+
+
+# Only listed and callable with PARRO_ALLOW_MARK_READ=1: the one tool that changes something at
+# Parro (PLAN-read-state-and-filters §2). The annotations tell MCP clients to ask first.
+MARK_READ_TOOL: dict[str, Any] = {
+    "name": "parro_mark_read",
+    "description": "Mark one announcement, calendar item or chat as read. Only when the user asks "
+    "for it, never in passing: the school sees it (teachers see who read an announcement, chats "
+    "show read receipts) and the Parro app shows it as read. An item that is already read is "
+    "left alone.",
+    "inputSchema": schema(
+        {
+            "kind": {
+                "type": "string",
+                "enum": ["announcement", "calendar", "chat"],
+                "description": "What to mark.",
+            },
+            "id": integer(
+                "Its id (from parro_overview, parro_announcements, parro_calendar or "
+                "parro_chatrooms)."
+            ),
+        },
+        required=["kind", "id"],
+    ),
+    "annotations": {
+        "title": "Mark as read",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+}
+MARK_READ_DISABLED = (
+    "parro_mark_read is off. It changes what the school sees, so it has to be switched on: set "
+    "PARRO_ALLOW_MARK_READ=1 in this server's environment."
+)
 
 
 # --------------------------------------------------------------------------- tool calling
@@ -362,13 +438,29 @@ TOOL_FUNCTIONS: dict[str, ToolFunction] = {
         past=bool(a.get("past")),
     ),
     "parro_chatrooms": lambda c, a: operations.list_chatrooms(
-        c, integer_argument(a, "limit", 25), raw=raw(a)
+        c,
+        integer_argument(a, "limit", 25),
+        raw=raw(a),
+        chats=operations.ChatFilter(
+            bool(a.get("unread")),
+            str(a.get("archived") or "exclude"),
+            a.get("type"),
+            integer_argument(a, "schoolyear"),
+        ),
     ),
     "parro_chat_messages": lambda c, a: operations.list_chat_messages(
-        c, a.get("chatroom_id"), integer_argument(a, "limit", 30), raw=raw(a)
+        c,
+        a.get("chatroom_id"),
+        integer_argument(a, "limit", 30),
+        raw=raw(a),
+        since=a.get("since"),
     ),
+    "parro_chat_members": lambda c, a: operations.list_chat_members(
+        c, a.get("chatroom_id"), include_former=bool(a.get("include_former")), raw=raw(a)
+    ),
+    "parro_mark_read": lambda c, a: operations.mark_read(c, str(a.get("kind")), a.get("id")),
     "parro_unread": lambda c, a: operations.show_unread_counts(c, raw=raw(a)),
-    "parro_overview": lambda c, a: operations.show_overview(c),
+    "parro_overview": lambda c, a: operations.show_overview(c, unread_only=not a.get("all")),
     "parro_calendar_link": lambda c, a: operations.calendar_link(c),
     "parro_privacy": lambda c, a: (
         operations.privacy_link(c, a.get("child_id"))
@@ -408,6 +500,8 @@ TOOL_VIEWS = {
     "parro_calendar": "calendar",
     "parro_chatrooms": "chatrooms",
     "parro_chat_messages": "chat_messages",
+    "parro_chat_members": "chat_members",
+    "parro_mark_read": "mark_read",
     "parro_unread": "unread",
     "parro_get": "get",
     "parro_overview": "overview",
@@ -457,13 +551,25 @@ class McpServer:
         self._client.token_store.reload()
         return self._client
 
+    @staticmethod
+    def mark_read_allowed() -> bool:
+        """PARRO_ALLOW_MARK_READ, read on every call (a typo there is simply 'off')."""
+        try:
+            return Settings.from_environment().allow_mark_read
+        except ParroError:
+            return False
+
     def list_tools(self) -> list[dict[str, Any]]:
+        if self.mark_read_allowed():
+            return [*TOOL_DEFINITIONS, MARK_READ_TOOL]
         return TOOL_DEFINITIONS
 
     def call_tool(self, name: str, arguments: dict[str, Any] | None) -> ToolCallResult:
         tool = TOOL_FUNCTIONS.get(name)
         if tool is None:
             return error_result(f"unknown tool: {name}")
+        if name == MARK_READ_TOOL["name"] and not self.mark_read_allowed():
+            return error_result(MARK_READ_DISABLED)
         arguments = dict(arguments or {})
         try:
             output_format = requested_format(arguments)

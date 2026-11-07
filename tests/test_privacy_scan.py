@@ -75,7 +75,10 @@ def test_secret_links_must_be_redacted():
     live = {"url": "https://start.parnassys.net/bao/privacy?signedpermission=a8Fk2q"}
     calendar = {"strings": ["https://calendar.parro.com/ical/4812/9f8e7d6c?noCache=1"]}
     assert findings(redacted) == []
-    assert findings(live) == ["sample.json: signed privacy link that is not redacted"]
+    assert findings(live) == [
+        "sample.json: /url: link not a placeholder (63 characters)",  # every link field
+        "sample.json: signed privacy link that is not redacted",  # and the link itself
+    ]
     assert findings(calendar) == ["sample.json: calendar subscription link that is not redacted"]
 
 
@@ -101,3 +104,46 @@ def test_in_a_spec_only_the_examples_are_checked_for_names():
 def test_the_published_spec_is_clean():
     text = PUBLIC_SPEC.read_text(encoding="utf-8")
     assert scan.scan_text(text, PUBLIC_SPEC.name) == []
+
+
+# ------------------------------------------- links, school codes, upload ids, chat texts
+
+
+def test_every_link_field_must_be_a_placeholder():
+    live = {
+        "url": "https://d3k9f8a7b6c5e4.cloudfront.net/attachments/9f8e7d6c5b4a39281706f5e4d3c2b1a0/1-x",
+        "cachedAvatarUrl": "https://img.cdnhost.net/u/48213",
+        "avatar": "https://start.parnassys.net/bao/avatar/77231",
+    }
+    found = findings(live)
+    assert [line.split(": ")[1] for line in found] == ["/url", "/cachedAvatarUrl", "/avatar"]
+    assert all("link not a placeholder" in line for line in found)
+    assert not any("48213" in line or "cloudfront" in line for line in found), "values never shown"
+    placeholders = {
+        "url": "https://d111111abcdef8.cloudfront.net/REDACTED/0/1-0",
+        "cachedAvatarUrl": "https://start.parnassys.net/bao/image?req=REDACTED",
+        "avatar": "REDACTED",
+        "downloadUrl": "",
+    }
+    assert findings(placeholders) == []
+
+
+def test_school_codes_upload_ids_and_chat_texts():
+    sample = {
+        "organisation": {"code": "07QX"},
+        "group": {"code": "GROUP3"},  # not an organisation: a code like this is the API's own
+        "attachments": [{"uploadId": "3f9c1e2a-7b4d-4e8a-9c21-5d6e7f8a9b0c"}],
+        "message": {"dtype": "chat.RChatTextMessage", "text": "Morgen ben ik er niet."},
+        "announcement": {"dtype": "event.RAnnouncementEventPrimer", "text": "not a chat message"},
+    }
+    assert [line.split(": ", 2)[1:] for line in findings(sample)] == [
+        ["/organisation/code", "code not a placeholder (4 characters)"],
+        ["/attachments/0/uploadId", "upload not a placeholder (36 characters)"],
+        ["/message/text", "text not a placeholder (22 characters)"],
+    ]
+    clean = {
+        "organisation": {"code": "00AB"},
+        "attachments": [{"uploadId": "00000000-0000-4000-8000-000000000001"}],
+        "message": {"dtype": "chat.RChatStatusMessage", "text": "Voorbeeldtekst"},
+    }
+    assert findings(clean) == []

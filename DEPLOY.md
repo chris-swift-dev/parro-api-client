@@ -31,7 +31,7 @@ is a CLI command; run it where you want the files, not inside the MCP container.
 Check after a rebuild:
 
 ```bash
-docker exec <container> /opt/venv/bin/python /app/parro_mcp.py tools   # lists 19 tools
+docker exec <container> /opt/venv/bin/python /app/parro_mcp.py tools   # lists 20 tools
 docker exec <container> parro-client-mcp tools                         # (installed package)
 ```
 
