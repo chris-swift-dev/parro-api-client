@@ -751,12 +751,17 @@ def archived_helper_lines(item: dict[str, Any], details: dict[str, Any]) -> list
 
 
 def render_overview(result: dict[str, Any], options: RenderOptions) -> str:
-    """The app's home screen in four short sections, each with the command that shows more."""
+    """The app's home screen in four short sections, each with the command that shows more.
+
+    By default only unread announcements and unread calendar items; `overview --all` (MCP:
+    all=true) shows the latest announcements and everything coming up.
+    """
+    unread_only = bool(result.get("unread_only"))
     return document(
         "# Overview",
         overview_unread(result.get("unread") or []),
-        overview_announcements(result.get("announcements") or {}, options),
-        overview_calendar(result.get("calendar") or {}, options),
+        overview_announcements(result.get("announcements") or {}, options, unread_only),
+        overview_calendar(result.get("calendar") or {}, options, unread_only),
         overview_chats(result.get("chats") or {}, options),
     )
 
@@ -769,8 +774,14 @@ def overview_unread(counts_per_guardian: list[dict[str, Any]]) -> str:
     return "## Unread\n" + "\n".join(lines or ["Nothing unread."])
 
 
-def overview_announcements(feed: dict[str, Any], options: RenderOptions) -> str:
+def overview_announcements(
+    feed: dict[str, Any], options: RenderOptions, unread_only: bool = False
+) -> str:
     lines = [f"- {overview_announcement_line(item)}" for item in feed.get("announcements", [])]
+    if unread_only:
+        more = hint(options, "announcements --unread-only", "parro_announcements(unread_only=true)")
+        empty = ["Nothing unread.", hint(options, "overview --all", "parro_overview(all=true)")]
+        return "## Unread announcements\n" + "\n".join([*lines, more] if lines else empty)
     more = hint(options, "announcements", "parro_announcements()")
     return "## Latest announcements\n" + "\n".join([*lines, more] if lines else ["None."])
 
@@ -782,7 +793,9 @@ def overview_announcement_line(item: dict[str, Any]) -> str:
     )
 
 
-def overview_calendar(agenda: dict[str, Any], options: RenderOptions) -> str:
+def overview_calendar(
+    agenda: dict[str, Any], options: RenderOptions, unread_only: bool = False
+) -> str:
     lines = []
     for item in agenda.get("items", []):
         start = parse_timestamp((item.get("calendarItem") or {}).get("startDate"))
@@ -790,7 +803,32 @@ def overview_calendar(agenda: dict[str, Any], options: RenderOptions) -> str:
         entry = agenda_entry(item, RenderOptions(audience=options.audience)).split("\n")[0]
         lines.append(f"- {day}, {entry.removeprefix('- ')}")
     more = hint(options, "calendar --details", "parro_calendar(details=true)")
+    if unread_only:
+        return "## New in the calendar\n" + "\n".join([*lines, more] if lines else ["Nothing new."])
     return "## Coming up\n" + "\n".join([*lines, more] if lines else ["Nothing planned."])
+
+
+def render_chat_members(result: dict[str, Any], options: RenderOptions) -> str:
+    """'- Sanne de Vries · parent of Mila, Daan · admin'."""
+    lines = []
+    for member in result.get("members", []):
+        children = member.get("children") or []
+        role = member.get("role") or ""
+        if role == "parent" and children:
+            role = f"parent of {', '.join(children)}"
+        lines.append(
+            "- "
+            + join_parts(
+                [
+                    member.get("name") or "(no name)",
+                    role,
+                    "admin" if member.get("admin") else "",
+                    "left the chat" if member.get("active") is False else "",
+                ]
+            )
+        )
+    heading = f"# Members of chat {object_id(result.get('chatroom_id'))} ({len(lines)})"
+    return document(heading, "\n".join(lines) if lines else "No members.")
 
 
 def overview_chats(chats: dict[str, Any], options: RenderOptions) -> str:
@@ -930,6 +968,7 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "calendar": render_agenda,
     "chatrooms": render_chatrooms,
     "chat_messages": render_conversation,
+    "chat_members": render_chat_members,
     "attachment": render_attachment,
     "cache": render_cache,
     "overview": render_overview,

@@ -89,7 +89,7 @@ CASES: list[tuple[str, dict[str, Any], Adjust]] = [
     # New: the messages name their chatroom (PLAN-readable-output phase 4).
     (
         "parro_chat_messages",
-        {"chatroom_id": 5},
+        {"chatroom_id": 8000000001},
         lambda old, new: (old, without(new, "chatroom_id")),
     ),
     ("parro_get", {"path": "/accountsettings"}, None),
@@ -213,8 +213,20 @@ def test_tools_list_matches_the_original_plus_the_login_method(tmp_path, monkeyp
         assert tool["properties"].pop("format")["default"] == "json"
     assert new_interface["parro_calendar"]["properties"].pop("details")["type"] == "boolean"
     assert new_interface["parro_calendar"]["properties"].pop("past")["type"] == "boolean"
-    assert new_interface.pop("parro_overview") == {"properties": {}}  # new tools
+    chatrooms = new_interface["parro_chatrooms"]["properties"]
+    assert {chatrooms.pop(k)["type"] for k in ("unread", "archived", "type", "schoolyear")} == {
+        "boolean",
+        "string",
+        "integer",
+    }
+    assert new_interface["parro_chat_messages"]["properties"].pop("since")["type"] == "string"
+    assert new_interface.pop("parro_overview") == {"properties": {"all": {"type": "boolean"}}}
     assert new_interface.pop("parro_calendar_link") == {"properties": {}}
     assert set(new_interface.pop("parro_privacy")["properties"]) == {"child_id", "link", "raw"}
+    assert set(new_interface.pop("parro_chat_members")["properties"]) == {
+        "chatroom_id",
+        "include_former",
+        "raw",
+    }
     assert new_interface == old_interface
     assert list(new_interface) == list(old_interface), "same tools, same order"

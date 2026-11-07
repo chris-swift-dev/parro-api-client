@@ -1,0 +1,322 @@
+{
+  "items": [
+    {
+      "dtype": "chat.RChatRoomMember",
+      "links": [
+        {
+          "id": 8200000001,
+          "rel": "self",
+          "type": "chat.RChatRoomMember",
+          "href": "https://rest-v2.parro.com/rest/v2/chatroommember/8200000001"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatRoomMember:READ:INSTANCE(8200000001)",
+          "type": "chat.RChatRoomMember",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8200000001)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-03T16:28:35.509+01:00",
+      "muted": false,
+      "todo": false,
+      "unreadCount": 0,
+      "admin": true,
+      "active": true,
+      "archived": false,
+      "createdAt": "2026-10-27T15:05:00.000+01:00",
+      "teacher": {
+        "dtype": "identity.RTeacher",
+        "links": [
+          {
+            "id": 2100000002,
+            "rel": "self",
+            "type": "identity.RTeacherPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/teacherprimer/2100000002"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RTeacherPrimer:READ:INSTANCE(2100000002)",
+            "type": "identity.RTeacherPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2100000002)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2021-10-28T10:18:43.076+02:00",
+        "firstname": "Tom",
+        "surname": "Smit",
+        "role": "TEACHER",
+        "active": true,
+        "accountActive": true
+      }
+    },
+    {
+      "dtype": "chat.RChatRoomMember",
+      "links": [
+        {
+          "id": 8200000002,
+          "rel": "self",
+          "type": "chat.RChatRoomMember",
+          "href": "https://rest-v2.parro.com/rest/v2/chatroommember/8200000002"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatRoomMember:READ:INSTANCE(8200000002)",
+          "type": "chat.RChatRoomMember",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8200000002)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-03T16:28:35.509+01:00",
+      "muted": false,
+      "todo": false,
+      "unreadCount": 0,
+      "admin": false,
+      "active": true,
+      "archived": false,
+      "createdAt": "2026-10-27T15:05:00.000+01:00",
+      "guardian": {
+        "dtype": "identity.RGuardianPrimer",
+        "links": [
+          {
+            "id": 2000000001,
+            "rel": "self",
+            "type": "identity.RGuardianPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/guardianprimer/2000000001"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RGuardianPrimer:READ:INSTANCE(2000000001)",
+            "type": "identity.RGuardianPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2000000001)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Sanne",
+        "surname": "de Vries",
+        "role": "GUARDIAN",
+        "accountActive": true,
+        "childNames": [
+          "Daan"
+        ]
+      }
+    },
+    {
+      "dtype": "chat.RChatRoomMember",
+      "links": [
+        {
+          "id": 8200000003,
+          "rel": "self",
+          "type": "chat.RChatRoomMember",
+          "href": "https://rest-v2.parro.com/rest/v2/chatroommember/8200000003"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatRoomMember:READ:INSTANCE(8200000003)",
+          "type": "chat.RChatRoomMember",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8200000003)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-03T16:28:35.509+01:00",
+      "muted": false,
+      "todo": false,
+      "unreadCount": 0,
+      "admin": false,
+      "active": true,
+      "archived": false,
+      "createdAt": "2026-10-27T15:05:00.000+01:00",
+      "guardian": {
+        "dtype": "identity.RGuardianPrimer",
+        "links": [
+          {
+            "id": 2000000003,
+            "rel": "self",
+            "type": "identity.RGuardianPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/guardianprimer/2000000003"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RGuardianPrimer:READ:INSTANCE(2000000003)",
+            "type": "identity.RGuardianPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2000000003)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Joris",
+        "surname": "Peters",
+        "role": "GUARDIAN",
+        "accountActive": true,
+        "childNames": [
+          "Sem"
+        ]
+      }
+    },
+    {
+      "dtype": "chat.RChatRoomMember",
+      "links": [
+        {
+          "id": 8200000004,
+          "rel": "self",
+          "type": "chat.RChatRoomMember",
+          "href": "https://rest-v2.parro.com/rest/v2/chatroommember/8200000004"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatRoomMember:READ:INSTANCE(8200000004)",
+          "type": "chat.RChatRoomMember",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8200000004)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-03T16:28:35.509+01:00",
+      "muted": false,
+      "todo": false,
+      "unreadCount": 0,
+      "admin": false,
+      "active": true,
+      "archived": false,
+      "createdAt": "2026-10-27T15:05:00.000+01:00",
+      "guardian": {
+        "dtype": "identity.RGuardianPrimer",
+        "links": [
+          {
+            "id": 2000000004,
+            "rel": "self",
+            "type": "identity.RGuardianPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/guardianprimer/2000000004"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RGuardianPrimer:READ:INSTANCE(2000000004)",
+            "type": "identity.RGuardianPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2000000004)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Fatima",
+        "surname": "Yilmaz",
+        "role": "GUARDIAN",
+        "accountActive": true,
+        "childNames": [
+          "Noor"
+        ]
+      }
+    },
+    {
+      "dtype": "chat.RChatRoomMember",
+      "links": [
+        {
+          "id": 8200000005,
+          "rel": "self",
+          "type": "chat.RChatRoomMember",
+          "href": "https://rest-v2.parro.com/rest/v2/chatroommember/8200000005"
+        }
+      ],
+      "permissions": [
+        {
+          "full": "chat.RChatRoomMember:READ:INSTANCE(8200000005)",
+          "type": "chat.RChatRoomMember",
+          "operations": [
+            "READ"
+          ],
+          "instances": [
+            "INSTANCE(8200000005)"
+          ]
+        }
+      ],
+      "additionalObjects": {},
+      "lastModifiedAt": "2026-11-03T16:28:35.509+01:00",
+      "muted": false,
+      "todo": false,
+      "unreadCount": 0,
+      "admin": false,
+      "active": false,
+      "archived": false,
+      "createdAt": "2026-10-27T15:05:00.000+01:00",
+      "guardian": {
+        "dtype": "identity.RGuardianPrimer",
+        "links": [
+          {
+            "id": 2000000005,
+            "rel": "self",
+            "type": "identity.RGuardianPrimer",
+            "href": "https://rest-v2.parro.com/rest/v2/guardianprimer/2000000005"
+          }
+        ],
+        "permissions": [
+          {
+            "full": "identity.RGuardianPrimer:READ:INSTANCE(2000000005)",
+            "type": "identity.RGuardianPrimer",
+            "operations": [
+              "READ"
+            ],
+            "instances": [
+              "INSTANCE(2000000005)"
+            ]
+          }
+        ],
+        "additionalObjects": {},
+        "lastModifiedAt": "2026-08-20T09:00:00.000+02:00",
+        "firstname": "Kees",
+        "surname": "Visser",
+        "role": "GUARDIAN",
+        "accountActive": true,
+        "childNames": [
+          "Lotte"
+        ]
+      }
+    }
+  ]
+}

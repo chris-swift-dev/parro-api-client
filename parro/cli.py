@@ -137,7 +137,14 @@ def add_login_commands(command: CommandFactory) -> None:
 
 
 def add_reading_commands(command: CommandFactory) -> None:
-    command("overview", "what is new: unread counts, latest announcements, coming up, chats")
+    overview = command(
+        "overview", "what is new: unread counts, unread announcements and calendar items, chats"
+    )
+    overview.add_argument(
+        "--all",
+        action="store_true",
+        help="the latest announcements and everything coming up, read or not",
+    )
     command("me", "the account: name, e-mail, school")
     add_limit(command("children", "the children linked to the account"), 20)
     privacy = command("privacy", "per child: can you change the privacy choices (photos, data) now")
@@ -166,10 +173,29 @@ def add_reading_commands(command: CommandFactory) -> None:
     add_calendar_commands(command)
     add_attachment_command(command)
 
-    add_limit(command("chatrooms", "chat conversations"), 25)
+    chats = add_limit(command("chatrooms", "chat conversations"), 25)
+    chats.add_argument("--unread", action="store_true", help="only chats with unread messages")
+    chats.add_argument(
+        "--archived",
+        choices=["only", "include"],
+        help="only archived chats, or archived chats too (default: not archived)",
+    )
+    chats.add_argument("--type", choices=list(operations.CHAT_TYPES), help="only this kind of chat")
+    chats.add_argument(
+        "--schoolyear",
+        type=int,
+        metavar="YEAR",
+        help="chats started in this school year, e.g. 2025",
+    )
     messages = command("chat-messages", "messages in one chat conversation")
     messages.add_argument("chatroom_id", type=int, help="chatroom id (see `chatrooms`)")
+    messages.add_argument(
+        "--since", metavar="DATE", help="only messages since then, e.g. 2026-10-01 (local time)"
+    )
     add_limit(messages, 30)
+    members = command("chat-members", "who is in a chat conversation")
+    members.add_argument("chatroom_id", type=int, help="chatroom id (see `chatrooms`)")
+    members.add_argument("--former", action="store_true", help="also members who left")
 
     add_local_data_commands(command)
     get = command("get", "GET any API path, e.g. /accountsettings (read-only)")
@@ -358,6 +384,7 @@ COMMAND_VIEWS = {
     "privacy": "privacy",
     "chatrooms": "chatrooms",
     "chat-messages": "chat_messages",
+    "chat-members": "chat_members",
     "get": "get",
     "cache": "cache",
     "sync": "sync",
@@ -380,7 +407,7 @@ HANDLERS: dict[str, Handler] = {
     "token": lambda c, a: PlainText(operations.access_token(c)),
     "login-url": lambda c, a: operations.login_url(c),
     "login-finish": lambda c, a: operations.login_finish(c, a.redirect_url),
-    "overview": lambda c, a: operations.show_overview(c),
+    "overview": lambda c, a: operations.show_overview(c, unread_only=not a.all),
     "me": lambda c, a: operations.show_account(c, raw=a.raw),
     "children": lambda c, a: operations.list_children(c, a.limit, raw=a.raw),
     "groups": lambda c, a: operations.list_groups(
@@ -398,9 +425,17 @@ HANDLERS: dict[str, Handler] = {
     "privacy": lambda c, a: (
         operations.privacy_link(c, a.link) if a.link is not None else operations.privacy(c, a.raw)
     ),
-    "chatrooms": lambda c, a: operations.list_chatrooms(c, a.limit, raw=a.raw),
+    "chatrooms": lambda c, a: operations.list_chatrooms(
+        c,
+        a.limit,
+        raw=a.raw,
+        chats=operations.ChatFilter(a.unread, a.archived or "exclude", a.type, a.schoolyear),
+    ),
     "chat-messages": lambda c, a: operations.list_chat_messages(
-        c, a.chatroom_id, a.limit, raw=a.raw
+        c, a.chatroom_id, a.limit, raw=a.raw, since=a.since
+    ),
+    "chat-members": lambda c, a: operations.list_chat_members(
+        c, a.chatroom_id, include_former=a.former, raw=a.raw
     ),
     "sync": lambda c, a: operations.sync_archive(
         c,

@@ -10,6 +10,7 @@ import json
 import urllib.parse
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,9 @@ REJECTED_PAGE_HTML = (
     "<span>Onjuiste inloggegevens. Account has 2 attempts remaining</span></li></ul>"
     "</body></html>"
 )
+
+# Chat room types the API accepts in `chatRoom.type` (spec).
+CHAT_TYPES = ("SINGLE", "BOT", "CALENDAR", "GROUP", "FAMILY")
 
 # Values tests look for in logs and error messages: none of them may ever show up there.
 USERNAME = "parent@example.com"
@@ -191,7 +195,6 @@ class FakeParroApi:
             "/identity/unreadcounts": "getUnreadCounts.200.json",
             "/absence/setting": "getAbsenceSetting.200.json",
             "/systemnews": "listSystemNews.200.json",
-            "/chatroom": "listChatrooms.200.json",
         }
         if path in single:
             return self._one(single[path], request.url)
@@ -214,8 +217,10 @@ class FakeParroApi:
             return self._collection(
                 "listGroups_previous.200.json" if previous else "listGroups.200.json", request
             )
-        if path.startswith("/chatroom/") and path.endswith("/chatmessage"):
-            return self._collection("listChatMessages.200.json", request)
+        if path == "/chatroom":
+            return self._chatrooms(query, request)
+        if path.startswith("/chatroom/"):
+            return self._chatroom_path(path, query, request)
         if path == "/event":
             return self._event_list(query, request)
         if path.startswith("/event/"):
@@ -269,9 +274,55 @@ class FakeParroApi:
         body = json.dumps(self.load_sample(sample_name)).encode()
         return HttpResponse(200, {"content-type": GEON_TYPE}, body, url)
 
+    def _chatrooms(self, query: dict[str, str], request: HttpRequest) -> HttpResponse:
+        """GET /chatroom with the filters the real API applies (spec, live check 2026-11-07)."""
+        rooms = self.load_sample("listChatrooms.200.json")["items"]
+        archived = query.get("archived", "FALSE")
+        chat_type = query.get("chatRoom.type")
+        if archived not in ("FALSE", "TRUE", "BOTH") or (
+            chat_type is not None and chat_type not in CHAT_TYPES
+        ):
+            body = b'{"code": 400, "message": "java.lang.IllegalArgumentException: No enum const"}'
+            return HttpResponse(400, {"content-type": GEON_TYPE}, body, request.url)
+        if archived != "BOTH":
+            rooms = [r for r in rooms if r.get("archived") is (archived == "TRUE")]
+        if chat_type is not None:
+            rooms = [r for r in rooms if r.get("type") == chat_type]
+        if query.get("read") == "false":
+            rooms = [r for r in rooms if r.get("unreadCount")]
+        return self._items(rooms, request)
+
+    def _chatroom_path(
+        self, path: str, query: dict[str, str], request: HttpRequest
+    ) -> HttpResponse:
+        """Calls on one chat room. The id must be the room's own (`rel: self`) id: the membership
+        id (`koppeling`, the first link) answers 403, as the real API does."""
+        room_id = int(path.split("/")[2])
+        rooms = self.load_sample("listChatrooms.200.json")["items"]
+        own_ids = {link["id"] for r in rooms for link in r["links"] if link["rel"] == "self"}
+        if room_id not in own_ids:
+            body = b'{"code": 403, "message": "CHAT_NOT_ACTIVE_MEMBER"}'
+            return HttpResponse(403, {"content-type": GEON_TYPE}, body, request.url)
+        if path.endswith("/chatmessage"):
+            messages = self.load_sample("listChatMessages.200.json")["items"]
+            since = query.get("createdSince")
+            if since:
+                limit = datetime.fromisoformat(since.replace("Z", "+00:00"))
+                messages = [m for m in messages if datetime.fromisoformat(m["createdAt"]) >= limit]
+            return self._items(messages, request)
+        if path.endswith("/chatroommember"):
+            members = self.load_sample("listChatroomMembers.200.json")["items"]
+            if query.get("isActive") == "true":
+                members = [m for m in members if m.get("active")]
+            return self._items(members, request)
+        return self._not_found(request)
+
     def _collection(self, sample_name: str, request: HttpRequest) -> HttpResponse:
         """Answer 206 with a Content-Range, honouring the Range header like the real API."""
-        items = self.load_sample(sample_name)["items"]
+        return self._items(self.load_sample(sample_name)["items"], request)
+
+    def _items(self, items: list[Any], request: HttpRequest) -> HttpResponse:
+        """A page of `items`: 206 with a Content-Range, honouring the Range header."""
         first, last = 0, len(items) - 1
         requested = request.headers.get("Range", "")
         if requested.startswith("items="):

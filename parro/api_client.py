@@ -278,16 +278,36 @@ class ParroClient:
     def get_absence_settings(self) -> ApiResponse:
         return self.get("/absence/setting")
 
-    def list_chatrooms(self, limit: int = 25, offset: int = 0) -> ApiResponse:
-        return self.get("/chatroom", limit=limit, offset=offset, count_total=True)
+    def list_chatrooms(
+        self, limit: int = 25, offset: int = 0, filters: dict[str, str] | None = None
+    ) -> ApiResponse:
+        """GET /chatroom. Without filters the API leaves out archived chats (spec: `archived`)."""
+        return self.get("/chatroom", filters or None, limit=limit, offset=offset, count_total=True)
 
-    def list_chat_messages(self, chatroom_id: int, limit: int = 30, offset: int = 0) -> ApiResponse:
-        """Messages of one chat, newest first (spec)."""
+    def list_chat_messages(
+        self,
+        chatroom_id: int,
+        limit: int = 30,
+        offset: int = 0,
+        created_since: str | None = None,
+    ) -> ApiResponse:
+        """Messages of one chat, newest first (spec); `created_since` (ISO 8601) only newer ones."""
+        params = {"createdSince": created_since} if created_since else None
         return self.get(
             f"/chatroom/{int(chatroom_id)}/chatmessage",
+            params,
             limit=limit,
             offset=offset,
             count_total=True,
+        )
+
+    def list_chatroom_members(
+        self, chatroom_id: int, active_only: bool = True, limit: int = 100
+    ) -> ApiResponse:
+        """GET /chatroom/{id}/chatroommember: who is in a chat (spec)."""
+        params = {"isActive": "true"} if active_only else None
+        return self.get(
+            f"/chatroom/{int(chatroom_id)}/chatroommember", params, limit=limit, count_total=True
         )
 
     # ---------------------------------------------------------------------------- events

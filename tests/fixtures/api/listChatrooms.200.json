@@ -4,6 +4,12 @@
       "dtype": "chat.RChatRoomPrimer",
       "links": [
         {
+          "id": 8000000501,
+          "rel": "koppeling",
+          "type": "chat.RChatRoomPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/chatroommember/8000000501"
+        },
+        {
           "id": 8000000001,
           "rel": "self",
           "type": "chat.RChatRoomPrimer",
@@ -105,6 +111,12 @@
     {
       "dtype": "chat.RChatRoomPrimer",
       "links": [
+        {
+          "id": 8000000502,
+          "rel": "koppeling",
+          "type": "chat.RChatRoomPrimer",
+          "href": "https://rest-v2.parro.com/rest/v2/chatroommember/8000000502"
+        },
         {
           "id": 8000000002,
           "rel": "self",

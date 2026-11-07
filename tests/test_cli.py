@@ -67,7 +67,7 @@ COMMANDS_WITH_JSON_OUTPUT = [
     ["announcement", "5000000101"],
     ["calendar", "--limit", "1"],
     ["chatrooms"],
-    ["chat-messages", "5", "--limit", "1"],
+    ["chat-messages", "8000000001", "--limit", "1"],
     ["get", "/accountsettings"],
     ["get", "/event", "--param", "dtype=event.RAnnouncementEventPrimer", "--param", "group=1"],
     ["login-url"],

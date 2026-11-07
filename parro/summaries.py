@@ -386,6 +386,27 @@ def summarize_chatrooms(response: ApiResponse) -> dict[str, Any]:
     }
 
 
+def summarize_chat_members(response: ApiResponse) -> dict[str, Any]:
+    """Members of a chat: each a guardian (parent) or a teacher (spec: RChatRoomMember)."""
+    members = []
+    for member in response.items:
+        person = member.get("guardian") or member.get("teacher") or member.get("identity") or {}
+        role = "teacher" if member.get("teacher") else "parent" if member.get("guardian") else None
+        members.append(
+            drop_missing(
+                {
+                    "id": get_object_id(person),
+                    "name": full_name(person) or None,
+                    "role": role,
+                    "children": [str(name) for name in person.get("childNames") or []] or None,
+                    "admin": bool(member.get("admin")),
+                    "active": member.get("active"),
+                }
+            )
+        )
+    return {"total": total_or_count(response), "members": members}
+
+
 def summarize_chat_messages(response: ApiResponse) -> dict[str, Any]:
     return {
         "total": total_or_count(response),

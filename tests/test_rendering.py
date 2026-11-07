@@ -356,11 +356,13 @@ def test_attachment_views():
 FIXED_NOW = datetime(2026, 11, 5, 12, 0, tzinfo=timezone(timedelta(hours=1)))
 
 
-def overview(now: datetime = FIXED_NOW) -> tuple[dict[str, Any], fakes.FakeParroApi]:
+def overview(
+    now: datetime = FIXED_NOW, unread_only: bool = True
+) -> tuple[dict[str, Any], fakes.FakeParroApi]:
     api = fakes.FakeParroApi(load_sample)
     client = ParroClient(Settings(role_override="GUARDIAN:1"), transport=api)
     client.token_store.save_token_response({"access_token": fakes.ACCESS_TOKEN})
-    return operations.show_overview(client, now=now), api
+    return operations.show_overview(client, now=now, unread_only=unread_only), api
 
 
 def test_overview_view(environment):
@@ -382,7 +384,7 @@ def test_overview_view(environment):
 )
 def test_overview_coming_up_depends_on_today(environment, today, first_upcoming, count):
     now = datetime.fromisoformat(f"{today}T08:00:00+01:00")
-    items = overview(now)[0]["calendar"]["items"]
+    items = overview(now, unread_only=False)[0]["calendar"]["items"]
     assert len(items) == count
     assert (items[0]["id"] if items else None) == first_upcoming
 
@@ -428,7 +430,7 @@ def test_calendar_pages_until_today_because_the_api_starts_far_ahead(environment
 
 def test_overview_finds_the_coming_weeks_behind_far_future_pages(environment, monkeypatch):
     monkeypatch.setattr(operations, "CALENDAR_PAGE_SIZE", 2)
-    result, _ = overview()
+    result, _ = overview(unread_only=False)
     titles = [item["calendarItem"]["title"] for item in result["calendar"]["items"]]
     assert "Sint-Maartenviering" in titles, "on page 6 of the whole-school group"
 
