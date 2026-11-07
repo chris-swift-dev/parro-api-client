@@ -4,7 +4,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
-## [0.6.0] - unreleased
+## [0.6.0] - 2026-11-07
 
 See what is new, and mark what you have read: `overview` now shows only unread announcements and
 new calendar items, and `mark-read` marks an item as read. **This changes the client's promise:**

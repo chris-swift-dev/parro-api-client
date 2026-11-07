@@ -17,4 +17,4 @@ Inspired by fobatai/parro-mcp; independent implementation based on openapi/parro
 
 # The one place the version lives. pyproject.toml repeats it; a test keeps the two equal, and the
 # release workflow checks that the git tag matches.
-__version__ = "0.5.1"
+__version__ = "0.6.0"

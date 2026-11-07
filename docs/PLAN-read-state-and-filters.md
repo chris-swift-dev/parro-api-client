@@ -1,6 +1,8 @@
 # Plan 7: read state, filters and more endpoints
 
-*Status: phase 1 done (2026-11-07); all six decisions taken as recommended (§7).*
+*Status: done (2026-11-07): phases 1–7 merged in #10, released as 0.6.0 (phase 8). All six
+decisions taken as recommended (§7). Not yet checked live: marking a calendar item or a chat as read
+(nothing was unread).*
 
 **Goal:** (1) describe the newly found endpoints, (2) let the client mark announcements, calendar
 items and chats as read, so the overview shows only what is new, and (3) describe and use the
