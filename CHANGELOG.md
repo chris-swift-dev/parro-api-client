@@ -4,6 +4,41 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.6.0] - unreleased
+
+See what is new, and mark what you have read: `overview` now shows only unread announcements and
+new calendar items, and `mark-read` marks an item as read. **This changes the client's promise:**
+it used to be read-only; now it reads, and the one change it can make in Parro is marking items as
+read, only when you ask. The school sees what you mark (read counts, read receipts), and so does
+the Parro app.
+
+### Added
+- **`mark-read announcement|calendar|chat ID`** marks one item as read. It looks the item up first,
+  so a wrong id is an error, not a write, and leaves items that are already read alone.
+  `mark-read group ID` shows how many unread announcements a group has; with `--yes` it marks them
+  all.
+- **`--mark-read`** on `announcement ID` and `chat-messages ID`: show it, then mark it.
+- The MCP tool **`parro_mark_read`** (one item at a time), only when you set
+  `PARRO_ALLOW_MARK_READ=1`. It is marked as not read-only, so MCP clients ask before calling it.
+- Chat filters: `chatrooms --unread --archived only|include --type group --schoolyear 2025`, and
+  `chat-messages ID --since 2026-10-01`. The MCP tools take the same options.
+- **`chat-members ID`** (MCP `parro_chat_members`): who is in a chat, parents with their children
+  and teachers, and who is admin; `--former` adds members who left.
+- The spec describes 10 more operations: chat details, members, scheduled and single messages,
+  school years, an identity, an announcement attachment, and the three calls that mark items read
+  (in their own section, *Read state*, which says what the school sees).
+
+### Changed
+- **`overview` lists only what you have not read**: unread announcements and new calendar items.
+  `overview --all` (MCP `all: true`) shows the latest announcements and everything coming up, as
+  before.
+- `chatrooms` leaves archived chats out, as the API does by default; `--archived include` adds them.
+- The README, the help text, `SECURITY.md` and the User-Agent describe the new promise. Making the
+  client write anything else, or mark something without being asked, is a security problem.
+
+### Fixed
+- `sync` missed archived chats: the API leaves them out unless asked. It now archives them too.
+
 ## [0.5.1] - 2026-11-06
 
 Know how long you stay logged in: a login lasts at most 8 hours, and `status` now says until when.

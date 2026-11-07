@@ -63,6 +63,13 @@ several groups, applies the unread filter *before* the limit, and builds compact
 5. on a **401**: asks the authenticator for one refresh and retries once. A second 401 raises
    `TokenRejected`, which also explains the `dtype` pitfall. **A 401 never starts a password login.**
 
+**The one write.** `ParroClient.mark_read(kind, id)` sends one of the three calls in
+`READ_STATE_WRITES` (`PUT …/read`, empty body), through the same headers and 401 handling as `get()`.
+There is no other method that sends anything but GET. Only commands the user runs on purpose call it
+(`operations.mark_read`, `mark_group_announcements_read`, and the `--mark-read` flags); the MCP tool
+`parro_mark_read` exists only with `PARRO_ALLOW_MARK_READ=1`. In the tests, the fake API fails any
+test that sends another write (`tests/fakes.py`, `ForbiddenWrite`).
+
 ## 4. The authenticator and the lockout latch
 
 `Authenticator.get_access_token()` uses the cached token while it is fresh, else the refresh token,
@@ -122,7 +129,7 @@ are there, otherwise downloaded once (`store_attachment()`).
 | --- | --- |
 | add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro/cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` in `parro/mcp_server.py` |
 | change how something looks | `parro/rendering.py`, then `UPDATE_SNAPSHOTS=1 .venv/bin/pytest tests/test_rendering.py` and read the diff in `tests/snapshots/` |
-| call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`) |
+| call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`); GET only: a new write needs a decision first, see `READ_STATE_WRITES` and `SECURITY.md` |
 | change output fields | `parro/summaries.py` (keep existing field names: clients depend on them) |
 | understand a login failure | `parro/authenticator.py`, `parro/login_methods.py`, `tests/test_login_safety.py` |
 | check what the API really does | `openapi/parro.openapi.json` and `samples/` (private) |

@@ -22,5 +22,17 @@ All in the spec; the important ones:
 - Privacy: `GET /child?currentSchoolYear=true&dtype=identity.RPrivacySettingChild` gives per child
   the state of the privacy choices; `GET /child/{id}/privacy` a **signed link** to the page where
   they are set. Like the calendar subscription link, it works without a login and is never logged.
+- Chats: a chat room's id is the id of its `rel: self` link. Its first link is `koppeling` (the
+  membership); that id answers `403 CHAT_NOT_ACTIVE_MEMBER` on every chat call. `GET /chatroom`
+  leaves archived chats out unless `archived=TRUE` (only archived) or `BOTH`; the values are
+  uppercase only. `chatRoom.type` is one of `SINGLE`, `BOT`, `CALENDAR`, `GROUP`, `FAMILY`.
+- Chat messages: `createdSince` / `modifiedSince` take an ISO time with `Z`. `sort=desc-stream` is
+  oldest first and `asc-stream` newest first (the opposite of the names), and both add system
+  messages (`chat.RChatStatusMessage`); the client sends no `sort`.
+- `GET /event` ignores `read=false`; the client filters unread items itself.
+- Read state: `PUT /event/{id}/read` (an announcement or calendar item),
+  `PUT /event/markannouncementsasread?group={id}` (all announcements of a group) and
+  `PUT /chatroom/{id}/read`, each with an empty body, answer `204`. **The school sees the result**
+  (read counts on announcements, read receipts in chats), and so does the Parro app.
 - `/conversations` and `/timeslot`, found in the web app's code, answer `404`. CORS preflights allow
   every method on every path, so they say nothing about what a path supports.

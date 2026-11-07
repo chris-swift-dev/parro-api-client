@@ -1,21 +1,22 @@
 # Parro API client and OpenAPI spec
 
-**Read your child's school news from the terminal or from Claude:** an unofficial, read-only client
-and API description for [Parro](https://talk.parro.com), the Dutch parent–school communication app
-by Topicus (ParnasSys). It reads announcements, newsletters (**including the text inside PDF
-attachments**), the calendar, chats and class info.
+**Read your child's school news from the terminal or from Claude:** an unofficial client and API
+description for [Parro](https://talk.parro.com), the Dutch parent–school communication app by
+Topicus (ParnasSys). It reads announcements, newsletters (**including the text inside PDF
+attachments**), the calendar, chats and class info, and shows what you have not read yet. The one
+thing it can change: marking items as read, only when you ask.
 
 [![Client checks](https://github.com/chris-swift-dev/parro-api-client/actions/workflows/ci.yml/badge.svg)](https://github.com/chris-swift-dev/parro-api-client/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/chris-swift-dev/parro-api-client)](https://github.com/chris-swift-dev/parro-api-client/releases/latest)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)
 ![Standard library only](https://img.shields.io/badge/dependencies-none-brightgreen)
-![Read-only](https://img.shields.io/badge/API_access-read--only-blue)
+![Reads; marks as read only on request](https://img.shields.io/badge/API_access-reads_%2B_mark_as_read-blue)
 [![Code: MIT](https://img.shields.io/badge/code-MIT-yellow)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE-CODE)
 [![Spec: CC BY 4.0](https://img.shields.io/badge/spec-CC_BY_4.0-lightgrey)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-overview-dark.svg">
-  <img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-overview-light.svg" alt="Terminal output of parro-client overview: unread counts, the latest announcements with author and date, the coming calendar items and chats with unread messages. Invented example data.">
+  <img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-overview-light.svg" alt="Terminal output of parro-client overview: unread counts, the unread announcements with author and date, the new calendar items and chats with unread messages. Invented example data.">
 </picture>
 
 <sub>All pictures in this README show invented example data from the test suite.</sub>
@@ -72,7 +73,9 @@ client speaks that API and adds three things:
    agenda per day, conversations in reading order, an overview of what is new. Every id stays
    visible, so the next command is always at hand.
 
-It only ever **reads**: the Parro API only receives `GET`, and `POST` goes only to the login
+It **reads**. The only change it can make in Parro is marking an announcement, a calendar item or
+a chat as read, and only when you ask for it ([Marking as read](#marking-as-read)): apart from
+those three `PUT …/read` calls the Parro API only receives `GET`, and `POST` goes only to the login
 server's token, revoke and login-form endpoints. Standard library only; PyMuPDF / pypdf (PDF text)
 and Pillow (photo downscaling) are optional.
 
@@ -82,7 +85,7 @@ flowchart LR
   claude([Claude or another MCP client]) --> mcp[parro-client-mcp]
   cli --> core["parro/<br>login · API calls · summaries · markdown"]
   mcp --> core
-  core -- "GET only" --> api[(Parro REST API)]
+  core -- "GET; PUT …/read when you ask" --> api[(Parro REST API)]
   core -- "login, refresh, logout" --> idp[(ParnasSys login server)]
   core -- "attachments" --> cdn[(Attachment CDN)]
   core --- disk[("~/.parro: tokens, cache, archive")]
@@ -121,7 +124,8 @@ marked *helpers wanted*; with `--details` you see how many signed up, and whethe
 parro-client --help
 parro-client login --prompt              # type the password; the login lasts up to 8 hours
 parro-client status
-parro-client overview                    # what is new, like the app's home screen
+parro-client overview                    # what is new: unread announcements, new calendar items
+parro-client overview --all              # the latest announcements and everything coming up
 parro-client announcements --limit 5 --unread-only
 parro-client attachment <announcement-id> --text
 parro-client calendar --details          # agenda with location, description and helper slots
@@ -129,22 +133,49 @@ parro-client calendar-link               # Parro's own link to subscribe from Go
 parro-client calendar --ics parro.ics --details # or: an .ics file to import
 parro-client sync                        # keep a local archive (repeat to update)
 parro-client privacy                     # can you still change your children's privacy choices?
+parro-client chatrooms --archived include --type group
+parro-client chat-messages <chatroom-id> --since 2026-10-01 --mark-read
+parro-client mark-read announcement <id> # the school can see this
 parro-client announcements --format json | jq '.announcements[].title'
 parro-client get /accountsettings
 parro-client token                       # paste into Swagger UI → Authorize → bearerToken
 ```
 
 Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-finish <url>`,
-`overview`, `me`, `children`, `privacy [--link CHILD_ID]`, `groups [--previous]`, `unread`, `system-news [--full]`,
-`announcements [--group ID] [--limit N] [--unread-only] [--full]`, `announcement <id>`,
-`calendar [--group ID] [--limit N] [--details] [--past] [--ics FILE]`, `calendar-link`,
-`attachment <event-id> [--attachment-id ID | --all] [--save-to DIR] [--text]`, `chatrooms`,
-`chat-messages <chatroom-id>`, `sync [--to DIR] [--previous] [--photos]`, `cache info|clear`,
-`get <path> [--param k=v ...] [--limit N] [--offset N]`.
+`overview [--all]`, `me`, `children`, `privacy [--link CHILD_ID]`, `groups [--previous]`, `unread`,
+`system-news [--full]`, `announcements [--group ID] [--limit N] [--unread-only] [--full]`,
+`announcement <id> [--mark-read]`, `calendar [--group ID] [--limit N] [--details] [--past] [--ics FILE]`,
+`calendar-link`, `attachment <event-id> [--attachment-id ID | --all] [--save-to DIR] [--text]`,
+`chatrooms [--unread] [--archived only|include] [--type single|bot|calendar|group|family] [--schoolyear YEAR]`,
+`chat-messages <chatroom-id> [--since DATE] [--mark-read]`, `chat-members <chatroom-id> [--former]`,
+`mark-read announcement|calendar|chat|group <id> [--yes]`, `sync [--to DIR] [--previous] [--photos]`,
+`cache info|clear`, `get <path> [--param k=v ...] [--limit N] [--offset N]`.
 Global options: `--format auto|json|markdown`, `--login-method`, `--raw`, `--compact`,
 `--no-cache`, `--verbose`. `--full` shows whole texts instead of a 3-line preview.
 
 Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in · `4` login halted.
+
+## Marking as read
+
+`overview` shows only what you have not read yet. Reading something here does not change that:
+**nothing is ever marked as read on its own**, not by showing an announcement, opening a chat or
+running `sync`. You mark items yourself:
+
+```bash
+parro-client mark-read announcement <id>      # also: calendar <id>, chat <chatroom-id>
+parro-client announcement <id> --mark-read    # show it, then mark it
+parro-client mark-read group <group-id>       # how many unread announcements a group has …
+parro-client mark-read group <group-id> --yes # … and mark them all
+```
+
+**The school sees it.** Teachers see who read an announcement ("read by 31 of 45"), chats show read
+receipts, and the Parro app on your phone shows the item as read too. So mark only what you have
+actually read. The client first fetches the item, so a wrong id is an error, not a write; an item
+that is already read is left alone.
+
+The MCP tool `parro_mark_read` (one item at a time, no groups) is **off unless you switch it on**
+with `PARRO_ALLOW_MARK_READ=1`, so an assistant cannot mark things while summarising them. MCP
+clients see it marked as not read-only, so they ask before calling it.
 
 ## MCP server
 
@@ -172,12 +203,14 @@ Ask Claude about school, and it reads Parro for you. An illustration with the in
 | `parro_announcement` | One announcement by id, with author. |
 | **`parro_attachment`** | **Downloads an attachment of an announcement or calendar item and returns its text (PDF/docx/txt/csv/html) or the image.** |
 | `parro_calendar` | Calendar items from today on, soonest first; `details: true` adds location, description and helper slots, `past: true` earlier items. |
-| `parro_chatrooms` / `parro_chat_messages` | Conversations. |
+| `parro_chatrooms` / `parro_chat_messages` | Conversations: `unread`, `archived`, `type` and `schoolyear` filters; messages `since` a date. |
+| `parro_chat_members` | Who is in a chat: parents (with their children) and teachers, and who is admin. |
 | `parro_unread` | Unread counts per category. |
 | `parro_get` | Escape hatch: GET any `/rest/v2` path not covered above. |
-| `parro_overview` | What is new: unread counts, latest announcements, coming up, unread chats. |
+| `parro_overview` | What is new: unread counts, unread announcements, new calendar items, unread chats; `all: true` shows everything. |
 | `parro_calendar_link` | The personal link to subscribe to the Parro agenda (keep it secret). |
 | `parro_privacy` | Per child: can parents change the privacy choices now, and when were they last changed; `link: true` gives the page to change them (keep it secret). |
+| `parro_mark_read` | Only with `PARRO_ALLOW_MARK_READ=1`: mark one announcement, calendar item or chat as read ([the school sees it](#marking-as-read)). |
 
 Every tool takes an optional `format`: `json` (default) or `markdown`, a readable view that keeps
 every id. The first 16 tools have the same names and arguments as the original server, so existing
@@ -288,12 +321,12 @@ archive. `cache info` shows its size, `cache clear` empties it, `--no-cache` swi
 <a href="https://chris-swift-dev.github.io/parro-api-client/"><img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
 
 [`openapi/parro.public.openapi.json`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/parro.public.openapi.json) describes the API as
-observed from the web client: 18 operations of the Parro API (account, children and their privacy
-settings, groups, announcements, calendar items, chats, unread counts, system news, absence and
-photo-export settings, the agenda subscription link), each called at least once, and the login
-server's OAuth2 endpoints. It
-explains the non-obvious parts: the geon media type and headers, `Range`-based paging, `dtype`
-polymorphism, and where attachments live.
+observed from the web client: 28 operations of the Parro API (account, children and their privacy
+settings, groups, announcements, calendar items, chats with their filters and members, unread
+counts, system news, absence and photo-export settings, the agenda subscription link, and the three
+calls that mark items as read), each seen in a live call or a capture of the web app, and the login
+server's OAuth2 endpoints. It explains the non-obvious parts: the geon media type and headers,
+`Range`-based paging, `dtype` polymorphism, which id opens a chat, and where attachments live.
 
 <details>
 <summary>An operation in Swagger UI: <code>GET /calendar/sync</code></summary>
@@ -314,9 +347,12 @@ polymorphism, and where attachments live.
 **Is this an official Parro tool?** No. It is not affiliated with or endorsed by Topicus, ParnasSys
 or Parro. It uses the same API calls as the Parro web app, as observed from that app.
 
-**Can it post, change or delete anything in Parro?** No. The Parro API only ever receives `GET`
-requests; the only `POST` requests go to the login server (logging in, refreshing, logging out).
-There is no command or tool that writes.
+**Can it post, change or delete anything in Parro?** It cannot post, send or delete anything. The
+one change it can make is marking an announcement, calendar item or chat as read, and only when you
+ask (`mark-read`, `--mark-read`, or the MCP tool you have to switch on): see
+[Marking as read](#marking-as-read). Those are three fixed `PUT …/read` calls; every other request
+to the Parro API is a `GET`, and the only `POST` requests go to the login server (logging in,
+refreshing, logging out).
 
 **Where does my password go?** Only to the ParnasSys login server, the same one the web app uses.
 `login --prompt` stores nothing but the tokens (`~/.parro-mcp/tokens.json`, readable only by you);
