@@ -1,6 +1,6 @@
 # Plan 7: read state, filters and more endpoints
 
-*Status: planned (2026-11-07); all six decisions taken as recommended (§7). Nothing implemented yet.*
+*Status: phase 1 done (2026-11-07); all six decisions taken as recommended (§7).*
 
 **Goal:** (1) describe the newly found endpoints, (2) let the client mark announcements, calendar
 items and chats as read, so the overview shows only what is new, and (3) describe and use the
@@ -34,6 +34,32 @@ The three captures are clean (placeholder `Authorization`, no cookies, no JWTs, 
 Two things in the new samples to fix before they feed the spec: `send-chatmessage.200.json` holds a
 `cachedAvatarUrl` that is not redacted (the privacy scan only knows the `bao/image` avatar links),
 and a short real chat text.
+
+### Probe results (phase 1, 2026-11-07, GET only)
+
+| Call | Result |
+| --- | --- |
+| `GET /chatroom?chatRoom.type=…` | works for all five types; an unknown type answers `400` |
+| `GET /chatroom?archived=…` | an enum, uppercase only: `FALSE` (the default list), `TRUE` (archived only), `BOTH`; `true`, `ALL`, `NONE` answer `400` |
+| `GET /chatroom?read=false` | accepted (no unread chats at the time, so not seen filtering) |
+| `GET /chatroom?chatRoom.createdInSchoolyear=2025` | works |
+| `GET /chatroom/schoolyears` | `identity.RSchoolyear` × 3 (2026, 2025, 2024) |
+| `GET /chatroom/{id}` | `chat.RChatRoom`. **The id is the `rel: self` link**: a chat room's first link is `koppeling` (the membership), and using that id answers `403 CHAT_NOT_ACTIVE_MEMBER` on every chat call |
+| `GET /chatroom/{id}/chatroommember?isActive=…` | `chat.RChatRoomMember`; `isActive=true` and no filter gave the same members |
+| `GET /chatroom/{id}/scheduledchatmessage?state=SCHEDULED` | works (empty) |
+| `GET /chatroom/{id}/chatmessage?createdSince=…` / `modifiedSince=…` | work (ISO time with `Z`) |
+| `GET /chatroom/{id}/chatmessage?sort=…` | **opposite of the names:** `desc-stream` is oldest first, `asc-stream` newest first; both also return `chat.RChatStatusMessage` (system messages), which the plain call leaves out |
+| `GET /chatroom/{id}/chatmessage/{id}` | one `chat.RChatTextMessage` |
+| `GET /identity/{id}` | `identity.RIdentity` (own identity) |
+| `GET /event/{id}/attachment/{id}` | needs `dtype=event.RAnnouncementEventPrimer` (without: `406 EVENT_BAD_TYPE`); answers `attachment.RAnnouncementAttachment` |
+| `GET …/attachment/{id}/attachmententry/{id}` | not reached: `406` without `dtype`, `404` with the announcement `dtype`. Spec: only with a capture |
+| **`GET /event?…&read=false`** | **ignored by the server** (36 results with and without it, 3 unread): the overview filters unread items itself |
+
+Samples written: `getChatroom`, `listChatroomMembers`, `listScheduledChatMessages`, `getChatMessage`,
+`listChatSchoolyears`, `listChatrooms_archived`, `listChatrooms_schoolyear`, `listChatrooms_type-group`,
+`getIdentity`, `getEventAttachment` (all sanitized; the privacy scan passes). The scan did not know
+`avatar`, `code` (school code), `city` on teachers' organisations, `uploadId` or `…Url` links on other
+hosts: phase 2 adds them.
 
 ## 2. Challenging (2): writing to Parro
 
@@ -73,11 +99,11 @@ marking items as read, and only when you ask*. Concretely:
 
 | Call | Filters | Spec | Client |
 | --- | --- | --- | --- |
-| `GET /chatroom` | `chatRoom.type`, `read`, `archived`, `chatRoom.createdInSchoolyear` | yes | `chatrooms --unread --archived --type GROUP --schoolyear 2025` |
+| `GET /chatroom` | `chatRoom.type`, `read`, `archived` (`TRUE`/`FALSE`/`BOTH`), `chatRoom.createdInSchoolyear` | yes | `chatrooms --unread --archived --type GROUP --schoolyear 2025` |
 | `GET /chatroom/{id}/chatmessage` | `sort=desc-stream`, `modifiedSince`, `createdSince` | yes | `chat-messages ID --since DATE` |
 | `GET /chatroom/{id}/chatroommember` | `isActive` | yes | via `chat-members` |
 | `GET /chatroom/{id}/scheduledchatmessage` | `state` | yes | – |
-| `GET /event` | unknown: is there a `read` filter? | after the live check | if it exists: the overview asks only for unread items |
+| `GET /event` | no `read` filter (ignored, measured) | note in the spec | the overview filters unread items itself |
 
 Values such as `TRUE` vs `true` and the exact date format get checked live, not guessed.
 
