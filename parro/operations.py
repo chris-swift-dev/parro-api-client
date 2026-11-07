@@ -22,6 +22,7 @@ from .api_client import (
     ApiResponse,
     FeedEvent,
     ParroClient,
+    ReadStateKind,
 )
 from .errors import AttachmentError, ConfigurationError, ParroError
 from .geon import get_object_id, strip_geon_metadata
@@ -165,9 +166,21 @@ def list_announcements(
     return summaries.summarize_announcement_feed(feed, limit, unread_only)
 
 
-def show_announcement(client: ParroClient, announcement_id: int | None, raw: bool = False) -> Any:
-    event = client.get_announcement(require_id(announcement_id, "announcement id"))
-    return event if raw else summaries.summarize_announcement_detail(event)
+def show_announcement(
+    client: ParroClient, announcement_id: int | None, raw: bool = False, mark_read: bool = False
+) -> Any:
+    """One announcement; with `mark_read`, marked as read once it has been fetched to show."""
+    event_id = require_id(announcement_id, "announcement id")
+    event = client.get_announcement(event_id)
+    marked = (
+        mark_if_unread(client, "announcement", event_id, event.get("read")) if mark_read else None
+    )
+    if raw:
+        return event
+    result = summaries.summarize_announcement_detail(event)
+    if marked is not None:
+        result["marked_read"] = marked
+    return result
 
 
 CALENDAR_PAGE_SIZE = 50
@@ -419,16 +432,24 @@ def list_chat_messages(
     limit: int = 30,
     raw: bool = False,
     since: str | None = None,
+    mark_read: bool = False,
 ) -> Any:
-    """Messages of one chat; with `since` (a date or an ISO time) only those written since then."""
+    """Messages of one chat; with `since` (a date or an ISO time) only those written since then.
+    With `mark_read` the chat is marked as read once the messages have been fetched to show."""
     room_id = require_id(chatroom_id, "chatroom id")
     created_since = api_time(since) if since else None
     response = client.list_chat_messages(room_id, limit=limit, created_since=created_since)
+    marked = None
+    if mark_read:
+        unread = client.get_chatroom(room_id).get("unreadCount")
+        marked = mark_if_unread(client, "chat", room_id, not unread)
     if raw:
         return response.payload
     result = {"chatroom_id": room_id, **summaries.summarize_chat_messages(response)}
     if created_since:
         result["since"] = created_since
+    if marked is not None:
+        result["marked_read"] = marked
     return result
 
 
@@ -589,6 +610,81 @@ def get_any(
         raise ConfigurationError("Give a path, e.g. /accountsettings or /absence/setting.")
     response = client.get(path, params, limit=limit, offset=offset, count_total=True)
     return summaries.summarize_any_response(response, raw=raw)
+
+
+# ----------------------------------------------------------------------- marking as read
+# The only writes (PLAN-read-state-and-filters §2): never automatic, always on request.
+
+MARK_READ_KINDS = ("announcement", "calendar", "chat")
+READ_STATE_NOTE = (
+    "The school sees this: teachers see who read an announcement, and chats show read receipts. "
+    "The Parro app shows it as read too."
+)
+
+
+def mark_if_unread(client: ParroClient, kind: ReadStateKind, item_id: int, is_read: Any) -> bool:
+    """Mark as read unless it already is. True when this call marked it."""
+    if is_read is True:
+        return False
+    client.mark_read(kind, item_id)
+    return True
+
+
+def mark_read(client: ParroClient, kind: str, item_id: int | None) -> dict[str, Any]:
+    """Mark one announcement, calendar item or chat as read.
+
+    The item is fetched first, so a wrong id or the wrong kind is an error and not a write, and
+    an item that is already read is left alone.
+    """
+    if kind not in MARK_READ_KINDS:
+        raise ConfigurationError(f"Mark what as read? One of: {', '.join(MARK_READ_KINDS)}.")
+    identifier = require_id(item_id, f"{kind} id")
+    if kind == "announcement":
+        event = client.get_announcement(identifier)
+        title, is_read = event.get("title"), event.get("read")
+        marked = mark_if_unread(client, "announcement", identifier, is_read)
+    elif kind == "calendar":
+        event = client.get_calendar_item(identifier)
+        title, is_read = (event.get("calendarItem") or {}).get("title"), event.get("read")
+        marked = mark_if_unread(client, "calendar", identifier, is_read)
+    else:
+        room = client.get_chatroom(identifier)
+        title, is_read = room.get("title"), not room.get("unreadCount")
+        marked = mark_if_unread(client, "chat", identifier, is_read)
+    return {
+        "kind": kind,
+        "id": identifier,
+        "title": title,
+        "marked_read": marked,
+        "already_read": not marked,
+        "note": READ_STATE_NOTE,
+    }
+
+
+def mark_group_announcements_read(
+    client: ParroClient, group_id: int | None, confirmed: bool = False
+) -> dict[str, Any]:
+    """All unread announcements of one group: counted first, marked only when `confirmed`."""
+    identifier = require_id(group_id, "group id")
+    groups = client.list_current_group_names()
+    if identifier not in groups:
+        raise ConfigurationError(f"Group #{identifier} is not one of your current groups.")
+    feed = client.collect_feed(
+        ANNOUNCEMENT_LIST_DTYPE, identifier, limit_per_group=UNREAD_SCAN_PAGE_SIZE
+    )
+    unread = [item.event for item in feed if item.event.get("read") is False]
+    result: dict[str, Any] = {
+        "group_id": identifier,
+        "group": groups[identifier],
+        "unread": len(unread),
+        "titles": [str(event.get("title") or "") for event in unread],
+        "marked_read": False,
+        "note": READ_STATE_NOTE,
+    }
+    if confirmed and unread:
+        client.mark_read("group-announcements", identifier)
+        result["marked_read"] = True
+    return result
 
 
 def require_id(value: Any, what: str) -> int:

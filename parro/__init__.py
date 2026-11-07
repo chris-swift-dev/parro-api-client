@@ -1,11 +1,14 @@
-"""Read-only client for the Parro REST API (talk.parro.com), shared by the CLI and the MCP server.
+"""Client for the Parro REST API (talk.parro.com), shared by the CLI and the MCP server.
+
+It reads; the only write is marking items as read, on request (api_client.READ_STATE_WRITES).
 
 Everything that talks to Parro or to the ParnasSys login server lives in this package. The two entry
 points only translate between their own interface (command line, MCP JSON-RPC) and this core.
 
 This package must never:
-  * send anything other than GET to the Parro API (POST goes only to the IdP's token, revoke and
-    login-form endpoints);
+  * send anything to the Parro API but GET, and the PUT …/read calls of READ_STATE_WRITES when
+    asked to mark something as read (POST goes only to the IdP's token, revoke and login-form
+    endpoints);
   * write tokens, passwords or full attachment URLs to a log;
   * start a password login on its own after a password was rejected (see authenticator.py).
 

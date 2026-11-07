@@ -406,7 +406,17 @@ def render_announcement(item: dict[str, Any], options: RenderOptions) -> str:
         f"# {announcement_title(item)}\n{announcement_byline(item, [read_by, likes])}",
         str(item.get("contents") or "").strip(),
         attachment_list(item, options),
+        read_state_line(item),
     )
+
+
+def read_state_line(result: dict[str, Any]) -> str | None:
+    """After --mark-read / mark-read: what changed. None when nothing was asked."""
+    if "marked_read" not in result:
+        return None
+    if result["marked_read"]:
+        return "✓ Marked as read. The school can see that you read it."
+    return "Already read: nothing changed."
 
 
 def attachment_list(item: dict[str, Any], options: RenderOptions) -> str | None:
@@ -613,7 +623,8 @@ def render_conversation(result: dict[str, Any], options: RenderOptions) -> str:
     shown = plural(len(messages), "message") + (f" of {total}" if total > len(messages) else "")
     name = result.get("title") or join_parts(["Chat", object_id(result.get("chatroom_id"))])
     heading = f"# {name.replace(' · ', ' ')} ({shown})"
-    return document(heading, *blocks) if blocks else document(heading, "No messages.")
+    body = blocks or ["No messages."]
+    return document(heading, *body, read_state_line(result))
 
 
 def message_text(message: dict[str, Any]) -> str:
@@ -950,6 +961,34 @@ def render_cache(result: dict[str, Any], options: RenderOptions) -> str:
     return document("# Cache", "\n".join(lines))
 
 
+def render_mark_read(result: dict[str, Any], options: RenderOptions) -> str:
+    """'# Marked as read: Studiedag vrijdag' with what the school sees."""
+    kinds = {"announcement": "Announcement", "calendar": "Calendar item", "chat": "Chat"}
+    what = join_parts([kinds.get(result.get("kind", ""), "Item"), object_id(result.get("id"))])
+    title = result.get("title") or what
+    if not result.get("marked_read"):
+        return document(f"# Already read: {title}", f"{what}: nothing changed.")
+    return document(f"# Marked as read: {title}", f"{what}. {result.get('note', '')}".strip())
+
+
+def render_mark_group_read(result: dict[str, Any], options: RenderOptions) -> str:
+    """The count and titles first; the command that marks them, or what was marked."""
+    group = result.get("group") or f"group {object_id(result.get('group_id'))}"
+    count = plural(result.get("unread", 0), "unread announcement")
+    titles = "\n".join(f"- {title}" for title in result.get("titles", []))
+    if result.get("marked_read"):
+        return document(f"# Marked as read: {count} in {group}", titles, result.get("note"))
+    if not result.get("unread"):
+        return document(f"# No unread announcements in {group}", "Nothing to mark.")
+    command = f"mark-read group {result.get('group_id')} --yes"
+    return document(
+        f"# {count} in {group}",
+        titles,
+        f"Nothing marked yet. {result.get('note', '')}".strip(),
+        "To mark them all as read:\n" + hint(options, command, command),
+    )
+
+
 # ---------------------------------------------------------------------------------- render
 
 Renderer = Callable[[Any, RenderOptions], str]
@@ -969,6 +1008,8 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "chatrooms": render_chatrooms,
     "chat_messages": render_conversation,
     "chat_members": render_chat_members,
+    "mark_read": render_mark_read,
+    "mark_group_read": render_mark_group_read,
     "attachment": render_attachment,
     "cache": render_cache,
     "overview": render_overview,

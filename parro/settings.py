@@ -81,6 +81,8 @@ class Settings:
     output_format: OutputFormat = "auto"
     data_dir: Path = dataclasses.field(default_factory=default_data_dir)
     cache_enabled: bool = True
+    # The MCP tool parro_mark_read exists only with PARRO_ALLOW_MARK_READ=1 (off by default).
+    allow_mark_read: bool = False
     cache_max_bytes: int = DEFAULT_CACHE_MAX_MB * 1_000_000
 
     @classmethod
@@ -118,6 +120,7 @@ class Settings:
             output_format=parse_output_format(text("PARRO_FORMAT", "auto")),
             data_dir=Path(text("PARRO_DATA_DIR", str(default_data_dir()))).expanduser(),
             cache_enabled=parse_switch(env, "PARRO_CACHE", default=True),
+            allow_mark_read=parse_switch(env, "PARRO_ALLOW_MARK_READ", default=False),
             # Megabytes as people count them (1 MB = 1,000,000 bytes), like the sizes shown.
             cache_max_bytes=int(parse_number(env, "PARRO_CACHE_MAX_MB", DEFAULT_CACHE_MAX_MB))
             * 1_000_000,

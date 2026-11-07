@@ -1,4 +1,4 @@
-"""The command-line client: a read-only client for Parro (talk.parro.com).
+"""The command-line client for Parro (talk.parro.com): it reads, and marks items read on request.
 
 Installed, it is the `parro-client` command (`run()`); from a source folder or a release archive,
 `python3 parro_cli.py` starts the same program.
@@ -34,8 +34,9 @@ log = logging.getLogger("parro_cli")
 EXIT_INTERRUPTED = 130
 
 DESCRIPTION = """\
-Read-only client for Parro, the Dutch parent-school app. It only ever reads: nothing can be
-posted, changed or deleted.
+Client for Parro, the Dutch parent-school app. It reads. The one change it can make is marking
+an announcement, calendar item or chat as read, and only when you ask (`mark-read`, or
+`--mark-read`); the school can see that. Nothing can be posted, sent or deleted.
 
 Logging in: set PARRO_USERNAME plus PARRO_PASSWORD_FILE (or PARRO_PASSWORD) and run `login`,
 or run `login --prompt` to type the password, or use the browser flow: `login-url`, log in in
@@ -50,6 +51,7 @@ examples:
   {cli} login --prompt
   {cli} announcements --limit 5 --unread-only
   {cli} attachment 11000000000 --text
+  {cli} mark-read announcement 11000000000
   {cli} get /accountsettings
   {cli} token          # paste into Swagger UI → Authorize → bearerToken
 exit codes: 0 ok, 1 API/network error, 2 usage, 3 not logged in, 4 login halted"""
@@ -169,6 +171,7 @@ def add_reading_commands(command: CommandFactory) -> None:
     add_full(announcements)
     announcement = command("announcement", "one announcement in full, with its author")
     announcement.add_argument("id", type=int, help="announcement id")
+    add_mark_read_flag(announcement, "the announcement")
 
     add_calendar_commands(command)
     add_attachment_command(command)
@@ -193,10 +196,12 @@ def add_reading_commands(command: CommandFactory) -> None:
         "--since", metavar="DATE", help="only messages since then, e.g. 2026-10-01 (local time)"
     )
     add_limit(messages, 30)
+    add_mark_read_flag(messages, "the chat")
     members = command("chat-members", "who is in a chat conversation")
     members.add_argument("chatroom_id", type=int, help="chatroom id (see `chatrooms`)")
     members.add_argument("--former", action="store_true", help="also members who left")
 
+    add_mark_read_command(command)
     add_local_data_commands(command)
     get = command("get", "GET any API path, e.g. /accountsettings (read-only)")
     get.add_argument("path", help="path below /rest/v2, e.g. /absence/setting")
@@ -209,6 +214,30 @@ def add_reading_commands(command: CommandFactory) -> None:
     )
     get.add_argument("--limit", type=int, help="page size (sends a Range header)")
     get.add_argument("--offset", type=int, default=0, help="first item of the page")
+
+
+def add_mark_read_flag(parser: argparse.ArgumentParser, what: str) -> None:
+    parser.add_argument(
+        "--mark-read",
+        action="store_true",
+        help=f"after fetching it, mark {what} as read (the school can see this)",
+    )
+
+
+def add_mark_read_command(command: CommandFactory) -> None:
+    mark = command(
+        "mark-read",
+        "mark an announcement, calendar item or chat as read; the school can see this",
+    )
+    mark.add_argument(
+        "kind",
+        choices=[*operations.MARK_READ_KINDS, "group"],
+        help="what to mark; group: all unread announcements of a group (asks for --yes)",
+    )
+    mark.add_argument("id", type=int, help="its id (for group: the group id, see `groups`)")
+    mark.add_argument(
+        "--yes", action="store_true", help="for group: mark them; without it only the count"
+    )
 
 
 def add_calendar_commands(command: CommandFactory) -> None:
@@ -385,6 +414,7 @@ COMMAND_VIEWS = {
     "chatrooms": "chatrooms",
     "chat-messages": "chat_messages",
     "chat-members": "chat_members",
+    "mark-read": "mark_read",
     "get": "get",
     "cache": "cache",
     "sync": "sync",
@@ -418,7 +448,9 @@ HANDLERS: dict[str, Handler] = {
     "announcements": lambda c, a: operations.list_announcements(
         c, a.group, a.limit, a.unread_only, raw=a.raw
     ),
-    "announcement": lambda c, a: operations.show_announcement(c, a.id, raw=a.raw),
+    "announcement": lambda c, a: operations.show_announcement(
+        c, a.id, raw=a.raw, mark_read=a.mark_read
+    ),
     "calendar": lambda c, a: run_calendar(c, a),
     "attachment": run_attachment,
     "calendar-link": lambda c, a: operations.calendar_link(c),
@@ -432,7 +464,12 @@ HANDLERS: dict[str, Handler] = {
         chats=operations.ChatFilter(a.unread, a.archived or "exclude", a.type, a.schoolyear),
     ),
     "chat-messages": lambda c, a: operations.list_chat_messages(
-        c, a.chatroom_id, a.limit, raw=a.raw, since=a.since
+        c, a.chatroom_id, a.limit, raw=a.raw, since=a.since, mark_read=a.mark_read
+    ),
+    "mark-read": lambda c, a: (
+        operations.mark_group_announcements_read(c, a.id, confirmed=a.yes)
+        if a.kind == "group"
+        else operations.mark_read(c, a.kind, a.id)
     ),
     "chat-members": lambda c, a: operations.list_chat_members(
         c, a.chatroom_id, include_former=a.former, raw=a.raw
@@ -498,7 +535,11 @@ def print_result(args: argparse.Namespace, result: Any, output_format: str) -> N
         print(result, end="" if result.endswith("\n") else "\n")
     elif output_format == "markdown":
         options = RenderOptions(audience="cli", full_text=getattr(args, "full", False))
-        view = "ics_export" if "ics_file" in result else COMMAND_VIEWS.get(args.command, "get")
+        view = COMMAND_VIEWS.get(args.command, "get")
+        if "ics_file" in result:
+            view = "ics_export"
+        elif args.command == "mark-read" and args.kind == "group":
+            view = "mark_group_read"
         print(render(view, result, options), end="")
     else:
         print(operations.to_json_text(result, compact=args.compact))

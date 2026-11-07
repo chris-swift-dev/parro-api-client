@@ -224,7 +224,14 @@ def test_help_reads_well(capsys):
         parro_cli.main(["--help"])
     assert stop.value.code == 0
     text = capsys.readouterr().out
-    for expected in ("Read-only client for Parro", "announcements", "attachment", "exit codes"):
+    for expected in (
+        "Client for Parro",
+        "the school can see that",
+        "mark-read",
+        "announcements",
+        "attachment",
+        "exit codes",
+    ):
         assert expected in text
     for command in parro_cli.HANDLERS:
         with pytest.raises(SystemExit):

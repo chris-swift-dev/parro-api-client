@@ -1,11 +1,13 @@
-"""ParroClient: read-only access to the Parro REST API (https://rest-v2.parro.com/rest/v2).
+"""ParroClient: access to the Parro REST API (https://rest-v2.parro.com/rest/v2).
 
-get() is the one low-level call; every endpoint in the spec has a small method on top of it
-(get_account, list_groups, list_events, get_event, ...). They return the API's own JSON, untouched;
-summaries.py shapes it for people.
+get() is the one low-level call for reading; every endpoint in the spec has a small method on top
+of it (get_account, list_groups, list_events, get_event, ...). They return the API's own JSON,
+untouched; summaries.py shapes it for people.
 
 Rules for this module:
-  * Only GET. There is no method that could change anything at Parro.
+  * GET, plus exactly one kind of write: mark_read(), which can only send the PUT requests in
+    READ_STATE_WRITES (marking an announcement, a calendar item, a chat or a group's announcements
+    as read). There is no generic put() or post(); nothing else can change anything at Parro.
   * Requests only go to the configured API host, so a token can never be sent elsewhere.
   * A 401 leads to one refresh and one retry, never to a password login (PLAN-api-client §4, fix 3).
     A second 401 raises TokenRejected, which explains the `dtype` pitfall of GET /event/{id}.
@@ -44,6 +46,17 @@ GROUPS_PAGE_SIZE = 50
 PRIVACY_CHILD_DTYPE = "identity.RPrivacySettingChild"
 
 EventKind = Literal["announcement", "calendar"]
+
+# The only writes this client can send (PLAN-read-state-and-filters §2): PUT, no body, answer 204.
+# The school sees the result: announcements show teachers who read them, chats show read receipts.
+ReadStateKind = Literal["announcement", "calendar", "chat", "group-announcements"]
+READ_STATE_WRITES: dict[str, tuple[str, str | None]] = {
+    # kind: (path template, query parameter that takes the id instead of the path)
+    "announcement": ("/event/{id}/read", None),
+    "calendar": ("/event/{id}/read", None),
+    "chat": ("/chatroom/{id}/read", None),
+    "group-announcements": ("/event/markannouncementsasread", "group"),
+}
 
 
 @dataclass(frozen=True)
@@ -126,6 +139,25 @@ class ParroClient:
             raise _api_error(label, response)
         return ApiResponse(response.json(), response.header("Content-Range"))
 
+    def mark_read(self, kind: ReadStateKind, object_id: int) -> None:
+        """PUT one of READ_STATE_WRITES: mark an item (or a group's announcements) as read.
+
+        The only write in this client. Callers decide when; nothing calls it on its own.
+        """
+        if kind not in READ_STATE_WRITES:
+            raise ConfigurationError(f"Cannot mark {kind!r} as read.")
+        if isinstance(object_id, bool) or not isinstance(object_id, int) or object_id <= 0:
+            raise ConfigurationError("Marking as read needs a positive id.")
+        template, query_name = READ_STATE_WRITES[kind]
+        params = {query_name: str(object_id)} if query_name else {}
+        url = add_query_parameters(self.build_api_url(template.format(id=object_id)), params)
+        label = f"PUT {template}"
+        headers = self._build_headers(None, 0, False, True, True)
+        response = self._send_with_one_refresh(url, headers, label, True, method="PUT")
+        if response.status not in (200, 204):
+            raise _api_error(label, response)
+        log.info("marked as read: %s", kind)
+
     def download_from_api_host(self, url: str) -> HttpResponse:
         """GET a file that lives on the API host itself (not the CDN), with the Parro headers."""
         if not url.startswith(self.settings.api_base_uri + "/"):
@@ -138,15 +170,20 @@ class ParroClient:
         return response
 
     def _send_with_one_refresh(
-        self, url: str, headers: dict[str, str], label: str, refresh_on_unauthorized: bool
+        self,
+        url: str,
+        headers: dict[str, str],
+        label: str,
+        refresh_on_unauthorized: bool,
+        method: Literal["GET", "PUT"] = "GET",
     ) -> HttpResponse:
         """Send; on a 401 refresh once and resend once (fix 3). A 401 never leads to a login."""
-        response = self._send(url, headers, label)
+        response = self._send(url, headers, label, method)
         if response.status == 401 and refresh_on_unauthorized:
             new_access_token = self.authenticator.refresh_after_unauthorized()
             if new_access_token is not None:
                 headers["Authorization"] = f"Bearer {new_access_token}"
-                response = self._send(url, headers, label)
+                response = self._send(url, headers, label, method)
         if response.status == 401:
             raise TokenRejected(
                 f"{label} answered 401 Unauthorized. Either the login is no longer valid (log "
@@ -196,8 +233,12 @@ class ParroClient:
                 headers["topicus-Range-Count"] = "Exact"
         return headers
 
-    def _send(self, url: str, headers: dict[str, str], label: str) -> HttpResponse:
-        return self.transport.send(HttpRequest("GET", url, dict(headers), log_label=label))
+    def _send(
+        self, url: str, headers: dict[str, str], label: str, method: Literal["GET", "PUT"]
+    ) -> HttpResponse:
+        # A PUT carries an empty body (Content-Length: 0), as the web client sends it.
+        body = b"" if method == "PUT" else None
+        return self.transport.send(HttpRequest(method, url, dict(headers), body, log_label=label))
 
     # ---------------------------------------------------------------------- account and role
 
@@ -283,6 +324,11 @@ class ParroClient:
     ) -> ApiResponse:
         """GET /chatroom. Without filters the API leaves out archived chats (spec: `archived`)."""
         return self.get("/chatroom", filters or None, limit=limit, offset=offset, count_total=True)
+
+    def get_chatroom(self, chatroom_id: int) -> dict[str, Any]:
+        """GET /chatroom/{id}: one chat (title, unreadCount). The id is the chat's `rel: self`."""
+        payload = self.get(f"/chatroom/{chatroom_id}").payload
+        return payload if isinstance(payload, dict) else {}
 
     def list_chat_messages(
         self,
