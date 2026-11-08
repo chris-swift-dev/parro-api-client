@@ -226,7 +226,7 @@ def test_help_reads_well(capsys):
     text = capsys.readouterr().out
     for expected in (
         "Client for Parro",
-        "the school can see that",
+        "chat-send",
         "mark-read",
         "announcements",
         "attachment",

@@ -687,6 +687,68 @@ def mark_group_announcements_read(
     return result
 
 
+# --------------------------------------------------------------------- sending a chat message
+# Real people receive it, under the user's name, and it cannot be taken back (PLAN-send-chat-message
+# §2): prepare_chat_message() shows what would happen; only send_prepared_message() sends.
+
+
+def clean_message_text(text: Any) -> str:
+    """The text to send: as given, minus the line break a file or `echo` ends with."""
+    cleaned = str(text if text is not None else "").rstrip("\r\n")
+    if not cleaned.strip():
+        raise ConfigurationError("Not sent: the message is empty.")
+    try:
+        cleaned.encode("utf-8")
+    except UnicodeEncodeError:
+        raise ConfigurationError("Not sent: the text is not valid UTF-8.") from None
+    return cleaned
+
+
+def why_chat_is_closed(room: dict[str, Any]) -> str | None:
+    """Why no message should go to this chat, or None when it can be written to."""
+    if room.get("archived") is True:
+        return "this chat is archived."
+    if room.get("active") is False:
+        return "you are no longer active in this chat."
+    if room.get("repliesEnabled") is False:
+        return "replies are switched off in this chat."
+    if str(room.get("type") or "").upper() == "BOT":
+        return "this chat is with a bot, not with people."
+    return None
+
+
+def prepare_chat_message(client: ParroClient, chatroom_id: int | None, text: Any) -> dict[str, Any]:
+    """What would be sent to whom. Reads only; raises when the message should not be sent."""
+    room_id = require_id(chatroom_id, "chatroom id")
+    cleaned = clean_message_text(text)
+    room = client.get_chatroom(room_id)
+    closed = why_chat_is_closed(room)
+    if closed:
+        raise ConfigurationError(f"Not sent: {closed}")
+    members = summaries.summarize_chat_members(client.list_chatroom_members(room_id))["members"]
+    own_id = str(client.get_role_header() or "").rpartition(":")[2]
+    return {
+        "chatroom_id": room_id,
+        "title": room.get("title"),
+        "type": str(room.get("type") or "").lower() or None,
+        "recipients": [member for member in members if str(member.get("id")) != own_id],
+        "text": cleaned,
+    }
+
+
+def send_prepared_message(client: ParroClient, prepared: dict[str, Any]) -> dict[str, Any]:
+    """Send what prepare_chat_message() returned, once."""
+    response = client.send_chat_message(prepared["chatroom_id"], prepared["text"])
+    message = response.items[0] if response.items else {}
+    return {
+        "sent": True,
+        "chatroom_id": prepared["chatroom_id"],
+        "title": prepared.get("title"),
+        "message_id": get_object_id(message),
+        "created_at": message.get("createdAt"),
+    }
+
+
 def require_id(value: Any, what: str) -> int:
     """An id argument as int, with a usage error instead of a traceback when it is missing."""
     try:

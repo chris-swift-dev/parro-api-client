@@ -26,7 +26,7 @@ from parro.api_client import ParroClient
 from parro.attachments import ReadOptions
 from parro.cache import write_private_file
 from parro.errors import EXIT_OK, EXIT_USAGE_ERROR, ConfigurationError, ParroError
-from parro.rendering import RenderOptions, choose_format, render
+from parro.rendering import RenderOptions, choose_format, render, render_chat_preview
 from parro.settings import LOGIN_METHODS, OUTPUT_FORMATS, Settings
 
 log = logging.getLogger("parro_cli")
@@ -34,9 +34,10 @@ log = logging.getLogger("parro_cli")
 EXIT_INTERRUPTED = 130
 
 DESCRIPTION = """\
-Client for Parro, the Dutch parent-school app. It reads. The one change it can make is marking
-an announcement, calendar item or chat as read, and only when you ask (`mark-read`, or
-`--mark-read`); the school can see that. Nothing can be posted, sent or deleted.
+Client for Parro, the Dutch parent-school app. It reads. It can change two things, and only when
+you ask: mark an announcement, calendar item or chat as read (`mark-read`, `--mark-read`; the
+school can see that), and send a text message to a chat you are in (`chat-send`; it shows what
+would go to whom first). Nothing can be deleted, and no new chats can be started.
 
 Logging in: set PARRO_USERNAME plus PARRO_PASSWORD_FILE (or PARRO_PASSWORD) and run `login`,
 or run `login --prompt` to type the password, or use the browser flow: `login-url`, log in in
@@ -202,6 +203,7 @@ def add_reading_commands(command: CommandFactory) -> None:
     members.add_argument("--former", action="store_true", help="also members who left")
 
     add_mark_read_command(command)
+    add_chat_send_command(command)
     add_local_data_commands(command)
     get = command("get", "GET any API path, e.g. /accountsettings (read-only)")
     get.add_argument("path", help="path below /rest/v2, e.g. /absence/setting")
@@ -237,6 +239,24 @@ def add_mark_read_command(command: CommandFactory) -> None:
     mark.add_argument("id", type=int, help="its id (for group: the group id, see `groups`)")
     mark.add_argument(
         "--yes", action="store_true", help="for group: mark them; without it only the count"
+    )
+
+
+def add_chat_send_command(command: CommandFactory) -> None:
+    send = command(
+        "chat-send",
+        "send a text message to a chat you are in: real people receive it, under your name",
+    )
+    send.add_argument("chatroom_id", type=int, help="chatroom id (see `chatrooms`)")
+    send.add_argument("text", nargs="?", help="the message (or use --file)")
+    send.add_argument(
+        "--file", metavar="PATH", help="read the message from a UTF-8 file (- for standard input)"
+    )
+    send.add_argument(
+        "--yes",
+        action="store_true",
+        help="send without asking; without it you see the message and who receives it, and "
+        "are asked first",
     )
 
 
@@ -415,6 +435,7 @@ COMMAND_VIEWS = {
     "chat-messages": "chat_messages",
     "chat-members": "chat_members",
     "mark-read": "mark_read",
+    "chat-send": "chat_send",
     "get": "get",
     "cache": "cache",
     "sync": "sync",
@@ -428,6 +449,48 @@ class PlainText(str):
 class ExactText(PlainText):
     """Plain text whose bytes must not change: iCalendar lines end in CRLF (RFC 5545), and a
     Windows console stream would turn each of those into CR CR LF."""
+
+
+def read_message_text(args: argparse.Namespace) -> str:
+    """The message from the argument, a file, or standard input (exactly one of them)."""
+    if (args.text is None) == (args.file is None):
+        raise ConfigurationError("Give the message as text or with --file, not both or neither.")
+    if args.file is None:
+        return str(args.text)
+    try:
+        data = sys.stdin.buffer.read() if args.file == "-" else Path(args.file).read_bytes()
+        return data.decode("utf-8")
+    except OSError as problem:
+        raise ConfigurationError(f"Cannot read {args.file}: {problem.strerror}") from None
+    except UnicodeDecodeError:
+        raise ConfigurationError(f"{args.file} is not a UTF-8 text file.") from None
+
+
+def someone_can_answer() -> bool:
+    """A person at a terminal, who sees the question and can answer it."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def ask_to_send(prepared: dict[str, Any]) -> bool:
+    """Show the message and who receives it, and ask. Anything but y means no."""
+    print(render_chat_preview(prepared))
+    try:
+        return input("Send this message? [y/N] ").strip().lower() == "y"
+    except EOFError:
+        return False
+
+
+def run_chat_send(client: ParroClient, args: argparse.Namespace) -> dict[str, Any]:
+    """Prepare, confirm, send. Without --yes and without a person to ask, nothing is sent."""
+    prepared = operations.prepare_chat_message(client, args.chatroom_id, read_message_text(args))
+    if not args.yes:
+        if not someone_can_answer():
+            raise ConfigurationError(
+                "Not sent: there is nobody to ask here. Run it at a terminal, or add --yes."
+            )
+        if not ask_to_send(prepared):
+            return {"sent": False, "chatroom_id": prepared["chatroom_id"]}
+    return operations.send_prepared_message(client, prepared)
 
 
 HANDLERS: dict[str, Handler] = {
@@ -474,6 +537,7 @@ HANDLERS: dict[str, Handler] = {
     "chat-members": lambda c, a: operations.list_chat_members(
         c, a.chatroom_id, include_former=a.former, raw=a.raw
     ),
+    "chat-send": run_chat_send,
     "sync": lambda c, a: operations.sync_archive(
         c,
         operations.SyncOptions(

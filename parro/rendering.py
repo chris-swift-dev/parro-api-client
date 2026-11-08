@@ -819,14 +819,44 @@ def overview_calendar(
     return "## Coming up\n" + "\n".join([*lines, more] if lines else ["Nothing planned."])
 
 
+def member_role(member: dict[str, Any]) -> str:
+    """'teacher', 'parent', or 'parent of Mila, Daan'."""
+    role = str(member.get("role") or "")
+    children = member.get("children") or []
+    return f"parent of {', '.join(children)}" if role == "parent" and children else role
+
+
+def render_chat_preview(prepared: dict[str, Any]) -> str:
+    """What is about to be sent, and to whom: shown before anything goes out."""
+    recipients = prepared.get("recipients", [])
+    names = [join_parts([r.get("name") or "(no name)", member_role(r)]) for r in recipients]
+    audience = "1 person" if len(names) == 1 else f"{len(names)} people"
+    kind = f"{prepared.get('type') or 'chat'} chat"
+    what = join_parts([kind, object_id(prepared["chatroom_id"])])
+    return document(
+        f"# Message to: {prepared.get('title') or what}\n{what}",
+        f"**To ({audience}):** " + ("; ".join(names) or "nobody else yet"),
+        quote(prepared.get("text")),
+    )
+
+
+def render_chat_send(result: dict[str, Any], options: RenderOptions) -> str:
+    """The outcome of chat-send."""
+    room_id = result.get("chatroom_id")
+    if not result.get("sent"):
+        return document("# Not sent", "Nothing was sent.")
+    title = result.get("title") or join_parts(["Chat", object_id(room_id)])
+    when = format_timestamp(result.get("created_at"))
+    message = join_parts(["Message", object_id(result.get("message_id"))])
+    next_step = hint(options, f"chat-messages {room_id}", f"parro_chat_messages({room_id})")
+    return document(f"# Sent to: {title}", join_parts([message, when]), next_step)
+
+
 def render_chat_members(result: dict[str, Any], options: RenderOptions) -> str:
     """'- Sanne de Vries · parent of Mila, Daan · admin'."""
     lines = []
     for member in result.get("members", []):
-        children = member.get("children") or []
-        role = member.get("role") or ""
-        if role == "parent" and children:
-            role = f"parent of {', '.join(children)}"
+        role = member_role(member)
         lines.append(
             "- "
             + join_parts(
@@ -1010,6 +1040,7 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "chat_members": render_chat_members,
     "mark_read": render_mark_read,
     "mark_group_read": render_mark_group_read,
+    "chat_send": render_chat_send,
     "attachment": render_attachment,
     "cache": render_cache,
     "overview": render_overview,
