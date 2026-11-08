@@ -213,8 +213,8 @@ def poly(*names, dtypes=None):
 DESCRIPTION = """\
 Description of the REST API behind **talk.parro.com**, the Dutch parent–school
 communication app by Topicus (ParnasSys). The API is a Topicus *geon* API. Every operation reads,
-except the three under **Read state**, which mark items as read, and `sendChatMessage`, which sends
-a message to real people.
+except the three under **Read state**, which mark items as read, `sendChatMessage`, which sends a
+message to real people, and `addCommitment` and `deleteCommitment` under **Helpers**.
 This spec was derived from the web client's traffic: a captured browser session and sanitized response
 samples. Response schemas list **only fields seen in those samples**. Treat every object as
 open: geon adds fields between contract versions. Every operation here was called at least once;
@@ -492,7 +492,8 @@ def build(samples_dir, public=False):
                  "Items of `type: VOLUNTEER` or `SCHOOLWIDE_VOLUNTEER` (seen live) ask for helpers: "
                  "each entry in `resources[]` "
                  "(`RCalendarItemVolunteerResource`) has a `title`, `amount` (helpers wanted), "
-                 "`amountCommitted`, `commitedByMe` (sic) and `commitments[]`. `numberOfTimeslots` "
+                 "`amountCommitted`, `commitedByMe` (sic) and `commitments[]`, which lists only your own. "
+                 "`numberOfTimeslots` "
                  "and the `RCalendarItemTimeslotCreate` permission point to timeslots (e.g. "
                  "parent–teacher talks) that hang off calendar items; their path is not known.",
             params=[dict(id_param, description="Calendar item id (`calendarItem.links[rel=self].id` "
@@ -603,7 +604,7 @@ def build(samples_dir, public=False):
     }
 
 
-    # ---- Read state: the only operations that change anything (captured 2026-11-07)
+    # ---- Read state: marking as read (captured 2026-11-07)
     read_state_note = (
         "\n\n⚠️ **Others see it.** Read state is shared: the item is no longer marked new in the Parro "
         "app on your phone, and the school sees it as read (announcements show teachers how many "
@@ -669,6 +670,72 @@ def build(samples_dir, public=False):
                     "content": content(collection(ref("ChatTextMessage")), ["sendChatMessage.201.json"])},
             **std_err},
     }
+
+    # ---- helper slots: a promise in the user's name, so it says what others see
+    item_param = dict(id_param, description="The calendar item's **own** id "
+                                            "(`calendarItem.links[rel=self].id`), not the event id: "
+                                            "the event id answers `404`.")
+    resource_param = {"name": "resourceId", "in": "path", "required": True,
+                      "schema": {"type": "integer", "format": "int64"},
+                      "description": "The slot's id (`calendarItem.resources[].links[rel=self].id`)."}
+    commitment = ref("CalendarItemResourceCommitmentPrimer")
+    helper_note = (
+        "\n\n⚠️ **Others see it.** The school sees your name on the slot; a parent sees how many signed "
+        "up, not who (`GET` answers show only your own commitment). A sign-up is a promise, and it can "
+        "take the last place from another parent; withdrawing can leave the school short.")
+
+    def helper_op(op_id, summary, desc, params, responses, body=None):
+        operation = {"tags": ["Helpers"], "operationId": op_id, "summary": summary,
+                     "description": desc + helper_note,
+                     "parameters": [{"$ref": "#/components/parameters/AppVersion"},
+                                    {"$ref": "#/components/parameters/Role"}, *params],
+                     "responses": {**responses, **std_err}}
+        if body:
+            operation["requestBody"] = body
+        return operation
+
+    paths["/calendaritem/{id}/resource/{resourceId}/commitment"] = {"get": op(
+        "listCommitments", "Helpers", "Your own commitment on a helper slot", commitment,
+        ["listCommitments.200.json"], coll=True,
+        desc="Lists **only your own** commitment on the slot (live check 2026-11-08), even when "
+             "`amountCommitted` shows that others signed up: it is empty where you did not. The same entry "
+             "is in `resources[].commitments[]` of the calendar item. The path also answers with a "
+             "trailing `/`.",
+        params=[item_param, resource_param])}
+    paths["/calendaritem/{id}/resource/{resourceId}/commitment/"] = {"post": helper_op(
+        "addCommitment", "Sign up on a helper slot",
+        "Adds a commitment for the logged-in parent, as seen in a capture of the web app, with the "
+        "trailing `/`. Answered `201` with the new commitment, and its address in `Location`. Slots are "
+        "people (`type: VOLUNTEER`) or things to bring (`EQUIPMENT`).\n\n"
+        "`amount` is how many places you take, for example how many children a parent can take along. "
+        "Captures send `1`; `2` was accepted in a live check (2026-11-08), and `amountCommitted` rose "
+        "by 2 and `commitedByMe` became 2.\n\n"
+        "**Not known** (finding out means changing real slots): the answer for a full slot, a past item "
+        "or closed sign-ups, and whether a second sign-up on the same slot adds up.",
+        [item_param, resource_param],
+        {"201": {"description": "Signed up. One item: the new commitment.",
+                 "headers": {"Location": {
+                     "description": "`…/commitment/{commitmentId}` of the new commitment.",
+                     "schema": {"type": "string", "format": "uri"}}},
+                 "content": content(collection(commitment), ["addCommitment.201.json"])}},
+        body={"required": True, "content": {GEON: {"schema": collection({
+            "type": "object", "required": ["dtype", "links", "amount"],
+            "description": "The web app sends exactly these three fields.",
+            "properties": {
+                "dtype": {"type": "string", "enum": ["calendar.RCalendarItemResourceCommitmentPrimer"]},
+                "links": {"type": "array", "maxItems": 0, "items": {},
+                          "description": "Empty: the commitment has no id yet."},
+                "amount": {"type": "integer", "minimum": 1, "description": "How many places you take."},
+            }})}}})}
+    paths["/calendaritem/{id}/resource/{resourceId}/commitment/{commitmentId}"] = {"delete": helper_op(
+        "deleteCommitment", "Withdraw from a helper slot",
+        "Removes your commitment. Answered `204` in a capture of the web app. No request body. The id is "
+        "in `resources[].commitments[]` of the calendar item, which lists only your own.",
+        [item_param, resource_param,
+         {"name": "commitmentId", "in": "path", "required": True,
+          "schema": {"type": "integer", "format": "int64"},
+          "description": "Your commitment's id (`commitments[].links[rel=self].id`)."}],
+        {"204": {"description": "Withdrawn. No body."}})}
 
     # ---- IdP
     idp = [{"url": "https://inloggen.parnassys.net/idp", "description": "ParnasSys IdP"}]
@@ -808,7 +875,8 @@ def build(samples_dir, public=False):
             {"name": "Chat", "description": "Conversations with teachers."},
             {"name": "Misc", "description": "System news, absence and photo-export settings."},
             {"name": "Read state", "description": "Mark announcements, calendar items and chats as "
-                                                  "read: the only operations that change anything."}],
+                                                  "read."},
+            {"name": "Helpers", "description": "Sign up on a calendar item's helper slot, or withdraw."}],
         "security": [{"bearerToken": []}, {"parnassysOAuth": ["openid"]}],
         "paths": paths,
         "components": {

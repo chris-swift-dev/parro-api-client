@@ -149,6 +149,8 @@ DEFAULT_GROUP = GROUP_3  # its feed: 2 announcements, 1 calendar item
 NEWSLETTER_ID = 5000000101  # announcement with a PDF
 MUSEUM_TRIP_ID = 7000000301  # calendar item with a photo
 DEFAULT_CALENDAR_EVENT = MUSEUM_TRIP_ID
+MUSEUM_TRIP_CALENDAR_ITEM = 7000000351  # its calendar item's own id, not the event id
+MUSEUM_TRIP_SLOT = 7000000361  # "Rijden naar het museum": 2 wanted, 1 taken
 GROUPS = (SCHOOLWIDE_GROUP, GROUP_3, GROUP_6)
 
 # The only writes the client may send (parro.api_client.READ_STATE_WRITES, and one chat message).
@@ -160,10 +162,29 @@ ALLOWED_WRITE_PATHS = re.compile(
 
 
 CHAT_MESSAGE_PATH = re.compile(r"^/chatroom/\d+/chatmessage$")
+ADD_COMMITMENT_PATH = re.compile(r"^/calendaritem/(\d+)/resource/(\d+)/commitment/$")
+ONE_COMMITMENT_PATH = re.compile(r"^/calendaritem/(\d+)/resource/(\d+)/commitment/(\d+)$")
 
 
 class ForbiddenWrite(AssertionError):
     """The client sent the API a request that is neither a GET nor one of the allowed writes."""
+
+
+def is_captured_commitment(body: bytes | None) -> bool:
+    """Exactly the body the web app sends (spec: addCommitment), with a count from 1 up."""
+    try:
+        document = json.loads(body or b"")
+        (commitment,) = document["items"]
+    except (ValueError, KeyError, TypeError):
+        return False
+    return (
+        list(document) == ["items"]
+        and list(commitment) == ["dtype", "links", "amount"]
+        and commitment["dtype"] == "calendar.RCalendarItemResourceCommitmentPrimer"
+        and commitment["links"] == []
+        and type(commitment["amount"]) is int
+        and commitment["amount"] >= 1
+    )
 
 
 def is_captured_chat_message(body: bytes | None) -> bool:
@@ -210,6 +231,9 @@ class FakeParroApi:
     # a number answers with that status. A send with no entry here works normally.
     send_outcomes: list[str | int] = field(default_factory=list)
     room_overrides: dict[str, Any] = field(default_factory=dict)
+    # Your commitments per slot id: [{"id": …, "amount": …}]. GETs show them on the slot.
+    commitments: dict[int, list[dict[str, int]]] = field(default_factory=dict)
+    calendar_item_overrides: dict[str, Any] = field(default_factory=dict)
 
     def api_requests(self) -> list[HttpRequest]:
         return [r for r in self.requests if r.url.startswith(API)]
@@ -245,16 +269,64 @@ class FakeParroApi:
             and CHAT_MESSAGE_PATH.match(path)
             and is_captured_chat_message(request.body)
         )
-        if request.method != "GET" and not (allowed_put or allowed_post):
+        allowed_helper = (
+            request.method == "POST"
+            and ADD_COMMITMENT_PATH.match(path)
+            and is_captured_commitment(request.body)
+        ) or (request.method == "DELETE" and ONE_COMMITMENT_PATH.match(path) and not request.body)
+        if request.method != "GET" and not (allowed_put or allowed_post or allowed_helper):
             raise ForbiddenWrite(f"the client must never send {request.method} {path}")
         token = request.headers.get("Authorization", "").removeprefix("Bearer ")
         if token in self.unauthorized_tokens or not token:
             return HttpResponse(401, {}, b"", request.url)
         if request.method == "PUT":
             return self._mark_read(path, query_of(request.url), request)
+        if request.method != "GET" and allowed_helper:
+            return self._change_commitment(path, request)
         if request.method == "POST":
             return self._post_chat_message(path, request)
         return self._with_read_state(self._route(request))
+
+    def _change_commitment(self, path: str, request: HttpRequest) -> HttpResponse:
+        """POST …/commitment/ (201) and DELETE …/commitment/{id} (204), as in the capture."""
+        match = ADD_COMMITMENT_PATH.match(path) or ONE_COMMITMENT_PATH.match(path)
+        assert match is not None
+        item_id, slot_id = int(match[1]), int(match[2])
+        if item_id != MUSEUM_TRIP_CALENDAR_ITEM:  # e.g. the event id: the real API answers 404
+            return self._not_found(request)
+        outcome = self.send_outcomes.pop(0) if self.send_outcomes else None
+        if isinstance(outcome, int):
+            return HttpResponse(outcome, {"content-type": GEON_TYPE}, b'{"code": 1}', request.url)
+        mine = self.commitments.setdefault(slot_id, [])
+        if request.method == "DELETE":
+            kept = [c for c in mine if c["id"] != int(match[3])]
+            if len(kept) == len(mine):
+                return self._not_found(request)
+            self.commitments[slot_id] = kept
+            if outcome == "lost":
+                raise NetworkError("No answer for DELETE …/commitment/{id}: timed out")
+            return HttpResponse(204, {}, b"", request.url)
+        amount = json.loads(request.body or b"")["items"][0]["amount"]
+        commitment_id = 8500000000 + sum(len(c) for c in self.commitments.values()) + 1
+        mine.append({"id": commitment_id, "amount": amount})
+        if outcome == "lost":
+            raise NetworkError("No answer for POST …/commitment/: timed out")
+        location = f"{API}/rest/v2{path}{commitment_id}"
+        headers = {"content-type": GEON_TYPE, "location": location}
+        if outcome == "broken":
+            return HttpResponse(201, headers, b"not json", request.url)
+        body = json.dumps({"items": [self._commitment_object(commitment_id, amount)]}).encode()
+        return HttpResponse(201, headers, body, request.url)
+
+    @staticmethod
+    def _commitment_object(commitment_id: int, amount: int) -> dict[str, Any]:
+        kind = "calendar.RCalendarItemResourceCommitmentPrimer"
+        return {
+            "dtype": kind,
+            "links": [{"id": commitment_id, "rel": "self", "type": kind}],
+            "identity": {"dtype": "identity.RIdentityPrimer", "firstname": "Sanne"},
+            "amount": amount,
+        }
 
     def _post_chat_message(self, path: str, request: HttpRequest) -> HttpResponse:
         """POST …/chatmessage: 201, Location and the new message, as in the capture."""
@@ -304,7 +376,10 @@ class FakeParroApi:
 
     def _with_read_state(self, response: HttpResponse) -> HttpResponse:
         """Show the items marked by earlier PUTs as read (`read`, `unreadCount`)."""
-        if not (self.read_events or self.read_chats) or not response.body.startswith(b"{"):
+        changed = (
+            self.read_events or self.read_chats or self.commitments or self.calendar_item_overrides
+        )
+        if not changed or not response.body.startswith(b"{"):
             return response
         payload = json.loads(response.body)
         self._apply_read_state(payload)
@@ -320,6 +395,16 @@ class FakeParroApi:
                 value["read"] = True
             if dtype.startswith("chat.RChatRoom") and get_object_id(value) in self.read_chats:
                 value["unreadCount"] = 0
+            if dtype == "calendar.RCalendarItem":
+                value.update(self.calendar_item_overrides)
+            if (
+                "commitedByMe" in value and get_object_id(value) in self.commitments
+            ):  # API's spelling
+                mine = self.commitments[get_object_id(value) or 0]
+                total = sum(c["amount"] for c in mine)
+                value["commitments"] = [self._commitment_object(c["id"], c["amount"]) for c in mine]
+                value["commitedByMe"] = total
+                value["amountCommitted"] = value.get("amountCommitted", 0) + total
             for item in value.values():
                 self._apply_read_state(item)
 

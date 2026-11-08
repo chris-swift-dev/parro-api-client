@@ -26,7 +26,13 @@ from parro.api_client import ParroClient
 from parro.attachments import ReadOptions
 from parro.cache import write_private_file
 from parro.errors import EXIT_OK, EXIT_USAGE_ERROR, ConfigurationError, ParroError
-from parro.rendering import RenderOptions, choose_format, render, render_chat_preview
+from parro.rendering import (
+    RenderOptions,
+    choose_format,
+    render,
+    render_chat_preview,
+    render_helper_preview,
+)
 from parro.settings import LOGIN_METHODS, OUTPUT_FORMATS, Settings
 
 log = logging.getLogger("parro_cli")
@@ -34,10 +40,10 @@ log = logging.getLogger("parro_cli")
 EXIT_INTERRUPTED = 130
 
 DESCRIPTION = """\
-Client for Parro, the Dutch parent-school app. It reads. It can change two things, and only when
+Client for Parro, the Dutch parent-school app. It reads. It can change three things, and only when
 you ask: mark an announcement, calendar item or chat as read (`mark-read`, `--mark-read`; the
-school can see that), and send a text message to a chat you are in (`chat-send`; it shows what
-would go to whom first). Nothing can be deleted, and no new chats can be started.
+school can see that), send a text message to a chat you are in (`chat-send`; it shows what would
+go to whom first), and sign you up or withdraw you as a helper (`helper`; it asks first).
 
 Logging in: set PARRO_USERNAME plus PARRO_PASSWORD_FILE (or PARRO_PASSWORD) and run `login`,
 or run `login --prompt` to type the password, or use the browser flow: `login-url`, log in in
@@ -204,6 +210,7 @@ def add_reading_commands(command: CommandFactory) -> None:
 
     add_mark_read_command(command)
     add_chat_send_command(command)
+    add_helper_command(command)
     add_local_data_commands(command)
     get = command("get", "GET any API path, e.g. /accountsettings (read-only)")
     get.add_argument("path", help="path below /rest/v2, e.g. /absence/setting")
@@ -258,6 +265,28 @@ def add_chat_send_command(command: CommandFactory) -> None:
         help="send without asking; without it you see the message and who receives it, and "
         "are asked first",
     )
+
+
+def add_helper_command(command: CommandFactory) -> None:
+    helper = command(
+        "helper",
+        "sign up or withdraw as a helper on a calendar item: the school sees your name",
+    )
+    helper.add_argument("action", choices=("signup", "withdraw"), help="what to do")
+    helper.add_argument("event_id", type=int, help="the calendar item's id (see `calendar`)")
+    helper.add_argument(
+        "--slot",
+        type=int,
+        metavar="ID",
+        help="which slot, if there are several (`calendar --details`)",
+    )
+    helper.add_argument(
+        "--count",
+        type=int,
+        metavar="N",
+        help="signup: how many places you take, e.g. 3 children in your car (default 1)",
+    )
+    helper.add_argument("--yes", action="store_true", help="do it without asking")
 
 
 def add_calendar_commands(command: CommandFactory) -> None:
@@ -436,6 +465,7 @@ COMMAND_VIEWS = {
     "chat-members": "chat_members",
     "mark-read": "mark_read",
     "chat-send": "chat_send",
+    "helper": "helper",
     "get": "get",
     "cache": "cache",
     "sync": "sync",
@@ -471,11 +501,11 @@ def someone_can_answer() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def ask_to_send(prepared: dict[str, Any]) -> bool:
-    """Show the message and who receives it, and ask. Anything but y means no."""
-    print(render_chat_preview(prepared))
+def ask(preview: str, question: str) -> bool:
+    """Show what is about to happen, and ask. Anything but y means no."""
+    print(preview)
     try:
-        return input("Send this message? [y/N] ").strip().lower() == "y"
+        return input(question).strip().lower() == "y"
     except EOFError:
         return False
 
@@ -488,9 +518,33 @@ def run_chat_send(client: ParroClient, args: argparse.Namespace) -> dict[str, An
             raise ConfigurationError(
                 "Not sent: there is nobody to ask here. Run it at a terminal, or add --yes."
             )
-        if not ask_to_send(prepared):
+        if not ask(render_chat_preview(prepared), "Send this message? [y/N] "):
             return {"sent": False, "chatroom_id": prepared["chatroom_id"]}
     return operations.send_prepared_message(client, prepared)
+
+
+HELPER_QUESTIONS = {
+    "signup": "Sign up for this slot? [y/N] ",
+    "withdraw": "Withdraw from this slot? [y/N] ",
+}
+
+
+def run_helper(client: ParroClient, args: argparse.Namespace) -> dict[str, Any]:
+    """Prepare, confirm, change. Without --yes and without a person to ask, nothing changes."""
+    if args.action == "withdraw" and args.count is not None:
+        raise ConfigurationError("--count is only for signup: withdrawing removes your place.")
+    count = 1 if args.count is None else args.count
+    prepared = operations.prepare_helper_change(
+        client, args.action, args.event_id, args.slot, count
+    )
+    if not args.yes:
+        if not someone_can_answer():
+            raise ConfigurationError(
+                "Nothing changed: there is nobody to ask here. Run it at a terminal, or add --yes."
+            )
+        if not ask(render_helper_preview(prepared), HELPER_QUESTIONS[args.action]):
+            return {"done": False, "action": args.action, "event_id": args.event_id}
+    return operations.apply_helper_change(client, prepared)
 
 
 HANDLERS: dict[str, Handler] = {
@@ -538,6 +592,7 @@ HANDLERS: dict[str, Handler] = {
         c, a.chatroom_id, include_former=a.former, raw=a.raw
     ),
     "chat-send": run_chat_send,
+    "helper": run_helper,
     "sync": lambda c, a: operations.sync_archive(
         c,
         operations.SyncOptions(

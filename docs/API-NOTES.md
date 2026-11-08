@@ -39,5 +39,14 @@ All in the spec; the important ones:
   answers `201`, `Location` and the new message. There is no idempotency key, and the capture shows
   no way to take a message back. Not known: the longest text, the answer to empty text, and the answer
   for a chat that cannot be written to.
+- Helper slots: an item's `resources[]` are its slots (`type` `VOLUNTEER` or `EQUIPMENT`).
+  `POST /calendaritem/{id}/resource/{resourceId}/commitment/` (with the trailing `/`) and
+  `{"items":[{"dtype":"calendar.RCalendarItemResourceCommitmentPrimer","links":[],"amount":1}]}`
+  answers `201` and `Location`; `DELETE …/commitment/{commitmentId}` answers `204`. `{id}` is the
+  calendar item's own id (`calendarItem.links[rel=self].id`); the event id answers `404`.
+  `resources[].commitments[]` lists only your own commitment, so a parent learns how many signed up
+  (`amountCommitted`), not who. `commitedByMe` (the API's spelling) is the number of places you committed, and `amount` above 1
+  works (checked with 2). Not known: how a
+  full slot, a past item or closed sign-ups are answered, and whether teachers get a notification.
 - `/conversations` and `/timeslot`, found in the web app's code, answer `404`. CORS preflights allow
   every method on every path, so they say nothing about what a path supports.

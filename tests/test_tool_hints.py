@@ -8,17 +8,20 @@ servers, so a hint that stops being true fails.
 import json
 import os
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import pytest
 
 from parro import mcp_server as parro_mcp
+from parro import operations
 from parro.api_client import ParroClient
 from tests import fakes
 from tests.conftest import load_sample
 
 CHAT = 8000000001
 UNREAD_ANNOUNCEMENT = 5000000102
+BEFORE_THE_TRIP = datetime(2026, 11, 3, 9, 0, tzinfo=timezone.utc)
 HINTS = ("readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint")
 
 READ = (True, False, True, True)
@@ -45,6 +48,8 @@ EXPECTED = {
     "parro_privacy": READ,
     "parro_mark_read": (False, False, True, True),
     "parro_send_chat_message": (False, True, False, True),
+    "parro_helper_signup": (False, False, True, True),
+    "parro_helper_withdraw": (False, True, True, True),
 }
 
 READ_CALLS: dict[str, dict[str, Any]] = {
@@ -103,7 +108,13 @@ def result_of(answer: Any) -> Any:
 
 
 def all_tools() -> list[dict[str, Any]]:
-    return [*parro_mcp.TOOL_DEFINITIONS, parro_mcp.MARK_READ_TOOL, parro_mcp.SEND_CHAT_TOOL]
+    return [
+        *parro_mcp.TOOL_DEFINITIONS,
+        parro_mcp.MARK_READ_TOOL,
+        parro_mcp.SEND_CHAT_TOOL,
+        parro_mcp.HELPER_SIGNUP_TOOL,
+        parro_mcp.HELPER_WITHDRAW_TOOL,
+    ]
 
 
 def test_the_expected_table_covers_every_tool():
@@ -121,6 +132,7 @@ def test_every_tool_states_all_four_hints_as_booleans(name):
 def test_the_hints_reach_clients_through_tools_list(server, monkeypatch):
     monkeypatch.setenv("PARRO_ALLOW_MARK_READ", "1")
     monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    monkeypatch.setenv("PARRO_ALLOW_HELPER_SIGNUP", "1")
     listed = server.handle_request({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
     tools = {tool["name"]: tool["annotations"] for tool in listed["result"]["tools"]}
     assert set(tools) == set(EXPECTED)
@@ -211,3 +223,14 @@ def test_send_is_not_idempotent(api, server, monkeypatch):
     result_of(server.call_tool("parro_send_chat_message", arguments))
     result_of(server.call_tool("parro_send_chat_message", arguments))
     assert api.sent_messages == [(CHAT, "Tekst"), (CHAT, "Tekst")]
+
+
+def test_helper_tools_do_nothing_more_when_repeated(api, server, monkeypatch):
+    """idempotentHint true: a repeat is refused before it writes (more in test_helper_signup.py)."""
+    monkeypatch.setenv("PARRO_ALLOW_HELPER_SIGNUP", "1")
+    monkeypatch.setattr(operations, "current_time", lambda: BEFORE_THE_TRIP)
+    arguments = {"event_id": fakes.MUSEUM_TRIP_ID, "confirm": True}
+    for name, writes in (("parro_helper_signup", 1), ("parro_helper_withdraw", 2)):
+        result_of(server.call_tool(name, arguments))
+        assert server.call_tool(name, arguments).is_error
+        assert len(api.writes()) == writes

@@ -12,7 +12,7 @@
 - all day  Excursie Natuurmuseum · Groep 6 - meester Tom · RSVP needed · helpers wanted · #7000000301
   📍 Natuurmuseum Voorbeeldstad
   We vertrekken om 8.45 uur met de auto. Neem een lunchpakket mee.
-  🙋 Rijden naar het museum: 1 of 2 signed up
+  🙋 Rijden naar het museum: 1 of 2 signed up · #7000000361
   🖼 Route.jpg · 1.3 MB · #6000000401
   → parro-client attachment 7000000301
 

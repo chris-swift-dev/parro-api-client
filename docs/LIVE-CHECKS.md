@@ -107,3 +107,21 @@ was sent, in a chat with one other person. Personal data is left out.
 | `mark-read chat <id>` | OK: 2 GETs and one `PUT /chatroom/{id}/read`; afterwards `unread` says nothing is unread and the chat is gone from `overview` and `chatrooms --unread`. **This closes the gap left by the 0.6.0 check** for chats |
 | the same again | OK: "Already read", 2 GETs, no PUT |
 | Not checked live | `PUT /event/{id}/read` for a calendar item (nothing unread so far), MCP `confirm: true` (same code path as `chat-send` after the preview), refusals of closed chats, a timeout, the limits listed in the spec: finding out would mean more real messages |
+
+## Live check (2026-11-08, release 0.8.0: signing up and withdrawing as a helper)
+
+With the account owner present, who picked the slot and the count and compared the Parro app after
+each step. **No password check**: the existing login was used. One real sign-up and one real
+withdrawal, on an empty slot for two helpers, about two weeks ahead. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| MCP `parro_helper_signup` without `confirm`, `PARRO_ALLOW_HELPER_SIGNUP=1` | OK: the preview shows the item, the slot, 0 of 2 places taken and the count; nothing changed |
+| `helper signup <event> --slot <slot> --count 2 --yes` | OK: accepted, with the new commitment's id. **`amount: 2` works**, the value no capture shows |
+| Read back | OK: `amountCommitted` 2, `commitedByMe` 2, one commitment of yours with `amount` 2; `calendar --details` says 2 of 2 signed up, including you |
+| Parro app | OK: the owner saw 2 of 2 |
+| MCP `parro_helper_withdraw` without `confirm` | OK: the preview shows 2 of 2 places taken; nothing changed |
+| `helper withdraw <event> --slot <slot> --yes` | OK: accepted |
+| Read back | OK: `amountCommitted` 0, `commitedByMe` 0, `commitments` empty |
+| Parro app | OK: the owner saw 0 of 2 |
+| Not checked live | MCP `confirm: true` (the same code path as the CLI after the preview), a timeout, how the API itself answers a full slot, a past item or a second sign-up (the client refuses those before writing), and whether teachers get a notification |

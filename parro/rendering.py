@@ -548,7 +548,8 @@ def detail_lines(item: dict[str, Any], options: RenderOptions) -> list[str]:
         text = str(details["description"]).strip()
         lines += (text if options.full_text else preview(text)).split("\n")
     for slot in details.get("helpers") or []:
-        lines.append(f"{HELPER_MARK} {helper_slot_text(slot)}")
+        text = join_parts([helper_slot_text(slot), object_id(slot.get("id"))])
+        lines.append(f"{HELPER_MARK} {text}")
     for attachment in details.get("attachments") or []:
         lines.append(attachment_line(attachment))
     if details.get("attachments"):
@@ -854,6 +855,60 @@ def render_chat_send(result: dict[str, Any], options: RenderOptions) -> str:
     return document(f"# Sent to: {title}", join_parts([message, when]), next_step)
 
 
+def helper_item_line(result: dict[str, Any]) -> str:
+    """'Excursie Natuurmuseum · Thu 12 Nov 2026 · #7000000301'."""
+    return join_parts(
+        [
+            result.get("title") or "Calendar item",
+            format_date(result.get("start")),
+            object_id(result.get("event_id")),
+        ]
+    )
+
+
+def render_helper_preview(prepared: dict[str, Any]) -> str:
+    """What is about to change, on which slot: shown before anything is written."""
+    wanted, taken = prepared.get("wanted"), prepared.get("signed_up", 0)
+    places = f"{taken} of {wanted} places taken" if wanted is not None else f"{taken} signed up"
+    slot = join_parts(
+        [prepared.get("slot") or "Helpers", object_id(prepared.get("slot_id")), places]
+    )
+    if prepared["action"] == "signup":
+        heading = "Sign up"
+        lines = [
+            f"**Your count:** {prepared['count']}",
+            "The school will see your name on this slot.",
+        ]
+    else:
+        heading = "Withdraw"
+        lines = [
+            "Your place becomes free. The school will see that you are no longer on this slot."
+        ]
+    return document(
+        f"# {heading}: {slot.split(' · ')[0]}", helper_item_line(prepared), slot, "\n".join(lines)
+    )
+
+
+def render_helper_change(result: dict[str, Any], options: RenderOptions) -> str:
+    """The outcome of `helper signup` / `helper withdraw`."""
+    if result.get("preview"):
+        return document(render_helper_preview(result), "Not done yet: nothing has changed.")
+    if not result.get("done"):
+        return document("# Nothing changed", "Nothing was written.")
+    slot = result.get("slot") or "Helpers"
+    if result.get("action") == "signup":
+        detail = join_parts(
+            [f"Count: {result.get('count')}", object_id(result.get("commitment_id"))]
+        )
+        return document(
+            f"# Signed up: {slot}",
+            helper_item_line(result),
+            detail,
+            "The school sees your name on this slot.",
+        )
+    return document(f"# Withdrawn: {slot}", helper_item_line(result))
+
+
 def render_chat_members(result: dict[str, Any], options: RenderOptions) -> str:
     """'- Sanne de Vries · parent of Mila, Daan · admin'."""
     lines = []
@@ -1043,6 +1098,7 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "mark_read": render_mark_read,
     "mark_group_read": render_mark_group_read,
     "chat_send": render_chat_send,
+    "helper": render_helper_change,
     "attachment": render_attachment,
     "cache": render_cache,
     "overview": render_overview,

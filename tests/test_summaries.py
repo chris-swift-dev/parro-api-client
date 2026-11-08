@@ -129,7 +129,13 @@ def test_calendar_details_summary():
     assert details["description"].startswith("We vertrekken")
     assert details["attachments"][0]["filename"] == "Route.jpg"
     assert details["helpers"] == [
-        {"title": "Rijden naar het museum", "wanted": 2, "signed_up": 1, "you_signed_up": False}
+        {
+            "id": 7000000361,
+            "title": "Rijden naar het museum",
+            "wanted": 2,
+            "signed_up": 1,
+            "you_signed_up": False,
+        }
     ]
 
 

@@ -5,10 +5,12 @@ of it (get_account, list_groups, list_events, get_event, ...). They return the A
 untouched; summaries.py shapes it for people.
 
 Rules for this module:
-  * GET, plus exactly two kinds of write. mark_read() can only send the PUT requests in
+  * GET, plus exactly three kinds of write. mark_read() can only send the PUT requests in
     READ_STATE_WRITES (marking an announcement, a calendar item, a chat or a group's announcements
-    as read). send_chat_message() can only send one text message to one chat. There is no generic
-    put() or post(); nothing else can change anything at Parro.
+    as read). send_chat_message() can only send one text message to one chat.
+    add_helper_commitment() and remove_helper_commitment() can only sign the user up on, or
+    withdraw them from, a calendar item's helper slot. There is no generic put(), post() or
+    delete(); nothing else can change anything at Parro.
   * Requests only go to the configured API host, so a token can never be sent elsewhere.
   * A 401 leads to one refresh and one retry, never to a password login (PLAN-api-client §4, fix 3).
     A second 401 raises TokenRejected, which explains the `dtype` pitfall of GET /event/{id}.
@@ -48,14 +50,19 @@ PREVIOUS_GROUPS_SCOPE = "PREVIOUS_ACTIVE"
 GROUPS_PAGE_SIZE = 50
 PRIVACY_CHILD_DTYPE = "identity.RPrivacySettingChild"
 CHAT_TEXT_MESSAGE_DTYPE = "chat.RChatTextMessage"
+HELPER_COMMITMENT_DTYPE = "calendar.RCalendarItemResourceCommitmentPrimer"
 
 EventKind = Literal["announcement", "calendar"]
-WriteMethod = Literal["GET", "PUT", "POST"]
+WriteMethod = Literal["GET", "PUT", "POST", "DELETE"]
 
 # After these, nobody can know whether a message arrived, so it is never sent again on its own.
 SEND_OUTCOME_UNKNOWN = (
     "The message may or may not have arrived, and it was not sent again. Look at the chat before "
     "you try again."
+)
+HELPER_OUTCOME_UNKNOWN = (
+    "It may or may not have gone through, and it was not repeated. Look at the calendar item "
+    "before you try again."
 )
 
 # The only writes this client can send (PLAN-read-state-and-filters §2): PUT, no body, answer 204.
@@ -208,6 +215,61 @@ class ParroClient:
             return ApiResponse(response.json(), response.header("Content-Range"))
         except ValueError:  # sent all the same: the status says so
             return ApiResponse({}, None)
+
+    def add_helper_commitment(
+        self, calendar_item_id: int, resource_id: int, count: int
+    ) -> ApiResponse:
+        """POST one commitment on a helper slot, in the user's name, as captured.
+
+        `calendar_item_id` is the calendar item's own id, not the event id (spec: addCommitment).
+        Sent once, like every write; callers decide when.
+        """
+        for number in (calendar_item_id, resource_id, count):
+            _require_positive_integer(number, "A helper sign-up")
+        commitment = {"dtype": HELPER_COMMITMENT_DTYPE, "links": [], "amount": count}
+        body = json.dumps({"items": [commitment]}, separators=(",", ":")).encode("utf-8")
+        path = f"/calendaritem/{calendar_item_id}/resource/{resource_id}/commitment/"
+        label = "POST /calendaritem/{id}/resource/{id}/commitment/"
+        response = self._change_helper_slot(path, label, "POST", body, (200, 201))
+        try:
+            return ApiResponse(response.json(), response.header("Content-Range"))
+        except ValueError:  # signed up all the same: the status says so
+            return ApiResponse({}, None)
+
+    def remove_helper_commitment(
+        self, calendar_item_id: int, resource_id: int, commitment_id: int
+    ) -> None:
+        """DELETE the user's commitment on a helper slot. Sent once, like every write."""
+        for number in (calendar_item_id, resource_id, commitment_id):
+            _require_positive_integer(number, "Withdrawing from a helper slot")
+        path = f"/calendaritem/{calendar_item_id}/resource/{resource_id}/commitment/{commitment_id}"
+        label = "DELETE /calendaritem/{id}/resource/{id}/commitment/{id}"
+        self._change_helper_slot(path, label, "DELETE", None, (200, 204))
+
+    def _change_helper_slot(
+        self,
+        path: str,
+        label: str,
+        method: WriteMethod,
+        body: bytes | None,
+        success: tuple[int, ...],
+    ) -> HttpResponse:
+        url = self.build_api_url(path)
+        headers = self._build_headers(None, 0, False, True, True)
+        try:
+            response = self._send_with_one_refresh(
+                url, headers, label, True, method=method, body=body
+            )
+        except (NetworkError, http.client.HTTPException) as failure:
+            raise NetworkError(f"{failure} {HELPER_OUTCOME_UNKNOWN}") from None
+        if response.status >= 500:
+            raise ApiError(
+                f"{_api_error(label, response)} {HELPER_OUTCOME_UNKNOWN}", status=response.status
+            )
+        if response.status not in success:
+            raise _api_error(label, response)
+        log.info("changed a helper commitment")
+        return response
 
     def download_from_api_host(self, url: str) -> HttpResponse:
         """GET a file that lives on the API host itself (not the CDN), with the Parro headers."""
@@ -502,6 +564,11 @@ class ParroClient:
             page = self.list_events(one_group_id, event_dtype, limit=limit_per_group)
             collected.extend(FeedEvent(event, group_name) for event in page.items)
         return collected
+
+
+def _require_positive_integer(value: Any, what: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ConfigurationError(f"{what} needs positive whole numbers.")
 
 
 def derive_role_header(account: dict[str, Any]) -> str | None:
