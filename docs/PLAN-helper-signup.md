@@ -1,7 +1,8 @@
 # Plan 9: signing up and withdrawing as a helper for a calendar item
 
-*Status: phases 1–6 done (2026-11-08); decisions taken in §7 (decision 3 changed: a count above 1).
-One question open in §7.*
+*Status: done (2026-11-08): phases 1–6 merged in #14, released as 0.8.0 (phase 7). Decisions in §7
+(decision 3 changed: a count above 1). One question stays open in §7. What was not checked live is
+in `docs/LIVE-CHECKS.md`.*
 
 **Goal:** the spec describes adding and removing a commitment on a calendar item's helper slot, and
 the client can do both. Source: `findings/calendar-event-commitment.har` (git-ignored).
@@ -114,7 +115,7 @@ commitment in place (no such call was captured), and signing up someone else.
 | 4 | ✅ **MCP** (per decision 2): the two tools, their switch and hints | tests, as in `test_tool_hints.py` |
 | 5 | ✅ **Docs:** README promise, badge, a *Helping out* section, FAQ; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; CHANGELOG **0.8.0** | links and pictures checked |
 | 6 | ✅ **Live check with you:** on one slot *you* pick, one sign-up and one withdrawal, with a count above 1 if the slot has room (the value no capture shows); the slot's counts and the Parro app agree after each | in `docs/LIVE-CHECKS.md` |
-| 7 | Release **0.8.0** | published |
+| 7 | ✅ Release **0.8.0** | published |
 
 For phase 6, pick an item where signing up and withdrawing a moment later bothers nobody: a slot with
 places left, not a full or nearly full one, and not close to its date.
