@@ -82,7 +82,7 @@ login was refreshed with its refresh token. Personal data is left out.
 | Check | Result |
 | --- | --- |
 | `overview` | OK: only the unread announcements (3); calendar "Nothing new.", no unread chats |
-| `mark-read announcement <id>` (picked by the owner) | OK: one `PUT /event/{id}/read`, answered 204; "Marked as read" |
+| `mark-read announcement <id>` (picked by the owner) | OK: one `PUT /event/{id}/read`, accepted; "Marked as read" |
 | the same again | OK: "Already read", no PUT |
 | `unread` / `overview` afterwards | OK: Parro's own count went from 3 to 2 unread announcements; the item is gone from the overview |
 | Parro app | OK: the owner saw the item shown as read in the app |
@@ -99,7 +99,7 @@ was sent, in a chat with one other person. Personal data is left out.
 | --- | --- |
 | MCP `parro_send_chat_message` without `confirm`, `PARRO_ALLOW_SEND_CHAT=1` | OK: the preview shows the chat, the one recipient (not the sender) and the exact text; nothing sent, the chat still had 6 messages |
 | `chat-send` without a terminal and without `--yes` | OK: exit 2, "Not sent", nothing sent |
-| `chat-send <id> "<text>" --yes` | OK: 3 GETs and **one POST**, `201`; shows the new message's id and time. The text is not in the `-vv` log |
+| `chat-send <id> "<text>" --yes` | OK: 3 GETs and **one POST**, accepted; shows the new message's id and time. The text is not in the `-vv` log |
 | `chat-messages` afterwards | OK: 7 messages; the newest has that id and exactly that text; `allRead` false |
 | Own unread count | Stayed 0: sending does not make the chat unread for the sender |
 | Parro app | OK: the owner saw the message in the app |
