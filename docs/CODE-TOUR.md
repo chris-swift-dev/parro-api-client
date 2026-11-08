@@ -63,7 +63,7 @@ several groups, applies the unread filter *before* the limit, and builds compact
 5. on a **401**: asks the authenticator for one refresh and retries once. A second 401 raises
    `TokenRejected`, which also explains the `dtype` pitfall. **A 401 never starts a password login.**
 
-**The three kinds of write.** `ParroClient.mark_read(kind, id)` sends one of the three calls in
+**The four kinds of write.** `ParroClient.mark_read(kind, id)` sends one of the three calls in
 `READ_STATE_WRITES` (`PUT …/read`, empty body), through the same headers and 401 handling as `get()`.
 Only commands the user runs on purpose call it (`operations.mark_read`,
 `mark_group_announcements_read`, and the `--mark-read` flags); the MCP tool `parro_mark_read` exists
@@ -82,8 +82,15 @@ commitment)` change one helper slot, once, under the same rule of no repeat afte
 Between those two, `helper` asks (`cli.run_helper`) and the MCP tools want `confirm: true`
 (`change_or_preview_helper_slot`, only with `PARRO_ALLOW_HELPER_SIGNUP=1`).
 
+`ParroClient.answer_rsvp(item, answer)` sends one of the three answers, once, under the same rule.
+It also needs the calendar item's own id. `operations.prepare_rsvp` reads your current answer and
+does the refusals; `apply_rsvp` writes, and sends nothing if the answer is already the same. Between
+those two, `rsvp` asks (`cli.run_rsvp`) and the MCP tool wants `confirm: true`
+(`answer_or_preview_rsvp`, only with `PARRO_ALLOW_RSVP=1`). The MCP tools `parro_get` and
+`parro_attachment` refuse the list of respondents (`mcp_server.refuse_respondents_list`).
+
 No other method sends anything but GET. In the tests, the fake API fails any test that sends another
-write (`tests/fakes.py`, `ForbiddenWrite`), and for messages and helper sign-ups it accepts only the captured body.
+write (`tests/fakes.py`, `ForbiddenWrite`), and for messages, helper sign-ups and answers it accepts only the captured body.
 
 ## 4. The authenticator and the lockout latch
 
@@ -144,7 +151,7 @@ are there, otherwise downloaded once (`store_attachment()`).
 | --- | --- |
 | add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro/cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` / `TOOL_HINTS` in `parro/mcp_server.py` |
 | change how something looks | `parro/rendering.py`, then `UPDATE_SNAPSHOTS=1 .venv/bin/pytest tests/test_rendering.py` and read the diff in `tests/snapshots/` |
-| call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`); GET only: a new write needs a decision first, see the three kinds of write in step 3 and `SECURITY.md` |
+| call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`); GET only: a new write needs a decision first, see the four kinds of write in step 3 and `SECURITY.md` |
 | change output fields | `parro/summaries.py` (keep existing field names: clients depend on them) |
 | understand a login failure | `parro/authenticator.py`, `parro/login_methods.py`, `tests/test_login_safety.py` |
 | check what the API really does | `openapi/parro.openapi.json` and `samples/` (private) |

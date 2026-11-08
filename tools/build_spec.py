@@ -760,8 +760,9 @@ def build(samples_dir, public=False):
                 "web app offers and occur as stored answers.\n\n"
                 "Sending the same answer twice changes nothing: the second call answers `201` with an identical "
                 "body, including `lastModifiedAt`. There is no call to remove an answer in the capture.\n\n"
-                "⚠️ **Others see it.** Everyone who can read the list of respondents sees your name and answer, "
-                "other parents included. It may decide what the school arranges.\n\n"
+                "⚠️ **Others see it.** The school sees your name and answer, and it may decide what is arranged. "
+                "The Parro app does not show parents who answered what, but `GET` on this path returns it "
+                "to a parent's login.\n\n"
                 "**Not known** (finding out means answering real invitations): whether another answer replaces "
                 "an earlier one, the answer for a past or cancelled item or one with `rsvpRequired: false`, and "
                 "whether teachers get a notification.",

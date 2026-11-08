@@ -4,14 +4,15 @@
 description for [Parro](https://talk.parro.com), the Dutch parent–school communication app by
 Topicus (ParnasSys). It reads announcements, newsletters (**including the text inside PDF
 attachments**), the calendar, chats and class info, and shows what you have not read yet. It can
-change three things, only when you ask: mark items as read, send a text message to a chat you are
-in, and sign you up or withdraw you as a helper for a calendar item.
+change four things, only when you ask: mark items as read, send a text message to a chat you are
+in, sign you up or withdraw you as a helper for a calendar item, and answer a calendar item's
+invitation.
 
 [![Client checks](https://github.com/chris-swift-dev/parro-api-client/actions/workflows/ci.yml/badge.svg)](https://github.com/chris-swift-dev/parro-api-client/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/chris-swift-dev/parro-api-client)](https://github.com/chris-swift-dev/parro-api-client/releases/latest)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab)
 ![Standard library only](https://img.shields.io/badge/dependencies-none-brightgreen)
-![Reads; marks as read, sends chat messages and signs up as helper only on request](https://img.shields.io/badge/API_access-reads_%2B_mark_read_%2B_send_chat_%2B_helper_signup-blue)
+![Reads; marks as read, sends chat messages, signs up as helper and answers invitations only on request](https://img.shields.io/badge/API_access-reads_%2B_mark_read_%2B_send_chat_%2B_helper_signup_%2B_rsvp-blue)
 [![Code: MIT](https://img.shields.io/badge/code-MIT-yellow)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE-CODE)
 [![Spec: CC BY 4.0](https://img.shields.io/badge/spec-CC_BY_4.0-lightgrey)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE)
 [![M8ven Score](https://m8ven.ai/badge/mcp/chris-swift-dev-parro-api-client-1lxl3d?v=a2fe9a75782c007b6f35ba102c2147ca)](https://m8ven.ai/mcp/chris-swift-dev-parro-api-client-1lxl3d?s=readme)
@@ -75,11 +76,12 @@ client speaks that API and adds three things:
    agenda per day, conversations in reading order, an overview of what is new. Every id stays
    visible, so the next command is always at hand.
 
-It **reads**. It can change three things in Parro, and only when you ask for it:
+It **reads**. It can change four things in Parro, and only when you ask for it:
 [mark an item as read](#marking-as-read), [send a text message](#sending-a-chat-message) to a chat
-you are in, and [sign up or withdraw as a helper](#helping-out). Apart from those three `PUT …/read`
-calls, the `POST` of a message and the `POST` and `DELETE` of a helper sign-up, the Parro API only
-receives `GET`; the other `POST` requests go to the login server's token, revoke and login-form
+you are in, [sign up or withdraw as a helper](#helping-out), and
+[answer an invitation](#answering-an-invitation). Apart from those three `PUT …/read` calls, the
+`POST` of a message, the `POST` and `DELETE` of a helper sign-up and the `POST` of an answer, the
+Parro API only receives `GET`; the other `POST` requests go to the login server's token, revoke and login-form
 endpoints. Standard library only; PyMuPDF / pypdf (PDF text)
 and Pillow (photo downscaling) are optional.
 
@@ -89,7 +91,7 @@ flowchart LR
   claude([Claude or another MCP client]) --> mcp[parro-client-mcp]
   cli --> core["parro/<br>login · API calls · summaries · markdown"]
   mcp --> core
-  core -- "GET; mark as read, send a message, sign up as helper when you ask" --> api[(Parro REST API)]
+  core -- "GET; mark as read, send a message, sign up as helper, answer an invitation when you ask" --> api[(Parro REST API)]
   core -- "login, refresh, logout" --> idp[(ParnasSys login server)]
   core -- "attachments" --> cdn[(Attachment CDN)]
   core --- disk[("~/.parro: tokens, cache, archive")]
@@ -143,6 +145,7 @@ parro-client chat-messages <chatroom-id> --since 2026-10-01 --mark-read
 parro-client mark-read announcement <id> # the school can see this
 parro-client chat-send <chatroom-id> "Ik kan rijden op de 12e" # shows who receives it, then asks
 parro-client helper signup <event-id> --count 3 # shows the slot, then asks
+parro-client rsvp accept <event-id>      # or decline, tentative; shows your old and new answer, then asks
 parro-client announcements --format json | jq '.announcements[].title'
 parro-client get /accountsettings
 parro-client token                       # paste into Swagger UI → Authorize → bearerToken
@@ -158,7 +161,8 @@ Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-f
 `mark-read announcement|calendar|chat|group <id> [--yes]`,
 `chat-send <chatroom-id> [TEXT] [--file PATH] [--yes]`,
 `helper signup <event-id> [--slot ID] [--count N] [--yes]`,
-`helper withdraw <event-id> [--slot ID] [--yes]`, `sync [--to DIR] [--previous] [--photos]`,
+`helper withdraw <event-id> [--slot ID] [--yes]`,
+`rsvp accept|decline|tentative <event-id> [--yes]`, `sync [--to DIR] [--previous] [--photos]`,
 `cache info|clear`, `get <path> [--param k=v ...] [--limit N] [--offset N]`.
 Global options: `--format auto|json|markdown`, `--login-method`, `--raw`, `--compact`,
 `--no-cache`, `--verbose`. `--full` shows whole texts instead of a 3-line preview.
@@ -249,8 +253,8 @@ time. Whether teachers get a notification is not known.
 - A change is **never repeated** on its own. After a timeout or a server error, the client says it
   may or may not have gone through. Running the command again is safe, because it first reads
   whether you are signed up.
-- Only helper slots, only for yourself: no RSVPs, no parent–teacher talk times, no signing up
-  someone else.
+- Only helper slots, only for yourself: no parent–teacher talk times, no signing up someone else.
+  To answer an invitation, see [below](#answering-an-invitation).
 
 **From an assistant.** The MCP tools `parro_helper_signup` and `parro_helper_withdraw` are **off
 unless you switch them on** with their own `PARRO_ALLOW_HELPER_SIGNUP=1`. Called without
@@ -262,6 +266,51 @@ would happen.
 > name. These tools send no free text, and a sign-up can be undone, but only if you notice it. MCP
 > clients that honour the hints ask before a withdrawal; **also keep approval on for the sign-up**,
 > which is not marked as destructive, and read the preview before you agree.
+
+## Answering an invitation
+
+Some calendar items ask for an answer; the agenda marks them *RSVP needed*, and shows your answer
+once you gave one. `rsvp` answers with the event id you already see:
+
+```bash
+parro-client rsvp accept <event-id>
+parro-client rsvp decline <event-id>
+parro-client rsvp tentative <event-id>
+```
+
+It first shows the item, its date and group, your current answer and the new one, and asks
+`Accept this invitation? [y/N]`. Anything but `y` changes nothing. `--yes` skips the question for
+scripts; without a terminal and without `--yes`, nothing changes.
+
+**The school sees your answer, under your name,** and it may decide what gets arranged. The Parro app
+does not show parents who answered what, but the API does return it to a parent's login, so don't
+treat your answer as hidden from other parents. Whether teachers get a notification is not known.
+
+- **You can change an answer, not remove it.** A new answer replaces the old one, and the client
+  shows both before asking. There is no way back to "not answered".
+- It refuses an item that does not ask for an answer, an item that is cancelled and an item in the
+  past.
+- The answer you already gave is not sent again.
+- An answer is **never repeated** on its own. After a timeout or a server error, the client says it
+  may or may not have gone through. Running the command again is safe, because it first reads your
+  current answer.
+- Only for yourself and one item at a time, and without a note. Parent–teacher talk times are
+  something else, and not covered.
+
+**Other people's answers.** The API also returns everyone an invitation went to, with their names,
+their children's names and their answers. The client has no command for that list, and the MCP tools
+`parro_get` and `parro_attachment` refuse it, so an assistant cannot read it. Only the command
+`get` can, if you ask for that path yourself. Please be careful with what it shows.
+
+**From an assistant.** The MCP tool `parro_rsvp` is **off unless you switch it on** with its own
+`PARRO_ALLOW_RSVP=1`. Called without `confirm: true` it changes nothing and returns the preview, so
+the assistant can show you what would happen.
+
+> **Think before you switch this on.** An assistant also reads what other people write in Parro, and
+> a newsletter that says "please accept this" could try to talk it into answering in your name. The
+> tool sends no free text, but a wrong answer can only be replaced, not removed. It is marked as
+> destructive, so MCP clients that honour this ask you before each call. **Leave that approval on**,
+> and read the preview before you agree.
 
 ## MCP server
 
@@ -299,6 +348,7 @@ Ask Claude about school, and it reads Parro for you. An illustration with the in
 | `parro_mark_read` | Only with `PARRO_ALLOW_MARK_READ=1`: mark one announcement, calendar item or chat as read ([the school sees it](#marking-as-read)). |
 | `parro_send_chat_message` | Only with `PARRO_ALLOW_SEND_CHAT=1`: a preview of a chat message, or with `confirm: true` the message itself ([real people receive it](#sending-a-chat-message)). |
 | `parro_helper_signup` / `parro_helper_withdraw` | Only with `PARRO_ALLOW_HELPER_SIGNUP=1`: a preview of signing up on a calendar item's helper slot (optional `count`) or withdrawing, or with `confirm: true` the change itself ([it is a promise in your name](#helping-out)). |
+| `parro_rsvp` | Only with `PARRO_ALLOW_RSVP=1`: a preview of answering a calendar item's invitation, or with `confirm: true` the answer itself ([the school sees it](#answering-an-invitation)). |
 
 Every tool takes an optional `format`: `json` (default) or `markdown`, a readable view that keeps
 every id. The first 16 tools have the same names and arguments as the original server, so existing
@@ -409,10 +459,10 @@ archive. `cache info` shows its size, `cache clear` empties it, `--no-cache` swi
 <a href="https://chris-swift-dev.github.io/parro-api-client/"><img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
 
 [`openapi/parro.public.openapi.json`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/parro.public.openapi.json) describes the API as
-observed from the web client: 32 operations of the Parro API (account, children and their privacy
+observed from the web client: 34 operations of the Parro API (account, children and their privacy
 settings, groups, announcements, calendar items, chats with their filters and members, unread
 counts, system news, absence and photo-export settings, the agenda subscription link, the three
-calls that mark items as read, sending a chat message, and signing up and withdrawing as a helper), each seen in a live call or a capture of the web app, and the login
+calls that mark items as read, sending a chat message, signing up and withdrawing as a helper, and answering an invitation), each seen in a live call or a capture of the web app, and the login
 server's OAuth2 endpoints. It explains the non-obvious parts: the geon media type and headers,
 `Range`-based paging, `dtype` polymorphism, which id opens a chat, and where attachments live.
 
@@ -435,12 +485,13 @@ server's OAuth2 endpoints. It explains the non-obvious parts: the geon media typ
 **Is this an official Parro tool?** No. It is not affiliated with or endorsed by Topicus, ParnasSys
 or Parro. It uses the same API calls as the Parro web app, as observed from that app.
 
-**Can it post, change or delete anything in Parro?** It can do three things, and only when you
+**Can it post, change or delete anything in Parro?** It can do four things, and only when you
 ask: [mark an item as read](#marking-as-read), [send a text message](#sending-a-chat-message) to a
-chat you are in, and [sign up or withdraw as a helper](#helping-out). Assistants can do these only
-if you switch that on, separately for each. Apart from taking back your own helper sign-up, it
-cannot delete anything, and it cannot start new chats or send attachments. Those are three fixed
-`PUT …/read` calls, two fixed `POST` calls and one fixed `DELETE`; every other request to the Parro
+chat you are in, [sign up or withdraw as a helper](#helping-out), and
+[answer an invitation](#answering-an-invitation). Assistants can do these only if you switch that
+on, separately for each. Apart from taking back your own helper sign-up, it cannot delete anything,
+and it cannot start new chats or send attachments. Those are three fixed `PUT …/read` calls, three
+fixed `POST` calls and one fixed `DELETE`; every other request to the Parro
 API is a `GET`, and the other `POST` requests go to the login server (logging in, refreshing,
 logging out).
 
