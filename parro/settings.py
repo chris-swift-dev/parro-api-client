@@ -83,6 +83,8 @@ class Settings:
     cache_enabled: bool = True
     # The MCP tool parro_mark_read exists only with PARRO_ALLOW_MARK_READ=1 (off by default).
     allow_mark_read: bool = False
+    # The MCP tool parro_send_chat_message exists only with PARRO_ALLOW_SEND_CHAT=1 (default off).
+    allow_send_chat: bool = False
     cache_max_bytes: int = DEFAULT_CACHE_MAX_MB * 1_000_000
 
     @classmethod
@@ -121,6 +123,7 @@ class Settings:
             data_dir=Path(text("PARRO_DATA_DIR", str(default_data_dir()))).expanduser(),
             cache_enabled=parse_switch(env, "PARRO_CACHE", default=True),
             allow_mark_read=parse_switch(env, "PARRO_ALLOW_MARK_READ", default=False),
+            allow_send_chat=parse_switch(env, "PARRO_ALLOW_SEND_CHAT", default=False),
             # Megabytes as people count them (1 MB = 1,000,000 bytes), like the sizes shown.
             cache_max_bytes=int(parse_number(env, "PARRO_CACHE_MAX_MB", DEFAULT_CACHE_MAX_MB))
             * 1_000_000,

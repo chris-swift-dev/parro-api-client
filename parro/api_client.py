@@ -5,14 +5,17 @@ of it (get_account, list_groups, list_events, get_event, ...). They return the A
 untouched; summaries.py shapes it for people.
 
 Rules for this module:
-  * GET, plus exactly one kind of write: mark_read(), which can only send the PUT requests in
+  * GET, plus exactly two kinds of write. mark_read() can only send the PUT requests in
     READ_STATE_WRITES (marking an announcement, a calendar item, a chat or a group's announcements
-    as read). There is no generic put() or post(); nothing else can change anything at Parro.
+    as read). send_chat_message() can only send one text message to one chat. There is no generic
+    put() or post(); nothing else can change anything at Parro.
   * Requests only go to the configured API host, so a token can never be sent elsewhere.
   * A 401 leads to one refresh and one retry, never to a password login (PLAN-api-client §4, fix 3).
     A second 401 raises TokenRejected, which explains the `dtype` pitfall of GET /event/{id}.
 """
 
+import http.client
+import json
 import logging
 import urllib.parse
 from dataclasses import dataclass
@@ -20,7 +23,7 @@ from typing import Any, Literal
 
 from .authenticator import Authenticator
 from .cache import Cache
-from .errors import ApiError, ConfigurationError, TokenRejected
+from .errors import ApiError, ConfigurationError, NetworkError, TokenRejected
 from .geon import (
     build_range_header,
     get_collection_items,
@@ -44,8 +47,16 @@ PREVIOUS_GROUPS_SCOPE = "PREVIOUS_ACTIVE"
 # The groups request of the official client asks for 50; enough for any family.
 GROUPS_PAGE_SIZE = 50
 PRIVACY_CHILD_DTYPE = "identity.RPrivacySettingChild"
+CHAT_TEXT_MESSAGE_DTYPE = "chat.RChatTextMessage"
 
 EventKind = Literal["announcement", "calendar"]
+WriteMethod = Literal["GET", "PUT", "POST"]
+
+# After these, nobody can know whether a message arrived, so it is never sent again on its own.
+SEND_OUTCOME_UNKNOWN = (
+    "The message may or may not have arrived, and it was not sent again. Look at the chat before "
+    "you try again."
+)
 
 # The only writes this client can send (PLAN-read-state-and-filters §2): PUT, no body, answer 204.
 # The school sees the result: announcements show teachers who read them, chats show read receipts.
@@ -153,10 +164,50 @@ class ParroClient:
         url = add_query_parameters(self.build_api_url(template.format(id=object_id)), params)
         label = f"PUT {template}"
         headers = self._build_headers(None, 0, False, True, True)
-        response = self._send_with_one_refresh(url, headers, label, True, method="PUT")
+        response = self._send_with_one_refresh(url, headers, label, True, method="PUT", body=b"")
         if response.status not in (200, 204):
             raise _api_error(label, response)
         log.info("marked as read: %s", kind)
+
+    def send_chat_message(self, chatroom_id: int, text: str) -> ApiResponse:
+        """POST one text message to one chat: real people receive it, under the user's name.
+
+        Sent once: the request has no idempotency key, so it is not repeated after an unclear
+        outcome. The one resend is after a 401, when the server refused the request. The text is
+        never logged. Callers decide when to send; nothing calls this on its own.
+        """
+        if isinstance(chatroom_id, bool) or not isinstance(chatroom_id, int) or chatroom_id <= 0:
+            raise ConfigurationError("Sending a message needs a positive chatroom id.")
+        if not isinstance(text, str) or not text.strip():
+            raise ConfigurationError("Sending a message needs some text.")
+        message = {
+            "dtype": CHAT_TEXT_MESSAGE_DTYPE,
+            "links": [],
+            "deleted": False,
+            "text": text,
+            "allRead": False,
+        }
+        body = json.dumps({"items": [message]}, ensure_ascii=False, separators=(",", ":"))
+        url = self.build_api_url(f"/chatroom/{chatroom_id}/chatmessage")
+        label = "POST /chatroom/{id}/chatmessage"
+        headers = self._build_headers(None, 0, False, True, True)
+        try:
+            response = self._send_with_one_refresh(
+                url, headers, label, True, method="POST", body=body.encode("utf-8")
+            )
+        except (NetworkError, http.client.HTTPException) as failure:
+            raise NetworkError(f"{failure} {SEND_OUTCOME_UNKNOWN}") from None
+        if response.status >= 500:
+            raise ApiError(
+                f"{_api_error(label, response)} {SEND_OUTCOME_UNKNOWN}", status=response.status
+            )
+        if response.status not in (200, 201):
+            raise _api_error(label, response)
+        log.info("sent a chat message")
+        try:
+            return ApiResponse(response.json(), response.header("Content-Range"))
+        except ValueError:  # sent all the same: the status says so
+            return ApiResponse({}, None)
 
     def download_from_api_host(self, url: str) -> HttpResponse:
         """GET a file that lives on the API host itself (not the CDN), with the Parro headers."""
@@ -175,15 +226,16 @@ class ParroClient:
         headers: dict[str, str],
         label: str,
         refresh_on_unauthorized: bool,
-        method: Literal["GET", "PUT"] = "GET",
+        method: WriteMethod = "GET",
+        body: bytes | None = None,
     ) -> HttpResponse:
         """Send; on a 401 refresh once and resend once (fix 3). A 401 never leads to a login."""
-        response = self._send(url, headers, label, method)
+        response = self._send(url, headers, label, method, body)
         if response.status == 401 and refresh_on_unauthorized:
             new_access_token = self.authenticator.refresh_after_unauthorized()
             if new_access_token is not None:
                 headers["Authorization"] = f"Bearer {new_access_token}"
-                response = self._send(url, headers, label, method)
+                response = self._send(url, headers, label, method, body)
         if response.status == 401:
             raise TokenRejected(
                 f"{label} answered 401 Unauthorized. Either the login is no longer valid (log "
@@ -234,11 +286,18 @@ class ParroClient:
         return headers
 
     def _send(
-        self, url: str, headers: dict[str, str], label: str, method: Literal["GET", "PUT"]
+        self,
+        url: str,
+        headers: dict[str, str],
+        label: str,
+        method: WriteMethod,
+        body: bytes | None,
     ) -> HttpResponse:
-        # A PUT carries an empty body (Content-Length: 0), as the web client sends it.
-        body = b"" if method == "PUT" else None
-        return self.transport.send(HttpRequest(method, url, dict(headers), body, log_label=label))
+        # A write never follows a redirect: it could repeat the write somewhere else.
+        request = HttpRequest(
+            method, url, dict(headers), body, follow_redirects=method == "GET", log_label=label
+        )
+        return self.transport.send(request)
 
     # ---------------------------------------------------------------------- account and role
 

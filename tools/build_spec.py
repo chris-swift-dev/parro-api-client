@@ -213,15 +213,16 @@ def poly(*names, dtypes=None):
 DESCRIPTION = """\
 Description of the REST API behind **talk.parro.com**, the Dutch parent–school
 communication app by Topicus (ParnasSys). The API is a Topicus *geon* API. Every operation reads,
-except the three under **Read state**, which mark items as read.
+except the three under **Read state**, which mark items as read, and `sendChatMessage`, which sends
+a message to real people.
 This spec was derived from the web client's traffic: a captured browser session and sanitized response
 samples. Response schemas list **only fields seen in those samples**. Treat every object as
 open: geon adds fields between contract versions. Every operation here was called at least once;
 two paths from the web app's code, `/conversations` and `/timeslot`, answered `404` and are left out.
 
 **A client for this API:** [parro-api-client](https://github.com/chris-swift-dev/parro-api-client),
-a command-line client and MCP server in plain Python that reads, and marks items as read only when
-you ask
+a command-line client and MCP server in plain Python that reads, and only when you ask marks items
+as read and sends chat messages
 ([download a release](https://github.com/chris-swift-dev/parro-api-client/releases/latest)).
 
 Inspired by [fobatai/parro-mcp](https://github.com/fobatai/parro-mcp), a read-only MCP server for Parro
@@ -628,6 +629,46 @@ def build(samples_dir, public=False):
         "markChatroomRead", "Mark a chat conversation as read",
         "No request body. Answered `204` in the capture. The id is the chat room's `rel: self` link.",
         [dict(id_param, description="Chatroom id from `GET /chatroom`.")])}
+
+    # ---- sending: speaks for the user, so it says what is known and what is not
+    paths["/chatroom/{id}/chatmessage"]["post"] = {
+        "tags": ["Chat"], "operationId": "sendChatMessage",
+        "summary": "Send a text message to a chat conversation",
+        "description":
+            "Adds a text message to an existing chat, as seen in a capture of the web app. The id is the "
+            "chat room's `rel: self` link. Answered `201` with the new message, and its address in "
+            "`Location`.\n\n"
+            "⚠️ **Real people receive this, under your name:** the teacher, or everyone in a group chat. "
+            "They get a notification. The capture shows no way to take a message back (a message's "
+            "`permissions` list only `READ`, also for your own), so treat sending as final.\n\n"
+            "⚠️ **Do not resend blindly.** The request has no idempotency key: after a timeout there is no "
+            "way to know whether the message arrived, so look at `GET /chatroom/{id}/chatmessage` first.\n\n"
+            "**Not known** (finding out means messaging real people): the longest text allowed, the answer "
+            "to empty text, and the answer for a chat that cannot be written to (`repliesEnabled: false`, "
+            "`active: false`, archived, or `BOT`). Other kinds of message, replies and attachments were not "
+            "captured.",
+        "parameters": [{"$ref": "#/components/parameters/AppVersion"},
+                       {"$ref": "#/components/parameters/Role"},
+                       dict(id_param, description="Chatroom id from `GET /chatroom`.")],
+        "requestBody": {"required": True, "content": {GEON: {"schema": collection({
+            "type": "object", "required": ["dtype", "links", "deleted", "text", "allRead"],
+            "description": "The web app sends exactly these five fields.",
+            "properties": {
+                "dtype": {"type": "string", "enum": ["chat.RChatTextMessage"]},
+                "links": {"type": "array", "maxItems": 0, "items": {},
+                          "description": "Empty: the message has no id yet."},
+                "deleted": {"type": "boolean", "enum": [False]},
+                "text": {"type": "string", "description": "The message, as the recipients will read it."},
+                "allRead": {"type": "boolean", "enum": [False]},
+            }})}}},
+        "responses": {
+            "201": {"description": "Sent. One item: the new message.",
+                    "headers": {"Location": {
+                        "description": "`…/chatroom/{id}/chatmessage/{messageId}` of the new message.",
+                        "schema": {"type": "string", "format": "uri"}}},
+                    "content": content(collection(ref("ChatTextMessage")), ["sendChatMessage.201.json"])},
+            **std_err},
+    }
 
     # ---- IdP
     idp = [{"url": "https://inloggen.parnassys.net/idp", "description": "ParnasSys IdP"}]

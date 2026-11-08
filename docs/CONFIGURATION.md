@@ -25,6 +25,7 @@ normal use. Back to the [README](../README.md).
 | `PARRO_CACHE` | `on` (`off` = never read or write the cache; CLI: `--no-cache`) |
 | `PARRO_CACHE_MAX_MB` | `500` |
 | `PARRO_ALLOW_MARK_READ` | `off`; `1` adds the MCP tool `parro_mark_read` ([the school sees it](../README.md#marking-as-read)). The CLI's `mark-read` needs no switch |
+| `PARRO_ALLOW_SEND_CHAT` | `off`; `1` adds the MCP tool `parro_send_chat_message` ([read this first](../README.md#sending-a-chat-message)). The CLI's `chat-send` needs no switch |
 
 Switch to the acceptance environment by overriding `PARRO_BASE_URI`, `PARRO_LOGIN_URI` and
 `PARRO_CLIENT_ID`.

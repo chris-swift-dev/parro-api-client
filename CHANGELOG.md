@@ -4,6 +4,33 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.7.0] - unreleased
+
+Reply from the terminal: `chat-send` sends a text message to a chat you are in. **This changes the
+client's promise again:** it reads, and it can change two things, only when you ask: mark items as
+read, and send a text message. Real people receive what you send, under your name, and as far as we
+know a message cannot be taken back.
+
+### Added
+- **`chat-send ID "text"`** (or `--file PATH`, `--file -` for standard input). It shows the chat, who
+  receives the message and the exact text, and asks `Send this message? [y/N]`. `--yes` skips the
+  question for scripts; without a terminal and without `--yes`, nothing is sent.
+- It refuses empty text and chats that are archived, that you have left, that have replies switched
+  off, or that are with a bot.
+- The MCP tool **`parro_send_chat_message`**, only when you set `PARRO_ALLOW_SEND_CHAT=1` (a switch of
+  its own). Without `confirm: true` it only returns the preview, and it is marked as destructive so
+  MCP clients ask first. An assistant also reads what others write, so please read the warning in
+  the README before you switch it on.
+- The spec describes `POST /chatroom/{id}/chatmessage`, and says what is not known about it.
+
+### Changed
+- A message is never sent twice on its own: after a timeout or a server error the client says it may
+  or may not have arrived. The text is never logged or stored.
+- The README, the help text, `SECURITY.md` and the User-Agent describe the new promise.
+- Writes no longer follow redirects.
+- Every MCP tool now states all four hints (`readOnlyHint`, `destructiveHint`, `idempotentHint`,
+  `openWorldHint`), matching what it does. MCP clients can use them to decide when to ask you.
+
 ## [0.6.0] - 2026-11-07
 
 See what is new, and mark what you have read: `overview` now shows only unread announcements and

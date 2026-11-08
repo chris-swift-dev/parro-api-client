@@ -151,15 +151,38 @@ MUSEUM_TRIP_ID = 7000000301  # calendar item with a photo
 DEFAULT_CALENDAR_EVENT = MUSEUM_TRIP_ID
 GROUPS = (SCHOOLWIDE_GROUP, GROUP_3, GROUP_6)
 
-# The only writes the client may send (parro.api_client.READ_STATE_WRITES). Any other method or
-# path to the API fails the test that caused it, so every test checks the allowlist.
+# The only writes the client may send (parro.api_client.READ_STATE_WRITES, and one chat message).
+# Any other method, path or body to the API fails the test that caused it, so every test checks
+# the allowlist.
 ALLOWED_WRITE_PATHS = re.compile(
     r"^/(event/\d+/read|chatroom/\d+/read|event/markannouncementsasread)$"
 )
 
 
+CHAT_MESSAGE_PATH = re.compile(r"^/chatroom/\d+/chatmessage$")
+
+
 class ForbiddenWrite(AssertionError):
-    """The client sent the API a request that is neither a GET nor an allowed PUT."""
+    """The client sent the API a request that is neither a GET nor one of the allowed writes."""
+
+
+def is_captured_chat_message(body: bytes | None) -> bool:
+    """Exactly the body the web app sends (spec: sendChatMessage), with some text."""
+    try:
+        document = json.loads(body or b"")
+        (message,) = document["items"]
+    except (ValueError, KeyError, TypeError):
+        return False
+    return (
+        list(document) == ["items"]
+        and list(message) == ["dtype", "links", "deleted", "text", "allRead"]
+        and message["dtype"] == "chat.RChatTextMessage"
+        and message["links"] == []
+        and message["deleted"] is False
+        and message["allRead"] is False
+        and isinstance(message["text"], str)
+        and bool(message["text"].strip())
+    )
 
 
 @dataclass
@@ -181,6 +204,12 @@ class FakeParroApi:
     # Read state set by the allowed PUTs; later GETs show these items as read.
     read_events: set[int] = field(default_factory=set)
     read_chats: set[int] = field(default_factory=set)
+    # Messages that reached the chat, as (chatroom id, text); later GETs list them.
+    sent_messages: list[tuple[int, str]] = field(default_factory=list)
+    # The next sends: "lost" arrives but the answer does not, "broken" answers 201 without JSON,
+    # a number answers with that status. A send with no entry here works normally.
+    send_outcomes: list[str | int] = field(default_factory=list)
+    room_overrides: dict[str, Any] = field(default_factory=dict)
 
     def api_requests(self) -> list[HttpRequest]:
         return [r for r in self.requests if r.url.startswith(API)]
@@ -208,16 +237,52 @@ class FakeParroApi:
         if not request.url.startswith(API):
             return HttpResponse(404, {}, b"", request.url)
         path = urllib.parse.urlsplit(request.url).path.removeprefix("/rest/v2")
-        if request.method != "GET" and not (
+        allowed_put = (
             request.method == "PUT" and ALLOWED_WRITE_PATHS.match(path) and not request.body
-        ):
+        )
+        allowed_post = (
+            request.method == "POST"
+            and CHAT_MESSAGE_PATH.match(path)
+            and is_captured_chat_message(request.body)
+        )
+        if request.method != "GET" and not (allowed_put or allowed_post):
             raise ForbiddenWrite(f"the client must never send {request.method} {path}")
         token = request.headers.get("Authorization", "").removeprefix("Bearer ")
         if token in self.unauthorized_tokens or not token:
             return HttpResponse(401, {}, b"", request.url)
         if request.method == "PUT":
             return self._mark_read(path, query_of(request.url), request)
+        if request.method == "POST":
+            return self._post_chat_message(path, request)
         return self._with_read_state(self._route(request))
+
+    def _post_chat_message(self, path: str, request: HttpRequest) -> HttpResponse:
+        """POST …/chatmessage: 201, Location and the new message, as in the capture."""
+        room_id = int(path.split("/")[2])
+        check = self._chatroom_path(f"/chatroom/{room_id}", {}, request)
+        if check.status == 403:
+            return check
+        outcome = self.send_outcomes.pop(0) if self.send_outcomes else None
+        if isinstance(outcome, int):
+            return HttpResponse(outcome, {"content-type": GEON_TYPE}, b'{"code": 1}', request.url)
+        text = json.loads(request.body or b"")["items"][0]["text"]
+        self.sent_messages.append((room_id, text))
+        if outcome == "lost":
+            raise NetworkError("No answer for POST /chatroom/{id}/chatmessage: timed out")
+        message_id = 8400000000 + len(self.sent_messages)
+        location = f"{API}/rest/v2/chatroom/{room_id}/chatmessage/{message_id}"
+        headers = {"content-type": GEON_TYPE, "location": location}
+        if outcome == "broken":
+            return HttpResponse(201, headers, b"not json", request.url)
+        message = {
+            "dtype": "chat.RChatTextMessage",
+            "links": [{"id": message_id, "rel": "self", "type": "chat.RChatTextMessage"}],
+            "createdAt": "2026-11-03T15:00:00.000+01:00",
+            "deleted": False,
+            "text": text,
+            "allRead": False,
+        }
+        return HttpResponse(201, headers, json.dumps({"items": [message]}).encode(), request.url)
 
     def _mark_read(self, path: str, query: dict[str, str], request: HttpRequest) -> HttpResponse:
         """The three PUT …/read calls: 204 without a body, as the real API answers."""
@@ -403,7 +468,8 @@ class FakeParroApi:
             return self._items(messages, request)
         if path == f"/chatroom/{room_id}":
             room = next(r for r in rooms if get_object_id(r) == room_id)
-            return self._one_object({**room, "dtype": "chat.RChatRoom"}, request.url)
+            changes = {"dtype": "chat.RChatRoom", **self.room_overrides}
+            return self._one_object({**room, **changes}, request.url)
         if path.endswith("/chatroommember"):
             members = self.load_sample("listChatroomMembers.200.json")["items"]
             if query.get("isActive") == "true":

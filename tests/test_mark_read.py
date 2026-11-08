@@ -118,9 +118,9 @@ def test_only_the_client_core_builds_api_requests():
         elif path.name == "attachments.py":  # downloads from the CDN
             assert methods == {"GET"}
         elif path.name == "api_client.py":
-            assert methods == set(), "_send passes the method on; it is GET or PUT"
-            assert 'Literal["GET", "PUT"]' in text and '"POST"' not in text
-            assert re.search(r'method="PUT"', text) and text.count('method="PUT"') == 1
+            assert methods == set(), "_send passes the method on; it is GET, PUT or POST"
+            assert 'Literal["GET", "PUT", "POST"]' in text
+            assert text.count('method="PUT"') == 1 and text.count('method="POST"') == 1
         else:
             assert "HttpRequest(" not in text, path.name
 
