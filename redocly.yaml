@@ -1,3 +1,6 @@
 # Lint config for the OpenAPI specs (npx redocly lint --config redocly.yaml <spec>)
 extends:
   - recommended
+rules:
+  # The spec describes the API as it is: signing up as a helper is POST …/commitment/, with the slash.
+  no-path-trailing-slash: off
