@@ -64,6 +64,21 @@ def test_names_in_lists_and_nested_objects():
     ]
 
 
+def test_a_name_in_a_helper_commitment_is_found():
+    commitment = {
+        "items": [
+            {
+                "dtype": "calendar.RCalendarItemResourceCommitmentPrimer",
+                "amount": 1,
+                "identity": {"dtype": "identity.RIdentityPrimer", "surname": INVENTED_NAME},
+            }
+        ]
+    }
+    findings = load_tool().scan_text(json.dumps(commitment), "addCommitment.201.json")
+    assert len(findings) == 1 and INVENTED_NAME not in findings[0]
+    assert "/items/0/identity/surname" in findings[0]
+
+
 def test_address_fields_are_checked_too():
     school = {"name": "Basisschool Voorbeeld", "city": "Zwolle"}
     assert findings(school) == ["sample.json: /city: not a placeholder (6 characters)"]
