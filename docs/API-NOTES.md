@@ -34,5 +34,10 @@ All in the spec; the important ones:
   `PUT /event/markannouncementsasread?group={id}` (all announcements of a group) and
   `PUT /chatroom/{id}/read`, each with an empty body, answer `204`. **The school sees the result**
   (read counts on announcements, read receipts in chats), and so does the Parro app.
+- Sending: `POST /chatroom/{id}/chatmessage` with
+  `{"items":[{"dtype":"chat.RChatTextMessage","links":[],"deleted":false,"text":"…","allRead":false}]}`
+  answers `201`, `Location` and the new message. There is no idempotency key, and the capture shows
+  no way to take a message back. Not known: the longest text, the answer to empty text, and the answer
+  for a chat that cannot be written to.
 - `/conversations` and `/timeslot`, found in the web app's code, answer `404`. CORS preflights allow
   every method on every path, so they say nothing about what a path supports.

@@ -25,7 +25,7 @@ from .errors import NetworkError
 
 log = logging.getLogger(__name__)
 
-USER_AGENT = f"parro-api-client/{__version__} (+reads; marks as read on request)"
+USER_AGENT = f"parro-api-client/{__version__} (+reads; marks read, sends chat text on request)"
 
 
 @dataclass(frozen=True)

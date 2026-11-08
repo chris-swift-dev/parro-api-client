@@ -63,12 +63,20 @@ several groups, applies the unread filter *before* the limit, and builds compact
 5. on a **401**: asks the authenticator for one refresh and retries once. A second 401 raises
    `TokenRejected`, which also explains the `dtype` pitfall. **A 401 never starts a password login.**
 
-**The one write.** `ParroClient.mark_read(kind, id)` sends one of the three calls in
+**The two writes.** `ParroClient.mark_read(kind, id)` sends one of the three calls in
 `READ_STATE_WRITES` (`PUT …/read`, empty body), through the same headers and 401 handling as `get()`.
-There is no other method that sends anything but GET. Only commands the user runs on purpose call it
-(`operations.mark_read`, `mark_group_announcements_read`, and the `--mark-read` flags); the MCP tool
-`parro_mark_read` exists only with `PARRO_ALLOW_MARK_READ=1`. In the tests, the fake API fails any
-test that sends another write (`tests/fakes.py`, `ForbiddenWrite`).
+Only commands the user runs on purpose call it (`operations.mark_read`,
+`mark_group_announcements_read`, and the `--mark-read` flags); the MCP tool `parro_mark_read` exists
+only with `PARRO_ALLOW_MARK_READ=1`.
+
+`ParroClient.send_chat_message(chatroom_id, text)` builds the one captured body and POSTs it, once:
+after a timeout or a `5xx` it says the outcome is unknown and does not send again (the request has no
+idempotency key). `operations.prepare_chat_message` does the reading and the refusals;
+`send_prepared_message` sends. Between those two, `chat-send` asks (`cli.run_chat_send`) and the MCP
+tool wants `confirm: true` (`send_or_preview_chat_message`, only with `PARRO_ALLOW_SEND_CHAT=1`).
+
+No other method sends anything but GET. In the tests, the fake API fails any test that sends another
+write (`tests/fakes.py`, `ForbiddenWrite`), and for messages it accepts only the captured body.
 
 ## 4. The authenticator and the lockout latch
 
@@ -129,7 +137,7 @@ are there, otherwise downloaded once (`store_attachment()`).
 | --- | --- |
 | add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro/cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` in `parro/mcp_server.py` |
 | change how something looks | `parro/rendering.py`, then `UPDATE_SNAPSHOTS=1 .venv/bin/pytest tests/test_rendering.py` and read the diff in `tests/snapshots/` |
-| call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`); GET only: a new write needs a decision first, see `READ_STATE_WRITES` and `SECURITY.md` |
+| call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`); GET only: a new write needs a decision first, see the two writes in step 3 and `SECURITY.md` |
 | change output fields | `parro/summaries.py` (keep existing field names: clients depend on them) |
 | understand a login failure | `parro/authenticator.py`, `parro/login_methods.py`, `tests/test_login_safety.py` |
 | check what the API really does | `openapi/parro.openapi.json` and `samples/` (private) |

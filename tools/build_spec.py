@@ -213,15 +213,16 @@ def poly(*names, dtypes=None):
 DESCRIPTION = """\
 Description of the REST API behind **talk.parro.com**, the Dutch parent–school
 communication app by Topicus (ParnasSys). The API is a Topicus *geon* API. Every operation reads,
-except the three under **Read state**, which mark items as read.
+except the three under **Read state**, which mark items as read, and `sendChatMessage`, which sends
+a message to real people.
 This spec was derived from the web client's traffic: a captured browser session and sanitized response
 samples. Response schemas list **only fields seen in those samples**. Treat every object as
 open: geon adds fields between contract versions. Every operation here was called at least once;
 two paths from the web app's code, `/conversations` and `/timeslot`, answered `404` and are left out.
 
 **A client for this API:** [parro-api-client](https://github.com/chris-swift-dev/parro-api-client),
-a command-line client and MCP server in plain Python that reads, and marks items as read only when
-you ask
+a command-line client and MCP server in plain Python that reads, and only when you ask marks items
+as read and sends chat messages
 ([download a release](https://github.com/chris-swift-dev/parro-api-client/releases/latest)).
 
 Inspired by [fobatai/parro-mcp](https://github.com/fobatai/parro-mcp), a read-only MCP server for Parro

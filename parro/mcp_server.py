@@ -328,8 +328,8 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
 ]
 
 
-# Only listed and callable with PARRO_ALLOW_MARK_READ=1: the one tool that changes something at
-# Parro (PLAN-read-state-and-filters §2). The annotations tell MCP clients to ask first.
+# Only listed and callable with PARRO_ALLOW_MARK_READ=1: it changes what the school sees
+# (PLAN-read-state-and-filters §2). The annotations tell MCP clients to ask first.
 MARK_READ_TOOL: dict[str, Any] = {
     "name": "parro_mark_read",
     "description": "Mark one announcement, calendar item or chat as read. Only when the user asks "
