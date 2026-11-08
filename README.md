@@ -13,6 +13,7 @@ thing it can change: marking items as read, only when you ask.
 ![Reads; marks as read only on request](https://img.shields.io/badge/API_access-reads_%2B_mark_as_read-blue)
 [![Code: MIT](https://img.shields.io/badge/code-MIT-yellow)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE-CODE)
 [![Spec: CC BY 4.0](https://img.shields.io/badge/spec-CC_BY_4.0-lightgrey)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE)
+[![M8ven Score](https://m8ven.ai/badge/mcp/chris-swift-dev-parro-api-client-1lxl3d?v=a2fe9a75782c007b6f35ba102c2147ca)](https://m8ven.ai/mcp/chris-swift-dev-parro-api-client-1lxl3d?s=readme)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-overview-dark.svg">
