@@ -1,7 +1,7 @@
 # Plan 9: signing up and withdrawing as a helper for a calendar item
 
-*Status: phase 1 done (2026-11-08); decisions taken in §7 (decision 3 changed: a count above 1). One
-question open in §7.*
+*Status: phases 1–5 done (2026-11-08); decisions taken in §7 (decision 3 changed: a count above 1).
+One question open in §7.*
 
 **Goal:** the spec describes adding and removing a commitment on a calendar item's helper slot, and
 the client can do both. Source: `findings/calendar-event-commitment.har` (git-ignored).
@@ -109,10 +109,10 @@ commitment in place (no such call was captured), and signing up someone else.
 | # | Phase | Done when |
 | --- | --- | --- |
 | 1 | ✅ **Live probe, GET only:** see *Probe results* in §1 | done |
-| 2 | **Spec and privacy:** sanitized samples (the new commitment, the list); `POST`, `DELETE` and the `GET` list with what is not known and what others see; the privacy scan covers commitments | spec validates; scan passes |
-| 3 | **Client:** the two calls, the checks of §3, `helper signup` / `withdraw`, slot ids in `calendar --details`; the fake API accepts exactly these writes and keeps the state | tests: nothing changes without confirmation, refusals (also of a count that does not fit), no retry, the count reaches the body, the event id is never used in the path |
-| 4 | **MCP** (per decision 2): the two tools, their switch and hints | tests, as in `test_tool_hints.py` |
-| 5 | **Docs:** README promise, badge, a *Helping out* section, FAQ; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; CHANGELOG **0.8.0** | links and pictures checked |
+| 2 | ✅ **Spec and privacy:** sanitized samples (the new commitment, the list); `POST`, `DELETE` and the `GET` list with what is not known and what others see; the privacy scan covers commitments | spec validates; scan passes |
+| 3 | ✅ **Client:** the two calls, the checks of §3, `helper signup` / `withdraw`, slot ids in `calendar --details`; the fake API accepts exactly these writes and keeps the state | tests: nothing changes without confirmation, refusals (also of a count that does not fit), no retry, the count reaches the body, the event id is never used in the path |
+| 4 | ✅ **MCP** (per decision 2): the two tools, their switch and hints | tests, as in `test_tool_hints.py` |
+| 5 | ✅ **Docs:** README promise, badge, a *Helping out* section, FAQ; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; CHANGELOG **0.8.0** | links and pictures checked |
 | 6 | **Live check with you:** on one slot *you* pick, one sign-up and one withdrawal, with a count above 1 if the slot has room (the value no capture shows); the slot's counts and the Parro app agree after each | in `docs/LIVE-CHECKS.md` |
 | 7 | Release **0.8.0** | published |
 

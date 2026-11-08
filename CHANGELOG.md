@@ -4,6 +4,35 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.8.0] - unreleased
+
+Say you can help: `helper signup` and `helper withdraw` put you on a calendar item's helper slot, or
+take you off it. **This changes the client's promise again:** it reads, and it can change three
+things, only when you ask: mark items as read, send a text message, and sign you up or withdraw you
+as a helper. A sign-up is a promise in your name: the school sees it, and you may take the last
+place.
+
+### Added
+- **`helper signup EVENT`**, with `--count N` for more than one place (for example three children
+  in your car) and `--slot ID` when an item has several slots, and **`helper withdraw EVENT`**. They
+  show the item, the slot and the places taken, and ask first. `--yes` skips the question for
+  scripts; without a terminal and without `--yes`, nothing changes.
+- They refuse an item that asks for no helpers, an item in the past, a full slot, a count that does
+  not fit the places left, signing up where you already have, and withdrawing where you have not.
+- `calendar --details` shows the id of each helper slot.
+- The MCP tools **`parro_helper_signup`** and **`parro_helper_withdraw`**, only when you set
+  `PARRO_ALLOW_HELPER_SIGNUP=1` (a switch of their own). Without `confirm: true` they only return
+  the preview. Please read the warning in the README before you switch them on.
+- The spec describes adding, listing and removing a helper commitment, and says what is not known
+  about it.
+
+### Changed
+- A helper change is never repeated on its own: after a timeout or a server error the client says
+  it may or may not have gone through.
+- The README, the help text, `SECURITY.md` and the User-Agent describe the new promise.
+- The README's opening note no longer says only `GET` calls are used, which stopped being true in
+  0.6.0.
+
 ## [0.7.0] - 2026-11-08
 
 Reply from the terminal: `chat-send` sends a text message to a chat you are in. **This changes the

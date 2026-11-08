@@ -604,7 +604,7 @@ def build(samples_dir, public=False):
     }
 
 
-    # ---- Read state: the only operations that change anything (captured 2026-11-07)
+    # ---- Read state: marking as read (captured 2026-11-07)
     read_state_note = (
         "\n\n⚠️ **Others see it.** Read state is shared: the item is no longer marked new in the Parro "
         "app on your phone, and the school sees it as read (announcements show teachers how many "
