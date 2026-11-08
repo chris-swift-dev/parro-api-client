@@ -913,6 +913,16 @@ def prepare_rsvp(client: ParroClient, event_id: int | None, answer: Any) -> dict
     }
 
 
+def answer_or_preview_rsvp(
+    client: ParroClient, event_id: int | None, answer: Any, confirm: bool = False
+) -> dict[str, Any]:
+    """For an assistant, which has no terminal to ask at: the preview, or `confirm` to answer."""
+    prepared = prepare_rsvp(client, event_id, answer)
+    if confirm or prepared["unchanged"]:
+        return apply_rsvp(client, prepared)
+    return {**prepared, "done": False, "preview": True}
+
+
 def apply_rsvp(client: ParroClient, prepared: dict[str, Any]) -> dict[str, Any]:
     """Do what prepare_rsvp() returned, once. The answer you already gave is not sent again."""
     if not prepared["unchanged"]:

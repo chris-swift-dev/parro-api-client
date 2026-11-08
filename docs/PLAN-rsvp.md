@@ -1,6 +1,6 @@
 # Plan 10: answering a calendar item's invitation (RSVP)
 
-*Status: phases 1–3 done (2026-11-09); decisions taken in §7.*
+*Status: phases 1–4 done (2026-11-09); decisions taken in §7.*
 
 **Goal:** the spec describes answering a calendar item with `ACCEPT`, `DECLINE` or `TENTATIVE`, and the
 client can do it. Source: `findings/accept-calendar-item.har` (git-ignored).
@@ -91,7 +91,7 @@ helper, and answer an invitation, and only when you ask.*
 8. **Your answer shows up.** The agenda shows it in place of *RSVP needed*. It comes from the event
    list, which is never cached, so a change shows at once.
 9. **Other parents' answers stay out.** The client has no command for the list of respondents, and
-   the MCP tool `parro_get` refuses that path (decision 5). The spec describes it as an operation,
+   the MCP tools `parro_get` and `parro_attachment` refuse that path (decision 5). The spec describes it as an operation,
    with a warning about the personal data it returns.
 
 ## 4. MCP
@@ -113,7 +113,7 @@ parent–teacher talk times (other calls, not captured), and answering a whole g
 | 1 | ✅ **Live probe, GET only:** see *Probe results* in §1. Only counts and field names were printed | done |
 | 2 | ✅ **Spec and privacy:** sanitized sample (git-ignored); the `POST` and the `GET` of the respondents under a new *RSVP* section, with what is not known, what others see and the warning about the personal data in that list; the event's `rsvp` field; the privacy scan covers `guardian` and `childNames` | spec validates; scan passes |
 | 3 | ✅ **Client:** the call, the checks of §3, `rsvp accept\|decline\|tentative`, the answer in the agenda; the fake API accepts exactly this write and keeps the state | tests: nothing changes without confirmation, refusals, no retry, the right id in the path, only the three answers reach the body |
-| 4 | **MCP** (per decisions 2 and 5): the tool, its switch and hints; `parro_get` refuses the respondents path | tests, as in `test_tool_hints.py`, and that no spelling of the path gets through |
+| 4 | ✅ **MCP** (per decisions 2 and 5): the tool, its switch and hints; `parro_get` and `parro_attachment` refuse the respondents path | tests, as in `test_tool_hints.py`, and that no spelling of the path gets through |
 | 5 | **Docs:** README promise, badge, an *Answering an invitation* section, FAQ, and the "no RSVPs" line under *Helping out*; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; spec-operations count; CHANGELOG **0.9.0** | links and pictures checked |
 | 6 | **Live check with you:** on the item *you* pick, `TENTATIVE`, then `DECLINE`, then back to the answer you want to end on (the values no capture shows, and replacing an answer); the Parro app agrees after each | in `docs/LIVE-CHECKS.md` |
 | 7 | Release **0.9.0** | published |
@@ -132,6 +132,6 @@ and not close to its date: teachers may be notified of each change.
    old and the new answer. It is the only way to correct a mistake.
 4. **Which items:** only items with `rsvpRequired: true`.
 5. **The list of respondents (added 2026-11-09):** the spec describes
-   `GET /calendaritem/{id}/calendaritemrsvp`, and the MCP tool `parro_get` refuses that path, so an
+   `GET /calendaritem/{id}/calendaritemrsvp`, and the MCP tools `parro_get` and `parro_attachment` refuse that path, so an
    assistant cannot read other people's names and answers. The CLI's `get` keeps working: there you
    ask for it yourself.
