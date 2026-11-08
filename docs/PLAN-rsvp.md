@@ -1,6 +1,6 @@
 # Plan 10: answering a calendar item's invitation (RSVP)
 
-*Status: phase 1 done (2026-11-09); decisions taken in §7.*
+*Status: phases 1–2 done (2026-11-09); decisions taken in §7.*
 
 **Goal:** the spec describes answering a calendar item with `ACCEPT`, `DECLINE` or `TENTATIVE`, and the
 client can do it. Source: `findings/accept-calendar-item.har` (git-ignored).
@@ -44,7 +44,7 @@ data, so the sample needs the privacy scan to cover those fields.
 | --- | --- |
 | How to read your own answer | **The event's own `rsvp` field**, on `GET /event` and `GET /event/{id}`: `ACCEPT` on the 3 items you answered, absent on the other 17. No extra request is needed |
 | `{id}` in the path | The calendar item's own id. It differs from the event id on all 20 items; with the event id the `GET` answers `404` |
-| `GET /calendaritem/{id}/calendaritemrsvp` | Answers on 15 of the 20 items and `403` on 5. **It lists every parent the invitation went to, with name, children's names and answer** (`identity.RRespondent`), 829 entries in total over those 15 lists. **The client must not use or show it** |
+| `GET /calendaritem/{id}/calendaritemrsvp` | Answers on 15 of the 20 items and `403` on 5. **It lists everyone the invitation went to, parents and teachers, with name, children's names and answer** (`identity.RRespondent`), 829 entries in total over those 15 lists. **The client must not use or show it** |
 | Possible answers | `ACCEPT`, `DECLINE`, `TENTATIVE` and `UNKNOWN` all occur in those lists. `UNKNOWN` means not answered yet. Whether sending `UNKNOWN` clears an answer is not known, and is not tried: the app offers no such button |
 | Deadline | No deadline field on the item, and no `RSVP` entry in its `permissions` |
 | Status | All 20 are `OPEN`, none cancelled, so the answer for a closed or cancelled item stays unknown |
@@ -111,7 +111,7 @@ parent–teacher talk times (other calls, not captured), and answering a whole g
 | # | Phase | Done when |
 | --- | --- | --- |
 | 1 | ✅ **Live probe, GET only:** see *Probe results* in §1. Only counts and field names were printed | done |
-| 2 | **Spec and privacy:** sanitized sample (git-ignored); the `POST` and the `GET` of the respondents under a new *RSVP* section, with what is not known, what others see and the warning about the personal data in that list; the event's `rsvp` field; the privacy scan covers `guardian` and `childNames` | spec validates; scan passes |
+| 2 | ✅ **Spec and privacy:** sanitized sample (git-ignored); the `POST` and the `GET` of the respondents under a new *RSVP* section, with what is not known, what others see and the warning about the personal data in that list; the event's `rsvp` field; the privacy scan covers `guardian` and `childNames` | spec validates; scan passes |
 | 3 | **Client:** the call, the checks of §3, `rsvp accept\|decline\|tentative`, the answer in the agenda; the fake API accepts exactly this write and keeps the state | tests: nothing changes without confirmation, refusals, no retry, the right id in the path, only the three answers reach the body |
 | 4 | **MCP** (per decisions 2 and 5): the tool, its switch and hints; `parro_get` refuses the respondents path | tests, as in `test_tool_hints.py`, and that no spelling of the path gets through |
 | 5 | **Docs:** README promise, badge, an *Answering an invitation* section, FAQ, and the "no RSVPs" line under *Helping out*; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; spec-operations count; CHANGELOG **0.9.0** | links and pictures checked |
@@ -133,5 +133,5 @@ and not close to its date: teachers may be notified of each change.
 4. **Which items:** only items with `rsvpRequired: true`.
 5. **The list of respondents (added 2026-11-09):** the spec describes
    `GET /calendaritem/{id}/calendaritemrsvp`, and the MCP tool `parro_get` refuses that path, so an
-   assistant cannot read other parents' names and answers. The CLI's `get` keeps working: there you
+   assistant cannot read other people's names and answers. The CLI's `get` keeps working: there you
    ask for it yourself.

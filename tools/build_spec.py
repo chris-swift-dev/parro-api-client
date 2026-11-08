@@ -214,7 +214,8 @@ DESCRIPTION = """\
 Description of the REST API behind **talk.parro.com**, the Dutch parent–school
 communication app by Topicus (ParnasSys). The API is a Topicus *geon* API. Every operation reads,
 except the three under **Read state**, which mark items as read, `sendChatMessage`, which sends a
-message to real people, and `addCommitment` and `deleteCommitment` under **Helpers**.
+message to real people, `addCommitment` and `deleteCommitment` under **Helpers**, and `answerRsvp`
+under **RSVP**.
 This spec was derived from the web client's traffic: a captured browser session and sanitized response
 samples. Response schemas list **only fields seen in those samples**. Treat every object as
 open: geon adds fields between contract versions. Every operation here was called at least once;
@@ -737,6 +738,55 @@ def build(samples_dir, public=False):
           "description": "Your commitment's id (`commitments[].links[rel=self].id`)."}],
         {"204": {"description": "Withdrawn. No body."}})}
 
+    # ---- RSVP: an answer in the user's name; the list of respondents holds other people's data
+    rsvp_answer = ref("CalendarItemRSVPPrimer")
+    paths["/calendaritem/{id}/calendaritemrsvp"] = {
+        "get": op(
+            "listRsvpRespondents", "RSVP", "Everyone invited, with their answers", ref("Respondent"),
+            ["listRsvpRespondents.200.json"], coll=True,
+            desc="⚠️ **Personal data of other people.** Lists everyone the invitation went to, parents and "
+                 "teachers: first name, surname, children's names, avatar and answer. Handle it with care, "
+                 "and do not pass it on.\n\n"
+                 "`rsvp` is `ACCEPT`, `DECLINE`, `TENTATIVE`, or `UNKNOWN` for someone who has not answered. "
+                 "Seen in a live check (2026-11-09): it answered on 15 of 20 items and `403` on the other 5, "
+                 "for reasons not known. You do not need it for your own answer: that is the `rsvp` field "
+                 "of the event in `GET /event` and `GET /event/{id}`, absent until you answer.",
+            params=[item_param]),
+        "post": {
+            "tags": ["RSVP"], "operationId": "answerRsvp", "summary": "Answer a calendar item's invitation",
+            "description":
+                "Stores your answer, as seen in a capture of the web app. Answered `201` with the answer, and "
+                "its address in `Location`. Only `ACCEPT` was captured; `DECLINE` and `TENTATIVE` are what the "
+                "web app offers and occur as stored answers.\n\n"
+                "Sending the same answer twice changes nothing: the second call answers `201` with an identical "
+                "body, including `lastModifiedAt`. There is no call to remove an answer in the capture.\n\n"
+                "⚠️ **Others see it.** Everyone who can read the list of respondents sees your name and answer, "
+                "other parents included. It may decide what the school arranges.\n\n"
+                "**Not known** (finding out means answering real invitations): whether another answer replaces "
+                "an earlier one, the answer for a past or cancelled item or one with `rsvpRequired: false`, and "
+                "whether teachers get a notification.",
+            "parameters": [{"$ref": "#/components/parameters/AppVersion"},
+                           {"$ref": "#/components/parameters/Role"}, item_param],
+            "requestBody": {"required": True, "content": {GEON: {"schema": collection({
+                "type": "object", "required": ["dtype", "links", "rsvp"],
+                "description": "The web app sends exactly these three fields.",
+                "properties": {
+                    "dtype": {"type": "string", "enum": ["calendar.RCalendarItemRSVPPrimer"]},
+                    "links": {"type": "array", "maxItems": 0, "items": {},
+                              "description": "Empty: the answer has no id yet."},
+                    "rsvp": {"type": "string", "enum": ["ACCEPT", "DECLINE", "TENTATIVE"],
+                             "description": "Your answer."},
+                }})}}},
+            "responses": {
+                "201": {"description": "Stored. One item: your answer.",
+                        "headers": {"Location": {
+                            "description": "`…/calendaritemrsvp/{rsvpId}` of the answer.",
+                            "schema": {"type": "string", "format": "uri"}}},
+                        "content": content(collection(rsvp_answer), ["answerRsvp.201.json"])},
+                **std_err},
+        },
+    }
+
     # ---- IdP
     idp = [{"url": "https://inloggen.parnassys.net/idp", "description": "ParnasSys IdP"}]
     form = "application/x-www-form-urlencoded"
@@ -876,7 +926,8 @@ def build(samples_dir, public=False):
             {"name": "Misc", "description": "System news, absence and photo-export settings."},
             {"name": "Read state", "description": "Mark announcements, calendar items and chats as "
                                                   "read."},
-            {"name": "Helpers", "description": "Sign up on a calendar item's helper slot, or withdraw."}],
+            {"name": "Helpers", "description": "Sign up on a calendar item's helper slot, or withdraw."},
+            {"name": "RSVP", "description": "Answer a calendar item's invitation."}],
         "security": [{"bearerToken": []}, {"parnassysOAuth": ["openid"]}],
         "paths": paths,
         "components": {
