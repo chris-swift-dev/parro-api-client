@@ -54,7 +54,7 @@ All in the spec; the important ones:
   `lastModifiedAt`. `{id}` is the calendar item's own id; the event id answers `404`. Your own answer
   is the event's `rsvp` field, absent until you answer. `GET` on that path lists everyone the
   invitation went to, parents and teachers, with names, children's names and answers (`UNKNOWN` =
-  not answered), or answers `403` (5 of 20 items, reason not known). Only `ACCEPT` was captured being
-  sent. Not known: the answer for a past or cancelled item, and whether teachers get a notification.
+  not answered), or answers `403` (5 of 20 items, reason not known). All three answers were sent in a live
+  check, and each replaced the one before. Not known: the answer for a past or cancelled item, and whether teachers get a notification.
 - `/conversations` and `/timeslot`, found in the web app's code, answer `404`. CORS preflights allow
   every method on every path, so they say nothing about what a path supports.

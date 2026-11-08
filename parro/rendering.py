@@ -931,9 +931,9 @@ def render_rsvp_preview(prepared: dict[str, Any]) -> str:
         "The school will see your answer. You can change it later, but not remove it.",
     ]
     item = join_parts([helper_item_line(prepared), short_list(prepared.get("groups") or [])])
-    return document(
-        f"# {answer_word(prepared.get('answer'))} this invitation", item, "\n".join(lines)
-    )
+    wanted = prepared.get("answer")
+    verb = "Answer tentative to" if wanted == "TENTATIVE" else answer_word(wanted)
+    return document(f"# {verb} this invitation", item, "\n".join(lines))
 
 
 def render_rsvp(result: dict[str, Any], options: RenderOptions) -> str:

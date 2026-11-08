@@ -1,6 +1,6 @@
 # Plan 10: answering a calendar item's invitation (RSVP)
 
-*Status: phases 1–5 done (2026-11-09); decisions taken in §7.*
+*Status: phases 1–6 done (2026-11-09); decisions taken in §7.*
 
 **Goal:** the spec describes answering a calendar item with `ACCEPT`, `DECLINE` or `TENTATIVE`, and the
 client can do it. Source: `findings/accept-calendar-item.har` (git-ignored).
@@ -29,10 +29,8 @@ data, so the sample needs the privacy scan to cover those fields.
 
 **What it does not show:**
 
-- **Sending `DECLINE` or `TENTATIVE`.** Both exist as stored answers (see the probe results), but
-  neither was captured being sent.
-- **Replacing an answer.** That `DECLINE` or `TENTATIVE` overwrites an earlier `ACCEPT` is the likely
-  behaviour, but it is not captured. Phase 6 checks it.
+- **Sending `DECLINE` or `TENTATIVE`, and replacing an answer.** Neither was captured. Phase 6
+  checked both live: each answer replaced the one before it.
 - **Going back to "no answer".** There is no `DELETE` in the capture, so treat a first answer as
   something you can change but not take away.
 - How the API answers for a past or cancelled item, or an item that asks for no RSVP.
@@ -115,7 +113,7 @@ parent–teacher talk times (other calls, not captured), and answering a whole g
 | 3 | ✅ **Client:** the call, the checks of §3, `rsvp accept\|decline\|tentative`, the answer in the agenda; the fake API accepts exactly this write and keeps the state | tests: nothing changes without confirmation, refusals, no retry, the right id in the path, only the three answers reach the body |
 | 4 | ✅ **MCP** (per decisions 2 and 5): the tool, its switch and hints; `parro_get` and `parro_attachment` refuse the respondents path | tests, as in `test_tool_hints.py`, and that no spelling of the path gets through |
 | 5 | ✅ **Docs:** README promise, badge, an *Answering an invitation* section, FAQ, and the "no RSVPs" line under *Helping out*; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; spec-operations count; CHANGELOG **0.9.0** | links and pictures checked |
-| 6 | **Live check with you:** on the item *you* pick, `TENTATIVE`, then `DECLINE`, then back to the answer you want to end on (the values no capture shows, and replacing an answer); the Parro app agrees after each | in `docs/LIVE-CHECKS.md` |
+| 6 | ✅ **Live check with you:** on the item *you* pick, `TENTATIVE`, then `DECLINE`, then back to the answer you want to end on (the values no capture shows, and replacing an answer); the Parro app agrees after each | in `docs/LIVE-CHECKS.md` |
 | 7 | Release **0.9.0** | published |
 
 For phase 6, use the item you already answered in the capture. A first answer cannot be removed, so an

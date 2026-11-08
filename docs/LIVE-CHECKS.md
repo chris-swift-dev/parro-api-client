@@ -125,3 +125,20 @@ withdrawal, on an empty slot for two helpers, about two weeks ahead. Personal da
 | Read back | OK: `amountCommitted` 0, `commitedByMe` 0, `commitments` empty |
 | Parro app | OK: the owner saw 0 of 2 |
 | Not checked live | MCP `confirm: true` (the same code path as the CLI after the preview), a timeout, how the API itself answers a full slot, a past item or a second sign-up (the client refuses those before writing), and whether teachers get a notification |
+
+## Live check (2026-11-09, release 0.9.0: answering an invitation)
+
+With the account owner present, who picked the item and the answers and compared the Parro app after
+each step. **No password check**: the existing login was used. Three real answers on an item the
+owner had already accepted in the web app, ending on that same answer. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| MCP `parro_rsvp` without `confirm`, `PARRO_ALLOW_RSVP=1` | OK: the preview shows the item, the current answer (accept) and the new one; nothing changed |
+| `rsvp tentative <event> --yes` | OK: accepted. **`TENTATIVE` replaces `ACCEPT`**; the event's `rsvp` reads `TENTATIVE`, the agenda says `RSVP: tentative`, and the Parro app agrees |
+| `rsvp decline <event> --yes` | OK: accepted. **`DECLINE` replaces `TENTATIVE`**; `rsvp` reads `DECLINE`, the agenda says `RSVP: declined`, and the Parro app agrees |
+| MCP `parro_rsvp` with `confirm: true`, answer accept | OK: accepted. `ACCEPT` replaces `DECLINE`; `rsvp` reads `ACCEPT`, the agenda says `RSVP: accepted`, and the Parro app agrees. **This closes the gap of `confirm: true` for this tool** |
+| `rsvp accept <event> --yes` again | OK: reports nothing changed, and no `POST` was sent |
+| MCP `parro_get` on the respondents path | OK: refused before any request |
+| Not checked live | A timeout, how the API itself answers a past or cancelled item or one that asks for no answer (the client refuses those before writing), whether teachers get a notification, and `confirm: true` on the other write tools |
+

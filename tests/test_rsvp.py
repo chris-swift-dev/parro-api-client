@@ -131,6 +131,11 @@ def test_each_answer_has_its_own_question(api, capsys, terminal, word, question)
     assert terminal.questions == [question]
 
 
+def test_the_tentative_preview_reads_as_a_sentence(api, capsys, terminal):
+    _, out, _ = answer(api, capsys, "tentative", "--format", "markdown")
+    assert "# Answer tentative to this invitation" in out and "# Tentative this" not in out
+
+
 @pytest.mark.parametrize("reply", ["n", "", "yes please", None])
 def test_anything_but_y_changes_nothing(api, capsys, terminal, reply):
     terminal.answer = reply
