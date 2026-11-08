@@ -1751,6 +1751,129 @@
           }
         },
         "description": "Without `sort`, only `chat.RChatTextMessage` comes back, **newest first** (live check 2026-11-05: `Range: items=0-29` returned the newest 30 of 89 messages). Reverse them for reading order.\n\nWith `sort` (what the web app sends), status messages (`chat.RChatStatusMessage`, e.g. someone joining) come back as well, and the names are the **opposite** of what they say: `desc-stream` is oldest first, `asc-stream` newest first (live check 2026-11-07).\n\n`createdSince` / `modifiedSince` (ISO 8601 with `Z`) return only messages created or changed since then: what the web app uses to fetch only new messages."
+      },
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "sendChatMessage",
+        "summary": "Send a text message to a chat conversation",
+        "description": "Adds a text message to an existing chat, as seen in a capture of the web app. The id is the chat room's `rel: self` link. Answered `201` with the new message, and its address in `Location`.\n\n⚠️ **Real people receive this, under your name:** the teacher, or everyone in a group chat. They get a notification. The capture shows no way to take a message back (a message's `permissions` list only `READ`, also for your own), so treat sending as final.\n\n⚠️ **Do not resend blindly.** The request has no idempotency key: after a timeout there is no way to know whether the message arrived, so look at `GET /chatroom/{id}/chatmessage` first.\n\n**Not known** (finding out means messaging real people): the longest text allowed, the answer to empty text, and the answer for a chat that cannot be written to (`repliesEnabled: false`, `active: false`, archived, or `BOT`). Other kinds of message, replies and attachments were not captured.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AppVersion"
+          },
+          {
+            "$ref": "#/components/parameters/Role"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Chatroom id from `GET /chatroom`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.topicus.geon+json;version=224": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "items"
+                ],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "dtype",
+                        "links",
+                        "deleted",
+                        "text",
+                        "allRead"
+                      ],
+                      "description": "The web app sends exactly these five fields.",
+                      "properties": {
+                        "dtype": {
+                          "type": "string",
+                          "enum": [
+                            "chat.RChatTextMessage"
+                          ]
+                        },
+                        "links": {
+                          "type": "array",
+                          "maxItems": 0,
+                          "items": {},
+                          "description": "Empty: the message has no id yet."
+                        },
+                        "deleted": {
+                          "type": "boolean",
+                          "enum": [
+                            false
+                          ]
+                        },
+                        "text": {
+                          "type": "string",
+                          "description": "The message, as the recipients will read it."
+                        },
+                        "allRead": {
+                          "type": "boolean",
+                          "enum": [
+                            false
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sent. One item: the new message.",
+            "headers": {
+              "Location": {
+                "description": "`…/chatroom/{id}/chatmessage/{messageId}` of the new message.",
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            },
+            "content": {
+              "application/vnd.topicus.geon+json;version=224": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChatTextMessage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/GeonErrorResponse"
+          }
+        }
       }
     },
     "/chatroom/{id}/chatmessage/{messageId}": {
@@ -3855,7 +3978,7 @@
         "required": [
           "dtype"
         ],
-        "description": "Geon type `chat.RChatRoomMember`. Inferred from 10 object(s) in: `chatroommember.200.json`, `getChatroom.200.json`, `listChatroomMembers.200.json`."
+        "description": "Geon type `chat.RChatRoomMember`. Inferred from 8 object(s) in: `getChatroom.200.json`, `listChatroomMembers.200.json`."
       },
       "ChatRoomPrimer": {
         "type": "object",
@@ -4013,7 +4136,7 @@
         "required": [
           "dtype"
         ],
-        "description": "Geon type `chat.RChatTextMessage`. Inferred from 34 object(s) in: `getChatMessage.200.json`, `getChatroom.200.json`, `listChatMessages.200.json`, `listChatrooms.200.json`, `listChatrooms_archived.200.json`, `listChatrooms_schoolyear.200.json`, `listChatrooms_type-group.200.json`, `send-chatmessage.200.json`."
+        "description": "Geon type `chat.RChatTextMessage`. Inferred from 34 object(s) in: `getChatMessage.200.json`, `getChatroom.200.json`, `listChatMessages.200.json`, `listChatrooms.200.json`, `listChatrooms_archived.200.json`, `listChatrooms_schoolyear.200.json`, `listChatrooms_type-group.200.json`, `sendChatMessage.201.json`."
       },
       "ChildPrimer": {
         "type": "object",
@@ -4509,7 +4632,7 @@
         "required": [
           "dtype"
         ],
-        "description": "Geon type `identity.RGuardianPrimer`. Inferred from 9 object(s) in: `chatroommember.200.json`, `getAccountMe.200.json`, `getChatroom.200.json`, `getIdentity.200.json`, `getUnreadCounts.200.json`, `listChatroomMembers.200.json`."
+        "description": "Geon type `identity.RGuardianPrimer`. Inferred from 7 object(s) in: `getAccountMe.200.json`, `getChatroom.200.json`, `getIdentity.200.json`, `getUnreadCounts.200.json`, `listChatroomMembers.200.json`."
       },
       "HomeGroup": {
         "type": "object",
@@ -4717,7 +4840,7 @@
         "required": [
           "dtype"
         ],
-        "description": "Geon type `identity.RIdentityPrimer`. Inferred from 40 object(s) in: `getChatMessage.200.json`, `getChatroom.200.json`, `getEvent_announcement.200.json`, `listChatMessages.200.json`, `listChatrooms.200.json`, `listChatrooms_archived.200.json`, `listChatrooms_schoolyear.200.json`, `listChatrooms_type-group.200.json`, `listEvents_announcements.200.json`, `send-chatmessage.200.json`."
+        "description": "Geon type `identity.RIdentityPrimer`. Inferred from 40 object(s) in: `getChatMessage.200.json`, `getChatroom.200.json`, `getEvent_announcement.200.json`, `listChatMessages.200.json`, `listChatrooms.200.json`, `listChatrooms_archived.200.json`, `listChatrooms_schoolyear.200.json`, `listChatrooms_type-group.200.json`, `listEvents_announcements.200.json`, `sendChatMessage.201.json`."
       },
       "MediaExportSettings": {
         "type": "object",
