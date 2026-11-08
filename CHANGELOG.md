@@ -4,7 +4,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
-## [0.8.0] - unreleased
+## [0.8.0] - 2026-11-08
 
 Say you can help: `helper signup` and `helper withdraw` put you on a calendar item's helper slot, or
 take you off it. **This changes the client's promise again:** it reads, and it can change three
