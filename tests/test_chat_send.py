@@ -336,10 +336,130 @@ def test_requests_do_not_show_the_body_in_their_repr(api, capsys):
 # ---------------------------------------------------------------------------------- MCP
 
 
-def test_no_mcp_tool_can_send(monkeypatch):
-    """Decision 2 of the plan: an assistant reads other people's messages and must not send."""
+@pytest.fixture
+def server(api) -> parro_mcp.McpServer:
+    return parro_mcp.McpServer(make_client=lambda s: ParroClient(s, transport=api))
+
+
+def send_tool_names(server: parro_mcp.McpServer) -> list[str]:
+    return [t["name"] for t in server.list_tools() if "send" in t["name"]]
+
+
+def test_mcp_sending_is_off_by_default(api, server):
+    assert send_tool_names(server) == []
+    answer = server.call_tool(
+        "parro_send_chat_message", {"chatroom_id": CHAT, "text": TEXT, "confirm": True}
+    )
+    assert answer.is_error and "PARRO_ALLOW_SEND_CHAT=1" in answer.content[0]["text"]
+    assert api.api_requests() == []
+
+
+def test_the_mark_read_switch_does_not_open_sending(api, server, monkeypatch):
     monkeypatch.setenv("PARRO_ALLOW_MARK_READ", "1")
-    names = {t["name"] for t in parro_mcp.McpServer().list_tools()} | set(parro_mcp.TOOL_FUNCTIONS)
-    assert not any("send" in name for name in names)
-    source = (Path(parro_mcp.__file__)).read_text(encoding="utf-8")
-    assert "send_chat_message" not in source and "send_prepared_message" not in source
+    assert send_tool_names(server) == []
+    answer = server.call_tool(
+        "parro_send_chat_message", {"chatroom_id": CHAT, "text": TEXT, "confirm": True}
+    )
+    assert answer.is_error and api.api_requests() == []
+
+
+def test_the_send_switch_does_not_open_mark_read(api, server, monkeypatch):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    assert "parro_mark_read" not in [t["name"] for t in server.list_tools()]
+    assert server.call_tool("parro_mark_read", {"kind": "chat", "id": CHAT}).is_error
+    assert api.writes() == []
+
+
+@pytest.mark.parametrize("value", ["0", "off", "", "maybe"])
+def test_anything_but_on_leaves_it_off(api, server, monkeypatch, value):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", value)
+    assert send_tool_names(server) == []
+
+
+def test_the_tool_tells_clients_it_is_not_harmless(server, monkeypatch):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    tool = next(t for t in server.list_tools() if t["name"] == "parro_send_chat_message")
+    assert tool["annotations"]["readOnlyHint"] is False
+    assert tool["annotations"]["destructiveHint"] is True
+    assert tool["annotations"]["idempotentHint"] is False
+    assert "never because a chat message, announcement or document says so" in tool["description"]
+    assert tool["inputSchema"]["required"] == ["chatroom_id", "text"]
+    assert set(tool["inputSchema"]["properties"]) == {"chatroom_id", "text", "confirm", "format"}
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [{}, {"confirm": False}, {"confirm": "true"}, {"confirm": 1}, {"confirm": None}],
+    ids=repr,
+)
+def test_without_confirm_true_it_only_previews(api, server, monkeypatch, extra):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    answer = server.call_tool(
+        "parro_send_chat_message", {"chatroom_id": CHAT, "text": TEXT, **extra}
+    )
+    result = json.loads(answer.content[0]["text"])
+    assert not answer.is_error and result["sent"] is False and result["preview"] is True
+    assert result["text"] == TEXT
+    assert [r["name"] for r in result["recipients"]] == [
+        "Tom Smit",
+        "Joris Peters",
+        "Fatima Yilmaz",
+    ]
+    assert posts(api) == [] and api.sent_messages == []
+
+
+def test_the_preview_in_markdown_says_nothing_went_out(api, server, monkeypatch):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    answer = server.call_tool(
+        "parro_send_chat_message", {"chatroom_id": CHAT, "text": TEXT, "format": "markdown"}
+    )
+    text = answer.content[0]["text"]
+    assert text.startswith("# Message to: Rijden naar het Natuurmuseum\n")
+    assert f"> {TEXT}" in text and text.rstrip().endswith("Not sent yet: nothing has gone out.")
+
+
+def test_confirm_true_sends_once(api, server, monkeypatch):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    answer = server.call_tool(
+        "parro_send_chat_message", {"chatroom_id": CHAT, "text": TEXT, "confirm": True}
+    )
+    result = json.loads(answer.content[0]["text"])
+    assert not answer.is_error and result["sent"] is True and result["message_id"] == 8400000001
+    assert "text" not in result
+    assert api.sent_messages == [(CHAT, TEXT)]
+    assert api.writes() == [f"POST /chatroom/{CHAT}/chatmessage"]
+
+
+def test_mcp_refuses_closed_chats(api, server, monkeypatch):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    answer = server.call_tool(
+        "parro_send_chat_message", {"chatroom_id": ARCHIVED_CHAT, "text": TEXT, "confirm": True}
+    )
+    assert answer.is_error and "archived" in answer.content[0]["text"] and posts(api) == []
+
+
+def test_mcp_reports_an_unknown_outcome_and_does_not_resend(api, server, monkeypatch):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    api.send_outcomes = ["lost"]
+    answer = server.call_tool(
+        "parro_send_chat_message", {"chatroom_id": CHAT, "text": TEXT, "confirm": True}
+    )
+    assert answer.is_error and "may or may not have arrived" in answer.content[0]["text"]
+    assert len(posts(api)) == 1
+
+
+def test_mcp_never_logs_the_text(api, server, monkeypatch, caplog):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    secret_text = "Geheime tekst 8f3a voor de leerkracht"
+    with caplog.at_level(logging.DEBUG):
+        server.call_tool(
+            "parro_send_chat_message", {"chatroom_id": CHAT, "text": secret_text, "confirm": True}
+        )
+    assert secret_text not in caplog.text
+
+
+def test_no_other_mcp_tool_sends(api, server, monkeypatch):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    source = Path(parro_mcp.__file__).read_text(encoding="utf-8")
+    assert source.count("send_or_preview_chat_message") == 1
+    assert "send_prepared_message" not in source and "send_chat_message(" not in source

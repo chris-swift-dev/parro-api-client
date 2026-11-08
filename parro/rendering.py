@@ -843,6 +843,8 @@ def render_chat_preview(prepared: dict[str, Any]) -> str:
 def render_chat_send(result: dict[str, Any], options: RenderOptions) -> str:
     """The outcome of chat-send."""
     room_id = result.get("chatroom_id")
+    if result.get("preview"):
+        return document(render_chat_preview(result), "Not sent yet: nothing has gone out.")
     if not result.get("sent"):
         return document("# Not sent", "Nothing was sent.")
     title = result.get("title") or join_parts(["Chat", object_id(room_id)])

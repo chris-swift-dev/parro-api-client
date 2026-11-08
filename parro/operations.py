@@ -749,6 +749,16 @@ def send_prepared_message(client: ParroClient, prepared: dict[str, Any]) -> dict
     }
 
 
+def send_or_preview_chat_message(
+    client: ParroClient, chatroom_id: int | None, text: Any, confirm: bool
+) -> dict[str, Any]:
+    """For an assistant, which has no terminal to ask at: the preview, or the send if `confirm`."""
+    prepared = prepare_chat_message(client, chatroom_id, text)
+    if confirm:
+        return send_prepared_message(client, prepared)
+    return {**prepared, "sent": False, "preview": True}
+
+
 def require_id(value: Any, what: str) -> int:
     """An id argument as int, with a usage error instead of a traceback when it is missing."""
     try:
