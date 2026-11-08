@@ -891,6 +891,8 @@ def render_helper_preview(prepared: dict[str, Any]) -> str:
 
 def render_helper_change(result: dict[str, Any], options: RenderOptions) -> str:
     """The outcome of `helper signup` / `helper withdraw`."""
+    if result.get("preview"):
+        return document(render_helper_preview(result), "Not done yet: nothing has changed.")
     if not result.get("done"):
         return document("# Nothing changed", "Nothing was written.")
     slot = result.get("slot") or "Helpers"

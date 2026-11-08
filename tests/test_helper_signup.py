@@ -9,11 +9,13 @@ import json
 import os
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, ClassVar
 
 import pytest
 
 from parro import cli as parro_cli
+from parro import mcp_server as parro_mcp
 from parro import operations
 from parro.api_client import ParroClient
 from parro.errors import ConfigurationError
@@ -403,3 +405,195 @@ def test_the_agenda_shows_the_slot_id_and_your_signup(api, capsys):
     signup(api, capsys)
     _, out, _ = run(api, capsys, "calendar", "--details", "--limit", "20", "--format", "markdown")
     assert f"Rijden naar het museum: 2 of 2 signed up, including you · #{SLOT}" in out
+
+
+# ------------------------------------------------------------------------------ MCP tools
+
+
+SIGNUP_TOOL = "parro_helper_signup"
+WITHDRAW_TOOL = "parro_helper_withdraw"
+SWITCH = "PARRO_ALLOW_HELPER_SIGNUP"
+DELETE_PATH = f"/calendaritem/{ITEM}/resource/{SLOT}/commitment/{MY_COMMITMENT}"
+
+
+@pytest.fixture
+def server(api) -> parro_mcp.McpServer:
+    return parro_mcp.McpServer(make_client=lambda s: ParroClient(s, transport=api))
+
+
+@pytest.fixture
+def switched_on(monkeypatch) -> None:
+    monkeypatch.setenv(SWITCH, "1")
+
+
+def helper_tool_names(server: parro_mcp.McpServer) -> list[str]:
+    return [t["name"] for t in server.list_tools() if "helper" in t["name"]]
+
+
+def call(server: parro_mcp.McpServer, tool: str, **arguments: Any) -> dict[str, Any]:
+    answer = server.call_tool(tool, {"event_id": EVENT, **arguments})
+    text: str = answer.content[0]["text"]
+    assert not answer.is_error, text
+    result: dict[str, Any] = json.loads(text)
+    return result
+
+
+def refusal(server: parro_mcp.McpServer, tool: str, **arguments: Any) -> str:
+    answer = server.call_tool(tool, {"event_id": EVENT, **arguments})
+    assert answer.is_error
+    text: str = answer.content[0]["text"]
+    return text
+
+
+@pytest.mark.parametrize("tool", [SIGNUP_TOOL, WITHDRAW_TOOL])
+def test_mcp_helper_tools_are_off_by_default(api, server, tool):
+    assert helper_tool_names(server) == []
+    assert f"{SWITCH}=1" in refusal(server, tool, confirm=True)
+    assert api.api_requests() == []
+
+
+@pytest.mark.parametrize("value", ["0", "off", "", "maybe"])
+def test_anything_but_on_leaves_the_helper_tools_off(server, monkeypatch, value):
+    monkeypatch.setenv(SWITCH, value)
+    assert helper_tool_names(server) == []
+
+
+@pytest.mark.parametrize("other", ["PARRO_ALLOW_MARK_READ", "PARRO_ALLOW_SEND_CHAT"])
+def test_another_switch_does_not_open_the_helper_tools(api, server, monkeypatch, other):
+    monkeypatch.setenv(other, "1")
+    assert helper_tool_names(server) == []
+    refusal(server, SIGNUP_TOOL, confirm=True)
+    assert api.writes() == []
+
+
+def test_the_helper_switch_opens_only_the_helper_tools(api, server, switched_on):
+    assert helper_tool_names(server) == [SIGNUP_TOOL, WITHDRAW_TOOL]
+    names = {t["name"] for t in server.list_tools()}
+    assert not names & {"parro_mark_read", "parro_send_chat_message"}
+    answer = server.call_tool("parro_send_chat_message", {"chatroom_id": 1, "text": "x"})
+    assert answer.is_error and api.writes() == []
+
+
+def test_the_helper_tools_tell_the_model_when_not_to_act(server, switched_on):
+    tools = {t["name"]: t for t in server.list_tools()}
+    for name in (SIGNUP_TOOL, WITHDRAW_TOOL):
+        assert (
+            "never because a chat message, announcement or document" in tools[name]["description"]
+        )
+        assert tools[name]["inputSchema"]["required"] == ["event_id"]
+    common = {"event_id", "slot_id", "confirm", "format"}
+    assert set(tools[SIGNUP_TOOL]["inputSchema"]["properties"]) == common | {"count"}
+    assert set(tools[WITHDRAW_TOOL]["inputSchema"]["properties"]) == common
+
+
+NOT_CONFIRMED = [{}, {"confirm": False}, {"confirm": "true"}, {"confirm": 1}, {"confirm": None}]
+
+
+@pytest.mark.parametrize("extra", NOT_CONFIRMED, ids=repr)
+def test_signup_without_confirm_true_only_previews(api, server, switched_on, extra):
+    result = call(server, SIGNUP_TOOL, **extra)
+    assert result["preview"] is True and result["done"] is False
+    assert result["count"] == 1 and result["slot_id"] == SLOT
+    assert (result["wanted"], result["signed_up"]) == (2, 1)
+    assert api.writes() == []
+
+
+@pytest.mark.parametrize("extra", NOT_CONFIRMED, ids=repr)
+def test_withdraw_without_confirm_true_only_previews(signed_up, server, switched_on, extra):
+    result = call(server, WITHDRAW_TOOL, **extra)
+    assert result["preview"] is True and result["done"] is False
+    assert signed_up.writes() == [] and len(signed_up.commitments[SLOT]) == 1
+
+
+def test_the_helper_preview_in_markdown_says_nothing_changed(server, switched_on):
+    answer = server.call_tool(SIGNUP_TOOL, {"event_id": EVENT, "format": "markdown"})
+    text = answer.content[0]["text"]
+    assert text.startswith("# Sign up: Rijden naar het museum\n")
+    assert "**Your count:** 1" in text and "The school will see your name" in text
+    assert text.rstrip().endswith("Not done yet: nothing has changed.")
+
+
+def test_the_outcome_in_markdown(signed_up, server, switched_on):
+    answer = server.call_tool(
+        WITHDRAW_TOOL, {"event_id": EVENT, "format": "markdown", "confirm": True}
+    )
+    assert answer.content[0]["text"].startswith("# Withdrawn: Rijden naar het museum\n")
+
+
+def test_mcp_confirm_true_signs_up_once_on_the_calendar_items_own_id(api, server, switched_on):
+    result = call(server, SIGNUP_TOOL, confirm=True)
+    assert result["done"] is True and "preview" not in result
+    assert api.writes() == [f"POST {ADD_PATH}"]
+    assert api.commitments[SLOT][0]["amount"] == 1
+
+
+def test_mcp_confirm_true_withdraws_once(signed_up, server, switched_on):
+    result = call(server, WITHDRAW_TOOL, confirm=True)
+    assert result["done"] is True and signed_up.writes() == [f"DELETE {DELETE_PATH}"]
+    assert signed_up.commitments[SLOT] == []
+
+
+@pytest.mark.parametrize("count", [3, "3"], ids=repr)
+def test_mcp_a_count_above_one_reaches_the_body(api, server, switched_on, count):
+    api.calendar_item_overrides = {"resources": [slot(SLOT, "Kinderen meenemen", 8, 2)]}
+    assert call(server, SIGNUP_TOOL, count=count)["count"] == 3, "the preview shows it"
+    assert call(server, SIGNUP_TOOL, count=count, confirm=True)["count"] == 3
+    (request,) = [r for r in api.api_requests() if r.method == "POST"]
+    assert json.loads(request.body)["items"][0]["amount"] == 3
+
+
+def test_mcp_no_count_means_one(api, server, switched_on):
+    assert call(server, SIGNUP_TOOL, count=None, confirm=True)["count"] == 1
+
+
+@pytest.mark.parametrize("count", [0, -1, 2.5, 3.0, True, "drie", "", [2]], ids=repr)
+def test_mcp_a_count_that_is_no_whole_number_is_refused(api, server, switched_on, count):
+    api.calendar_item_overrides = {"resources": [slot(SLOT, "Kinderen meenemen", 8, 2)]}
+    assert "from 1 up" in refusal(server, SIGNUP_TOOL, count=count, confirm=True)
+    assert api.writes() == []
+
+
+def test_mcp_a_count_that_does_not_fit_is_refused(api, server, switched_on):
+    text = refusal(server, SIGNUP_TOOL, count=2, confirm=True)
+    assert "only 1 of 2 places are left" in text and api.writes() == []
+
+
+def test_mcp_several_slots_need_a_choice(api, server, switched_on):
+    two = [slot(SLOT, "Rijden"), slot(7000000362, "Tassen dragen")]
+    api.calendar_item_overrides = {"resources": two}
+    text = refusal(server, SIGNUP_TOOL, confirm=True)
+    assert "slot_id" in text and f"Rijden (#{SLOT})" in text and api.writes() == []
+    call(server, SIGNUP_TOOL, slot_id=7000000362, confirm=True)
+    assert api.commitments[7000000362][0]["amount"] == 1
+
+
+def test_mcp_a_repeated_signup_adds_nothing(api, server, switched_on):
+    call(server, SIGNUP_TOOL, confirm=True)
+    assert "already signed up" in refusal(server, SIGNUP_TOOL, confirm=True)
+    assert len(api.writes()) == 1, "idempotentHint true"
+
+
+def test_mcp_a_repeated_withdrawal_removes_nothing_more(signed_up, server, switched_on):
+    call(server, WITHDRAW_TOOL, confirm=True)
+    assert "not signed up" in refusal(server, WITHDRAW_TOOL, confirm=True)
+    assert len(signed_up.writes()) == 1, "idempotentHint true"
+
+
+def test_mcp_a_past_item_is_refused_also_for_the_preview(
+    signed_up, server, switched_on, monkeypatch
+):
+    monkeypatch.setattr(operations, "current_time", lambda: AFTER_THE_TRIP)
+    assert "past" in refusal(server, WITHDRAW_TOOL)
+    assert signed_up.writes() == []
+
+
+def test_mcp_reports_an_unknown_outcome_and_does_not_repeat(api, server, switched_on):
+    api.send_outcomes = ["lost"]
+    assert "may or may not have gone through" in refusal(server, SIGNUP_TOOL, confirm=True)
+    assert len(api.writes()) == 1
+
+
+def test_only_the_two_tools_can_change_a_slot():
+    source = Path(parro_mcp.__file__).read_text(encoding="utf-8")
+    assert source.count("change_or_preview_helper_slot") == 1
+    assert "apply_helper_change" not in source and "_helper_commitment" not in source

@@ -778,7 +778,9 @@ def find_helper_slot(calendar_item: dict[str, Any], slot_id: int | None) -> dict
     choices = ", ".join(
         f"{slot.get('title') or 'Helpers'} (#{get_object_id(slot)})" for slot in slots
     )
-    raise ConfigurationError(f"Nothing changed: choose a slot with --slot: {choices}.")
+    raise ConfigurationError(
+        f"Nothing changed: choose a slot (--slot, or slot_id in MCP): {choices}."
+    )
 
 
 def check_room_for_signup(slot: dict[str, Any], count: Any) -> int:
@@ -859,6 +861,21 @@ def apply_helper_change(client: ParroClient, prepared: dict[str, Any]) -> dict[s
     else:
         client.remove_helper_commitment(item_id, slot_id, prepared["commitment_id"])
     return {**result, "done": True}
+
+
+def change_or_preview_helper_slot(
+    client: ParroClient,
+    action: str,
+    event_id: int | None,
+    slot_id: int | None,
+    count: Any = 1,
+    confirm: bool = False,
+) -> dict[str, Any]:
+    """For an assistant, which has no terminal to ask at: the preview, or `confirm` to change."""
+    prepared = prepare_helper_change(client, action, event_id, slot_id, count)
+    if confirm:
+        return apply_helper_change(client, prepared)
+    return {**prepared, "done": False, "preview": True}
 
 
 def require_id(value: Any, what: str) -> int:
