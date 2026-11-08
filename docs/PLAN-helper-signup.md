@@ -1,7 +1,7 @@
 # Plan 9: signing up and withdrawing as a helper for a calendar item
 
-*Status: planned (2026-11-08); decisions taken in §7 (decision 3 changed: a count above 1). Nothing
-implemented yet. One question open in §7.*
+*Status: phase 1 done (2026-11-08); decisions taken in §7 (decision 3 changed: a count above 1). One
+question open in §7.*
 
 **Goal:** the spec describes adding and removing a commitment on a calendar item's helper slot, and
 the client can do both. Source: `findings/calendar-event-commitment.har` (git-ignored).
@@ -26,9 +26,6 @@ path shape: `/calendaritem/{id}/resource/{resourceId}`. This is the same kind of
 
 **What it does not show:**
 
-- **How to find your own commitment to withdraw.** Withdrawing needs the commitment id. The samples
-  have `commitments: []` even on a slot with `amountCommitted: 2`, so it is unclear when that list is
-  filled. This decides the design of withdrawing, and a GET-only probe has to settle it (phase 1).
 - **A count above 1.** Teachers may ask how many children a parent can take along, so `amount` can
   be more than 1 (for example 3 in one car). Every capture sends `amount: 1`, so a higher value is
   known from how the app is used, not from a capture: phase 6 checks it live.
@@ -39,11 +36,23 @@ path shape: `/calendaritem/{id}/resource/{resourceId}`. This is the same kind of
 
 `permissions` do not help: a resource lists only `READ`, also where signing up works.
 
+### Probe results (phase 1, 2026-11-08, GET only, 54 items with helper slots)
+
+| Question | Answer |
+| --- | --- |
+| How to find your own commitment | **`resources[].commitments[]` lists only your own.** On all 3 slots where you are signed up it holds one entry with your identity and the commitment's id; on every slot where only others signed up it is empty, also when `amountCommitted` is above 0. So withdrawing reads the id from the item |
+| `GET …/resource/{id}/commitment` (with or without the trailing `/`) | Works, and shows the same: only your own commitment, with the same id; empty on slots where only others signed up. Goes into the spec; the client does not need it |
+| `{id}` in the path | The calendar item's own id. `GET /calendaritem/{eventId}` answers `404`; the two ids differ |
+| Who signed up | The API tells a parent how many (`amountCommitted`), not who. The preview cannot name other helpers |
+| `commitedByMe` | Seen only as 0 or 1, equal to your commitment's `amount` of 1, so it does not settle the question in §7 |
+| Kinds of slot | **`VOLUNTEER` and `EQUIPMENT`** (things to bring, e.g. 25 wanted). A count above 1 fits both; the commands use the slot's own title |
+| Places | 5 upcoming slots had places left when probed, so the live check has candidates |
+
 ## 2. Challenging it: a third kind of write
 
 | | Marking as read | Sending a message | Helper commitment |
 | --- | --- | --- | --- |
-| Who notices | the school (a count) | real people, directly | the teacher and other parents (your name on the slot) |
+| Who notices | the school (a count) | real people, directly | the teacher sees your name (other parents see at least the count) |
 | Can be undone | no | no (as far as known) | **yes**: withdraw |
 | Free text | no | yes | **no** |
 
@@ -77,7 +86,8 @@ helper, and only when you ask.*
 5. **Never repeated on its own.** No retry after a timeout or a `5xx`: the client says the outcome is
    unknown. Running the command again is safe, because it first reads whether you are signed up. The
    one resend is after a `401`, as for the other writes.
-6. **Output says what others see.** Your name is on the slot, for the teacher and other parents.
+6. **Output says what others see.** The school sees your name on the slot; other parents at least
+   see the count go up.
 7. **Details stay fresh.** Items with helper slots are already fetched fresh instead of from the
    cache, so a change shows at once.
 
@@ -98,8 +108,8 @@ commitment in place (no such call was captured), and signing up someone else.
 
 | # | Phase | Done when |
 | --- | --- | --- |
-| 1 | **Live probe with you, GET only:** an item with helper slots, in a state where you are signed up if there is one: is your commitment in `commitments[]`? Does `GET …/resource/{id}/commitment` list them? Which id is `{id}` (calendar item, not event)? | each question has an answer, in this plan |
-| 2 | **Spec and privacy:** sanitized sample; `POST` and `DELETE` with what is not known and what others see; the privacy scan covers commitments | spec validates; scan passes |
+| 1 | ✅ **Live probe, GET only:** see *Probe results* in §1 | done |
+| 2 | **Spec and privacy:** sanitized samples (the new commitment, the list); `POST`, `DELETE` and the `GET` list with what is not known and what others see; the privacy scan covers commitments | spec validates; scan passes |
 | 3 | **Client:** the two calls, the checks of §3, `helper signup` / `withdraw`, slot ids in `calendar --details`; the fake API accepts exactly these writes and keeps the state | tests: nothing changes without confirmation, refusals (also of a count that does not fit), no retry, the count reaches the body, the event id is never used in the path |
 | 4 | **MCP** (per decision 2): the two tools, their switch and hints | tests, as in `test_tool_hints.py` |
 | 5 | **Docs:** README promise, badge, a *Helping out* section, FAQ; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; CHANGELOG **0.8.0** | links and pictures checked |
@@ -123,4 +133,4 @@ places left, not a full or nearly full one, and not close to its date.
 **A question only you can answer:** the capture has two sign-ups before the withdrawal. Were they
 on the same slot, or on two different ones? All ids in the capture are placeholders, so it does not
 say. If the same slot accepted both, signing up twice really does add up, and refusing a second one
-(decision 3) matters more. Phase 1 may answer it too: `commitedByMe` on a slot where you are signed up.
+(decision 3) matters more. The phase 1 probe could not settle it.
