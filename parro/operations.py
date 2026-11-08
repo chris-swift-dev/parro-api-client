@@ -693,8 +693,9 @@ def mark_group_announcements_read(
 
 
 def clean_message_text(text: Any) -> str:
-    """The text to send: as given, minus the line break a file or `echo` ends with."""
-    cleaned = str(text if text is not None else "").rstrip("\r\n")
+    """The text to send: line breaks as \\n (a Windows file has \\r\\n), without a final one."""
+    raw = str(text if text is not None else "")
+    cleaned = raw.replace("\r\n", "\n").replace("\r", "\n").rstrip("\n")
     if not cleaned.strip():
         raise ConfigurationError("Not sent: the message is empty.")
     try:

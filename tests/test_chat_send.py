@@ -202,6 +202,26 @@ def test_text_from_a_file(api, capsys, tmp_path):
     assert code == 0 and api.sent_messages == [(CHAT, "Eerste regel\n\nDerde regel")]
 
 
+@pytest.mark.parametrize(
+    "raw",
+    [b"Eerste\r\n\r\nDerde\r\n", b"Eerste\r\rDerde\r", b"Eerste\n\nDerde\n"],
+    ids=["windows", "old-mac", "unix"],
+)
+def test_line_endings_become_plain_line_breaks(api, capsys, tmp_path, raw):
+    message = tmp_path / "bericht.txt"
+    message.write_bytes(raw)
+    code, _, _ = run(api, capsys, "chat-send", str(CHAT), "--file", str(message), "--yes")
+    assert code == 0 and api.sent_messages == [(CHAT, "Eerste\n\nDerde")]
+
+
+def test_the_preview_shows_the_cleaned_text(api, server, monkeypatch):
+    monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    answer = server.call_tool(
+        "parro_send_chat_message", {"chatroom_id": CHAT, "text": "Een\r\nTwee\r\n"}
+    )
+    assert json.loads(answer.content[0]["text"])["text"] == "Een\nTwee"
+
+
 def test_text_from_standard_input(api, capsys, monkeypatch):
     monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO("Via stdin é\n".encode())))
     code, _, _ = run(api, capsys, "chat-send", str(CHAT), "--file", "-", "--yes")
