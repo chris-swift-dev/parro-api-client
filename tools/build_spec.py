@@ -707,8 +707,9 @@ def build(samples_dir, public=False):
         "Adds a commitment for the logged-in parent, as seen in a capture of the web app, with the "
         "trailing `/`. Answered `201` with the new commitment, and its address in `Location`. Slots are "
         "people (`type: VOLUNTEER`) or things to bring (`EQUIPMENT`).\n\n"
-        "`amount` is how many places you take. Every capture sends `1`; a teacher may also ask how many "
-        "children a parent can take along, which is a higher value and has not been captured.\n\n"
+        "`amount` is how many places you take, for example how many children a parent can take along. "
+        "Captures send `1`; `2` was accepted in a live check (2026-11-08), and `amountCommitted` rose "
+        "by 2 and `commitedByMe` became 2.\n\n"
         "**Not known** (finding out means changing real slots): the answer for a full slot, a past item "
         "or closed sign-ups, and whether a second sign-up on the same slot adds up.",
         [item_param, resource_param],

@@ -1,6 +1,6 @@
 # Plan 9: signing up and withdrawing as a helper for a calendar item
 
-*Status: phases 1–5 done (2026-11-08); decisions taken in §7 (decision 3 changed: a count above 1).
+*Status: phases 1–6 done (2026-11-08); decisions taken in §7 (decision 3 changed: a count above 1).
 One question open in §7.*
 
 **Goal:** the spec describes adding and removing a commitment on a calendar item's helper slot, and
@@ -44,7 +44,7 @@ path shape: `/calendaritem/{id}/resource/{resourceId}`. This is the same kind of
 | `GET …/resource/{id}/commitment` (with or without the trailing `/`) | Works, and shows the same: only your own commitment, with the same id; empty on slots where only others signed up. Goes into the spec; the client does not need it |
 | `{id}` in the path | The calendar item's own id. `GET /calendaritem/{eventId}` answers `404`; the two ids differ |
 | Who signed up | The API tells a parent how many (`amountCommitted`), not who. The preview cannot name other helpers |
-| `commitedByMe` | Seen only as 0 or 1, equal to your commitment's `amount` of 1, so it does not settle the question in §7 |
+| `commitedByMe` | Seen only as 0 or 1, equal to your commitment's `amount` of 1, so it does not settle the question in §7. Phase 6 showed it follows the count: 2 after a sign-up with `amount` 2 |
 | Kinds of slot | **`VOLUNTEER` and `EQUIPMENT`** (things to bring, e.g. 25 wanted). A count above 1 fits both; the commands use the slot's own title |
 | Places | 5 upcoming slots had places left when probed, so the live check has candidates |
 
@@ -113,7 +113,7 @@ commitment in place (no such call was captured), and signing up someone else.
 | 3 | ✅ **Client:** the two calls, the checks of §3, `helper signup` / `withdraw`, slot ids in `calendar --details`; the fake API accepts exactly these writes and keeps the state | tests: nothing changes without confirmation, refusals (also of a count that does not fit), no retry, the count reaches the body, the event id is never used in the path |
 | 4 | ✅ **MCP** (per decision 2): the two tools, their switch and hints | tests, as in `test_tool_hints.py` |
 | 5 | ✅ **Docs:** README promise, badge, a *Helping out* section, FAQ; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; CHANGELOG **0.8.0** | links and pictures checked |
-| 6 | **Live check with you:** on one slot *you* pick, one sign-up and one withdrawal, with a count above 1 if the slot has room (the value no capture shows); the slot's counts and the Parro app agree after each | in `docs/LIVE-CHECKS.md` |
+| 6 | ✅ **Live check with you:** on one slot *you* pick, one sign-up and one withdrawal, with a count above 1 if the slot has room (the value no capture shows); the slot's counts and the Parro app agree after each | in `docs/LIVE-CHECKS.md` |
 | 7 | Release **0.8.0** | published |
 
 For phase 6, pick an item where signing up and withdrawing a moment later bothers nobody: a slot with
