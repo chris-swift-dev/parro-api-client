@@ -135,7 +135,7 @@ are there, otherwise downloaded once (`store_attachment()`).
 
 | …you want to | look at |
 | --- | --- |
-| add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro/cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` in `parro/mcp_server.py` |
+| add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro/cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` / `TOOL_HINTS` in `parro/mcp_server.py` |
 | change how something looks | `parro/rendering.py`, then `UPDATE_SNAPSHOTS=1 .venv/bin/pytest tests/test_rendering.py` and read the diff in `tests/snapshots/` |
 | call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`); GET only: a new write needs a decision first, see the two writes in step 3 and `SECURITY.md` |
 | change output fields | `parro/summaries.py` (keep existing field names: clients depend on them) |

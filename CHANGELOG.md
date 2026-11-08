@@ -28,6 +28,8 @@ know a message cannot be taken back.
   or may not have arrived. The text is never logged or stored.
 - The README, the help text, `SECURITY.md` and the User-Agent describe the new promise.
 - Writes no longer follow redirects.
+- Every MCP tool now states all four hints (`readOnlyHint`, `destructiveHint`, `idempotentHint`,
+  `openWorldHint`), matching what it does. MCP clients can use them to decide when to ask you.
 
 ## [0.6.0] - 2026-11-07
 

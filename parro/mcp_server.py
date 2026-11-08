@@ -350,13 +350,7 @@ MARK_READ_TOOL: dict[str, Any] = {
         },
         required=["kind", "id"],
     ),
-    "annotations": {
-        "title": "Mark as read",
-        "readOnlyHint": False,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
+    "annotations": {"title": "Mark as read"},
 }
 MARK_READ_DISABLED = (
     "parro_mark_read is off. It changes what the school sees, so it has to be switched on: set "
@@ -384,18 +378,69 @@ SEND_CHAT_TOOL: dict[str, Any] = {
         required=["chatroom_id", "text"],
         raw=False,
     ),
-    "annotations": {
-        "title": "Send a chat message",
-        "readOnlyHint": False,
-        "destructiveHint": True,
-        "idempotentHint": False,
-        "openWorldHint": True,
-    },
+    "annotations": {"title": "Send a chat message"},
 }
 SEND_CHAT_DISABLED = (
     "parro_send_chat_message is off. Real people would receive what it sends, so it has to be "
     "switched on: set PARRO_ALLOW_SEND_CHAT=1 in this server's environment."
 )
+
+
+# ----------------------------------------------------------------------------- tool hints
+
+
+def hints(
+    read_only: bool, destructive: bool, idempotent: bool, open_world: bool
+) -> dict[str, bool]:
+    return {
+        "readOnlyHint": read_only,
+        "destructiveHint": destructive,
+        "idempotentHint": idempotent,
+        "openWorldHint": open_world,
+    }
+
+
+# What a tool does to Parro, the login server or the user's login. Refreshing a token and filling
+# the private cache come with every read and are not counted as changes.
+READS_PARRO = hints(read_only=True, destructive=False, idempotent=True, open_world=True)
+TOOL_HINTS = {
+    "parro_auth_status": READS_PARRO,
+    # Every call spends a password check; failed ones count toward the account lockout.
+    "parro_login": hints(read_only=False, destructive=True, idempotent=False, open_world=True),
+    # No network; a new verifier replaces the unfinished browser login on disk.
+    "parro_login_url": hints(
+        read_only=False, destructive=False, idempotent=False, open_world=False
+    ),
+    # Uses up the one-time code and the unfinished login.
+    "parro_login_finish": hints(
+        read_only=False, destructive=False, idempotent=False, open_world=True
+    ),
+    # Revokes the tokens and forgets them; a second call has nothing left to do.
+    "parro_logout": hints(read_only=False, destructive=True, idempotent=True, open_world=True),
+    "parro_me": READS_PARRO,
+    "parro_children": READS_PARRO,
+    "parro_groups": READS_PARRO,
+    "parro_announcements": READS_PARRO,
+    "parro_announcement": READS_PARRO,
+    "parro_attachment": READS_PARRO,
+    "parro_calendar": READS_PARRO,
+    "parro_chatrooms": READS_PARRO,
+    "parro_chat_messages": READS_PARRO,
+    "parro_chat_members": READS_PARRO,
+    "parro_unread": READS_PARRO,
+    "parro_get": READS_PARRO,  # ParroClient.get can only send GET
+    "parro_overview": READS_PARRO,
+    "parro_calendar_link": READS_PARRO,
+    "parro_privacy": READS_PARRO,
+    # Adds a read mark and nothing else; an item that is already read is left alone.
+    "parro_mark_read": hints(read_only=False, destructive=False, idempotent=True, open_world=True),
+    # Reaches real people and cannot be taken back; every confirmed call is one more message.
+    "parro_send_chat_message": hints(
+        read_only=False, destructive=True, idempotent=False, open_world=True
+    ),
+}
+for _tool in (*TOOL_DEFINITIONS, MARK_READ_TOOL, SEND_CHAT_TOOL):
+    _tool["annotations"] = {**_tool.get("annotations", {}), **TOOL_HINTS[_tool["name"]]}
 
 
 # --------------------------------------------------------------------------- tool calling
