@@ -4,7 +4,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
-## [0.7.0] - unreleased
+## [0.7.0] - 2026-11-08
 
 Reply from the terminal: `chat-send` sends a text message to a chat you are in. **This changes the
 client's promise again:** it reads, and it can change two things, only when you ask: mark items as

@@ -1,6 +1,8 @@
 # Plan 8: sending a chat message to an existing chat
 
-*Status: in progress (2026-11-08); decisions in §6 (decision 2 changed: an MCP tool behind its own switch).*
+*Status: done (2026-11-08): phases 1–5 merged in #12, released as 0.7.0 (phase 6). Decisions in §6
+(decision 2 changed: an MCP tool behind its own switch). What was not checked live is in
+`docs/LIVE-CHECKS.md`.*
 
 **Goal:** the spec describes sending a text message to an existing chat, and the client can do it.
 Sources: `findings/send-chatmessage.har` and `findings/send-chatmessage.200.json` (git-ignored).
