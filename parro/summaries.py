@@ -309,6 +309,7 @@ def summarize_calendar_details(event: dict[str, Any]) -> dict[str, Any]:
 
 # Calendar item types that ask parents to help (seen live: VOLUNTEER and SCHOOLWIDE_VOLUNTEER).
 VOLUNTEER_TYPE_SUFFIX = "VOLUNTEER"
+RSVP_WORDS = {"ACCEPT": "accepted", "DECLINE": "declined", "TENTATIVE": "tentative"}
 
 
 def summarize_helpers(calendar_item: dict[str, Any]) -> list[dict[str, Any]]:
@@ -333,6 +334,11 @@ def summarize_helpers(calendar_item: dict[str, Any]) -> list[dict[str, Any]]:
             )
         )
     return slots
+
+
+def rsvp_answer(item: dict[str, Any]) -> str | None:
+    """'accepted', 'declined' or 'tentative': your answer (the event's `rsvp`), None if none yet."""
+    return RSVP_WORDS.get(str(item.get("rsvp")))
 
 
 def wants_helpers(calendar_item: dict[str, Any]) -> bool:

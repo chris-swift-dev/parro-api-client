@@ -164,6 +164,22 @@ ALLOWED_WRITE_PATHS = re.compile(
 CHAT_MESSAGE_PATH = re.compile(r"^/chatroom/\d+/chatmessage$")
 ADD_COMMITMENT_PATH = re.compile(r"^/calendaritem/(\d+)/resource/(\d+)/commitment/$")
 ONE_COMMITMENT_PATH = re.compile(r"^/calendaritem/(\d+)/resource/(\d+)/commitment/(\d+)$")
+RSVP_PATH = re.compile(r"^/calendaritem/(\d+)/calendaritemrsvp$")
+
+
+def is_captured_rsvp(body: bytes | None) -> bool:
+    """Exactly what the web app sends: one item, these three fields, one of the three answers."""
+    try:
+        items = json.loads(body or b"")["items"]
+    except (ValueError, KeyError, TypeError):
+        return False
+    return (
+        len(items) == 1
+        and set(items[0]) == {"dtype", "links", "rsvp"}
+        and items[0]["dtype"] == "calendar.RCalendarItemRSVPPrimer"
+        and items[0]["links"] == []
+        and items[0]["rsvp"] in ("ACCEPT", "DECLINE", "TENTATIVE")
+    )
 
 
 class ForbiddenWrite(AssertionError):
@@ -234,6 +250,9 @@ class FakeParroApi:
     # Your commitments per slot id: [{"id": …, "amount": …}]. GETs show them on the slot.
     commitments: dict[int, list[dict[str, int]]] = field(default_factory=dict)
     calendar_item_overrides: dict[str, Any] = field(default_factory=dict)
+    # Your answers per calendar item id. GETs show them as the event's `rsvp`.
+    rsvp_answers: dict[int, str] = field(default_factory=dict)
+    event_overrides: dict[str, Any] = field(default_factory=dict)
 
     def api_requests(self) -> list[HttpRequest]:
         return [r for r in self.requests if r.url.startswith(API)]
@@ -274,7 +293,12 @@ class FakeParroApi:
             and ADD_COMMITMENT_PATH.match(path)
             and is_captured_commitment(request.body)
         ) or (request.method == "DELETE" and ONE_COMMITMENT_PATH.match(path) and not request.body)
-        if request.method != "GET" and not (allowed_put or allowed_post or allowed_helper):
+        allowed_rsvp = (
+            request.method == "POST" and RSVP_PATH.match(path) and is_captured_rsvp(request.body)
+        )
+        if request.method != "GET" and not (
+            allowed_put or allowed_post or allowed_helper or allowed_rsvp
+        ):
             raise ForbiddenWrite(f"the client must never send {request.method} {path}")
         token = request.headers.get("Authorization", "").removeprefix("Bearer ")
         if token in self.unauthorized_tokens or not token:
@@ -283,9 +307,33 @@ class FakeParroApi:
             return self._mark_read(path, query_of(request.url), request)
         if request.method != "GET" and allowed_helper:
             return self._change_commitment(path, request)
+        if allowed_rsvp:
+            return self._answer_rsvp(path, request)
         if request.method == "POST":
             return self._post_chat_message(path, request)
         return self._with_read_state(self._route(request))
+
+    def _answer_rsvp(self, path: str, request: HttpRequest) -> HttpResponse:
+        """POST …/calendaritemrsvp: 201, Location and the answer, as in the capture."""
+        match = RSVP_PATH.match(path)
+        assert match is not None
+        item_id = int(match[1])
+        if item_id != MUSEUM_TRIP_CALENDAR_ITEM:  # e.g. the event id: the real API answers 404
+            return self._not_found(request)
+        outcome = self.send_outcomes.pop(0) if self.send_outcomes else None
+        if isinstance(outcome, int):
+            return HttpResponse(outcome, {"content-type": GEON_TYPE}, b'{"code": 1}', request.url)
+        answer = json.loads(request.body or b"")["items"][0]["rsvp"]
+        self.rsvp_answers[item_id] = answer
+        if outcome == "lost":
+            raise NetworkError("No answer for POST …/calendaritemrsvp: timed out")
+        kind, rsvp_id = "calendar.RCalendarItemRSVPPrimer", 8600000001
+        headers = {"content-type": GEON_TYPE, "location": f"{API}/rest/v2{path}/{rsvp_id}"}
+        if outcome == "broken":
+            return HttpResponse(201, headers, b"not json", request.url)
+        links = [{"id": rsvp_id, "rel": "self", "type": kind}]
+        item = {"dtype": kind, "links": links, "rsvp": answer}
+        return HttpResponse(201, headers, json.dumps({"items": [item]}).encode(), request.url)
 
     def _change_commitment(self, path: str, request: HttpRequest) -> HttpResponse:
         """POST …/commitment/ (201) and DELETE …/commitment/{id} (204), as in the capture."""
@@ -377,7 +425,12 @@ class FakeParroApi:
     def _with_read_state(self, response: HttpResponse) -> HttpResponse:
         """Show the items marked by earlier PUTs as read (`read`, `unreadCount`)."""
         changed = (
-            self.read_events or self.read_chats or self.commitments or self.calendar_item_overrides
+            self.read_events
+            or self.read_chats
+            or self.commitments
+            or self.calendar_item_overrides
+            or self.rsvp_answers
+            or self.event_overrides
         )
         if not changed or not response.body.startswith(b"{"):
             return response
@@ -397,6 +450,11 @@ class FakeParroApi:
                 value["unreadCount"] = 0
             if dtype == "calendar.RCalendarItem":
                 value.update(self.calendar_item_overrides)
+            if dtype.startswith("event.RCalendarItemEvent"):
+                value.update(self.event_overrides)
+                answer = self.rsvp_answers.get(get_object_id(value.get("calendarItem")) or 0)
+                if answer:
+                    value["rsvp"] = answer
             if (
                 "commitedByMe" in value and get_object_id(value) in self.commitments
             ):  # API's spelling

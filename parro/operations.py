@@ -19,6 +19,7 @@ from . import archive, attachments, rendering, summaries
 from .api_client import (
     ANNOUNCEMENT_LIST_DTYPE,
     CALENDAR_LIST_DTYPE,
+    RSVP_ANSWERS,
     ApiResponse,
     FeedEvent,
     ParroClient,
@@ -876,6 +877,52 @@ def change_or_preview_helper_slot(
     if confirm:
         return apply_helper_change(client, prepared)
     return {**prepared, "done": False, "preview": True}
+
+
+# ------------------------------------------------------------------------------- invitations
+# An answer is a statement in the user's name, and it can be changed but not removed
+# (PLAN-rsvp §2). prepare_rsvp() reads and shows what would happen; only apply_rsvp() writes.
+
+
+def prepare_rsvp(client: ParroClient, event_id: int | None, answer: Any) -> dict[str, Any]:
+    """What would change on which item. Reads only; raises when it should not be done."""
+    wanted = answer.strip().upper() if isinstance(answer, str) else None
+    if wanted not in RSVP_ANSWERS:
+        raise ConfigurationError("Nothing changed: answer with accept, decline or tentative.")
+    identifier = require_id(event_id, "calendar item id")
+    event = client.get_calendar_item(identifier)
+    calendar_item = event.get("calendarItem") or {}
+    if not calendar_item.get("rsvpRequired"):
+        raise ConfigurationError("Nothing changed: this calendar item does not ask for an answer.")
+    if event.get("cancelled"):
+        raise ConfigurationError("Nothing changed: this calendar item is cancelled.")
+    if summaries.is_over({"calendarItem": calendar_item}, current_time()):
+        raise ConfigurationError("Nothing changed: this calendar item is in the past.")
+    groups = [g.get("name") for g in event.get("groups") or [] if isinstance(g, dict)]
+    previous = event.get("rsvp") if event.get("rsvp") in RSVP_ANSWERS else None
+    return {
+        "event_id": identifier,
+        # Not the event id: the API answers 404 for that (spec: answerRsvp).
+        "calendar_item_id": require_id(get_object_id(calendar_item), "calendar item id"),
+        "title": calendar_item.get("title"),
+        "start": calendar_item.get("startDate"),
+        "groups": [name for name in groups if name],
+        "answer": wanted,
+        "previous": previous,
+        "unchanged": previous == wanted,
+    }
+
+
+def apply_rsvp(client: ParroClient, prepared: dict[str, Any]) -> dict[str, Any]:
+    """Do what prepare_rsvp() returned, once. The answer you already gave is not sent again."""
+    if not prepared["unchanged"]:
+        client.answer_rsvp(prepared["calendar_item_id"], prepared["answer"])
+    keys = ("event_id", "title", "start", "answer", "previous")
+    return {
+        **{key: prepared.get(key) for key in keys},
+        "changed": not prepared["unchanged"],
+        "done": True,
+    }
 
 
 def require_id(value: Any, what: str) -> int:

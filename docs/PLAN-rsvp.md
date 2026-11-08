@@ -1,6 +1,6 @@
 # Plan 10: answering a calendar item's invitation (RSVP)
 
-*Status: phases 1–2 done (2026-11-09); decisions taken in §7.*
+*Status: phases 1–3 done (2026-11-09); decisions taken in §7.*
 
 **Goal:** the spec describes answering a calendar item with `ACCEPT`, `DECLINE` or `TENTATIVE`, and the
 client can do it. Source: `findings/accept-calendar-item.har` (git-ignored).
@@ -88,8 +88,8 @@ helper, and answer an invitation, and only when you ask.*
    unknown and to look at the item. Running the command again is safe, because the same answer
    changes nothing. The one resend is after a `401`, as for the other writes.
 7. **Output says what others see,** and that a first answer can be changed but not removed.
-8. **Your answer shows up.** The agenda shows it next to *RSVP needed*, and the details of those
-   items are fetched fresh instead of from the cache.
+8. **Your answer shows up.** The agenda shows it in place of *RSVP needed*. It comes from the event
+   list, which is never cached, so a change shows at once.
 9. **Other parents' answers stay out.** The client has no command for the list of respondents, and
    the MCP tool `parro_get` refuses that path (decision 5). The spec describes it as an operation,
    with a warning about the personal data it returns.
@@ -112,7 +112,7 @@ parent–teacher talk times (other calls, not captured), and answering a whole g
 | --- | --- | --- |
 | 1 | ✅ **Live probe, GET only:** see *Probe results* in §1. Only counts and field names were printed | done |
 | 2 | ✅ **Spec and privacy:** sanitized sample (git-ignored); the `POST` and the `GET` of the respondents under a new *RSVP* section, with what is not known, what others see and the warning about the personal data in that list; the event's `rsvp` field; the privacy scan covers `guardian` and `childNames` | spec validates; scan passes |
-| 3 | **Client:** the call, the checks of §3, `rsvp accept\|decline\|tentative`, the answer in the agenda; the fake API accepts exactly this write and keeps the state | tests: nothing changes without confirmation, refusals, no retry, the right id in the path, only the three answers reach the body |
+| 3 | ✅ **Client:** the call, the checks of §3, `rsvp accept\|decline\|tentative`, the answer in the agenda; the fake API accepts exactly this write and keeps the state | tests: nothing changes without confirmation, refusals, no retry, the right id in the path, only the three answers reach the body |
 | 4 | **MCP** (per decisions 2 and 5): the tool, its switch and hints; `parro_get` refuses the respondents path | tests, as in `test_tool_hints.py`, and that no spelling of the path gets through |
 | 5 | **Docs:** README promise, badge, an *Answering an invitation* section, FAQ, and the "no RSVPs" line under *Helping out*; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; spec-operations count; CHANGELOG **0.9.0** | links and pictures checked |
 | 6 | **Live check with you:** on the item *you* pick, `TENTATIVE`, then `DECLINE`, then back to the answer you want to end on (the values no capture shows, and replacing an answer); the Parro app agrees after each | in `docs/LIVE-CHECKS.md` |
