@@ -760,6 +760,107 @@ def send_or_preview_chat_message(
     return {**prepared, "sent": False, "preview": True}
 
 
+# ------------------------------------------------------------------------- helper slots
+# A sign-up is a promise in the user's name (PLAN-helper-signup §2). prepare_helper_change() reads
+# and shows what would happen; only apply_helper_change() writes.
+
+
+def find_helper_slot(calendar_item: dict[str, Any], slot_id: int | None) -> dict[str, Any]:
+    """The slot asked for; `slot_id` may be left out when there is only one."""
+    slots = [slot for slot in calendar_item.get("resources") or [] if isinstance(slot, dict)]
+    if not slots:
+        raise ConfigurationError("Nothing changed: this calendar item asks for no helpers.")
+    if slot_id is None and len(slots) == 1:
+        return slots[0]
+    for slot in slots:
+        if slot_id is not None and get_object_id(slot) == slot_id:
+            return slot
+    choices = ", ".join(
+        f"{slot.get('title') or 'Helpers'} (#{get_object_id(slot)})" for slot in slots
+    )
+    raise ConfigurationError(f"Nothing changed: choose a slot with --slot: {choices}.")
+
+
+def check_room_for_signup(slot: dict[str, Any], count: Any) -> int:
+    """The count to sign up with, or why it cannot be done."""
+    if isinstance(count, bool) or not isinstance(count, int) or count < 1:
+        raise ConfigurationError("Nothing changed: the count must be a whole number from 1 up.")
+    if slot.get("commitedByMe"):  # the API's spelling
+        raise ConfigurationError(
+            "Nothing changed: you are already signed up on this slot. To change your count, "
+            "withdraw and sign up again."
+        )
+    wanted, taken = slot.get("amount"), slot.get("amountCommitted") or 0
+    if wanted is not None:
+        left = wanted - taken
+        if left <= 0:
+            raise ConfigurationError("Nothing changed: this slot is full.")
+        if count > left:
+            raise ConfigurationError(
+                f"Nothing changed: only {left} of {wanted} places are left on this slot."
+            )
+    return count
+
+
+def own_commitment_id(slot: dict[str, Any]) -> int:
+    """Your commitment's id: the API lists only your own (PLAN-helper-signup, probe results)."""
+    mine = [c for c in slot.get("commitments") or [] if isinstance(c, dict)]
+    if not slot.get("commitedByMe") or not mine:
+        raise ConfigurationError("Nothing changed: you are not signed up on this slot.")
+    if len(mine) > 1:
+        raise ConfigurationError(
+            f"Nothing changed: you have {len(mine)} commitments on this slot; use the Parro app."
+        )
+    return require_id(get_object_id(mine[0]), "commitment id")
+
+
+def prepare_helper_change(
+    client: ParroClient,
+    action: str,
+    event_id: int | None,
+    slot_id: int | None = None,
+    count: Any = 1,
+) -> dict[str, Any]:
+    """What would change, on which slot. Reads only; raises when it should not be done."""
+    if action not in ("signup", "withdraw"):
+        raise ConfigurationError("Choose signup or withdraw.")
+    identifier = require_id(event_id, "calendar item id")
+    calendar_item = client.get_calendar_item(identifier).get("calendarItem") or {}
+    slot = find_helper_slot(calendar_item, slot_id)
+    if summaries.is_over({"calendarItem": calendar_item}, current_time()):
+        raise ConfigurationError("Nothing changed: this calendar item is in the past.")
+    prepared: dict[str, Any] = {
+        "action": action,
+        "event_id": identifier,
+        # Not the event id: the API answers 404 for that (spec: addCommitment).
+        "calendar_item_id": require_id(get_object_id(calendar_item), "calendar item id"),
+        "slot_id": require_id(get_object_id(slot), "slot id"),
+        "title": calendar_item.get("title"),
+        "start": calendar_item.get("startDate"),
+        "slot": str(slot.get("title") or "").strip() or None,
+        "wanted": slot.get("amount"),
+        "signed_up": slot.get("amountCommitted") or 0,
+    }
+    if action == "signup":
+        prepared["count"] = check_room_for_signup(slot, count)
+    else:
+        prepared["commitment_id"] = own_commitment_id(slot)
+    return prepared
+
+
+def apply_helper_change(client: ParroClient, prepared: dict[str, Any]) -> dict[str, Any]:
+    """Do what prepare_helper_change() returned, once."""
+    item_id, slot_id = prepared["calendar_item_id"], prepared["slot_id"]
+    result = {key: prepared.get(key) for key in ("action", "event_id", "title", "slot", "slot_id")}
+    if prepared["action"] == "signup":
+        response = client.add_helper_commitment(item_id, slot_id, prepared["count"])
+        commitment = response.items[0] if response.items else {}
+        result.update(count=prepared["count"], commitment_id=get_object_id(commitment))
+    else:
+        client.remove_helper_commitment(item_id, slot_id, prepared["commitment_id"])
+    return {**result, "done": True}
+
+
 def require_id(value: Any, what: str) -> int:
     """An id argument as int, with a usage error instead of a traceback when it is missing."""
     try:

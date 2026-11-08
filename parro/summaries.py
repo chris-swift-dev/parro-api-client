@@ -324,6 +324,7 @@ def summarize_helpers(calendar_item: dict[str, Any]) -> list[dict[str, Any]]:
         slots.append(
             drop_missing(
                 {
+                    "id": get_object_id(resource),
                     "title": str(resource.get("title") or "").strip() or None,
                     "wanted": resource.get("amount"),
                     "signed_up": resource.get("amountCommitted"),
