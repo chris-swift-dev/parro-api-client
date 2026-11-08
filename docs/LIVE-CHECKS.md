@@ -88,3 +88,22 @@ login was refreshed with its refresh token. Personal data is left out.
 | Parro app | OK: the owner saw the item shown as read in the app |
 | `mark-read calendar <id>` / `mark-read chat <id>` | OK: found and already read, nothing sent (2 GETs each, no PUT). `GET /chatroom/{id}` works with the chat's own id. Nothing was unread, so `PUT /event/{id}/read` for a calendar item and `PUT /chatroom/{id}/read` are **not checked live yet**; both are the calls the web app sends (captures) |
 | `mark-read group <id>` without `--yes` | OK: the count (2) and the titles, nothing marked (3 GETs, no PUT). Bulk marking was not run |
+
+## Live check (2026-11-08, release 0.7.0: sending a chat message)
+
+With the account owner present, who picked the chat and the text and approved the preview. **One
+password check** (`login --prompt`, by the owner; the previous login had expired). One real message
+was sent, in a chat with one other person. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| MCP `parro_send_chat_message` without `confirm`, `PARRO_ALLOW_SEND_CHAT=1` | OK: the preview shows the chat, the one recipient (not the sender) and the exact text; nothing sent, the chat still had 6 messages |
+| `chat-send` without a terminal and without `--yes` | OK: exit 2, "Not sent", nothing sent |
+| `chat-send <id> "<text>" --yes` | OK: 3 GETs and **one POST**, `201`; shows the new message's id and time. The text is not in the `-vv` log |
+| `chat-messages` afterwards | OK: 7 messages; the newest has that id and exactly that text; `allRead` false |
+| Own unread count | Stayed 0: sending does not make the chat unread for the sender |
+| Parro app | OK: the owner saw the message in the app |
+| The other person's reply | OK: `unread` shows 1 chat, `overview` and `chatrooms --unread` list that chat |
+| `mark-read chat <id>` | OK: 2 GETs and one `PUT /chatroom/{id}/read`; afterwards `unread` says nothing is unread and the chat is gone from `overview` and `chatrooms --unread`. **This closes the gap left by the 0.6.0 check** for chats |
+| the same again | OK: "Already read", 2 GETs, no PUT |
+| Not checked live | `PUT /event/{id}/read` for a calendar item (nothing unread so far), MCP `confirm: true` (same code path as `chat-send` after the preview), refusals of closed chats, a timeout, the limits listed in the spec: finding out would mean more real messages |
