@@ -1,6 +1,6 @@
 # Plan 10: answering a calendar item's invitation (RSVP)
 
-*Status: planned (2026-11-08); decisions taken in §7. No phase started yet.*
+*Status: phase 1 done (2026-11-09); decisions taken in §7.*
 
 **Goal:** the spec describes answering a calendar item with `ACCEPT`, `DECLINE` or `TENTATIVE`, and the
 client can do it. Source: `findings/accept-calendar-item.har` (git-ignored).
@@ -29,17 +29,26 @@ data, so the sample needs the privacy scan to cover those fields.
 
 **What it does not show:**
 
-- **`DECLINE` and `TENTATIVE`.** Both come from the web app's buttons, not from a capture.
+- **Sending `DECLINE` or `TENTATIVE`.** Both exist as stored answers (see the probe results), but
+  neither was captured being sent.
 - **Replacing an answer.** That `DECLINE` or `TENTATIVE` overwrites an earlier `ACCEPT` is the likely
   behaviour, but it is not captured. Phase 6 checks it.
 - **Going back to "no answer".** There is no `DELETE` in the capture, so treat a first answer as
   something you can change but not take away.
-- **How to read your current answer.** The samples only carry `rsvpRequired`, the question and not
-  your answer. Phase 1 finds out.
-- **Which id `{id}` is.** All ids in the capture are placeholders. For helper slots it is the
-  calendar item's own id, and the event id answers `404`. Probably the same here; phase 1 checks it.
 - How the API answers for a past or cancelled item, or an item that asks for no RSVP.
-- Whether a deadline exists, and whether teachers get a notification.
+- Whether teachers get a notification.
+
+### Probe results (phase 1, 2026-11-09, GET only, 20 items with an RSVP: 5 upcoming, 15 past)
+
+| Question | Answer |
+| --- | --- |
+| How to read your own answer | **The event's own `rsvp` field**, on `GET /event` and `GET /event/{id}`: `ACCEPT` on the 3 items you answered, absent on the other 17. No extra request is needed |
+| `{id}` in the path | The calendar item's own id. It differs from the event id on all 20 items; with the event id the `GET` answers `404` |
+| `GET /calendaritem/{id}/calendaritemrsvp` | Answers on 15 of the 20 items and `403` on 5. **It lists every parent the invitation went to, with name, children's names and answer** (`identity.RRespondent`), 829 entries in total over those 15 lists. **The client must not use or show it** |
+| Possible answers | `ACCEPT`, `DECLINE`, `TENTATIVE` and `UNKNOWN` all occur in those lists. `UNKNOWN` means not answered yet. Whether sending `UNKNOWN` clears an answer is not known, and is not tried: the app offers no such button |
+| Deadline | No deadline field on the item, and no `RSVP` entry in its `permissions` |
+| Status | All 20 are `OPEN`, none cancelled, so the answer for a closed or cancelled item stays unknown |
+| Places to try it | 5 upcoming items ask for an RSVP; 1 of them is already answered |
 
 ## 2. Challenging it: a fourth kind of write
 
@@ -66,22 +75,24 @@ helper, and answer an invitation, and only when you ask.*
 1. **One fixed call, nothing generic.** `ParroClient.answer_rsvp(item, answer)` builds the captured
    body and accepts only the three answers. The fake API's allowlist gets exactly this path and body.
 2. **You think in events, the client finds the id.** `rsvp accept|decline|tentative EVENT [--yes]`
-   takes the event id you already see, and resolves the calendar item's own id if phase 1 confirms
-   that is the one needed.
-3. **See it before it happens.** First the item, its date, the group, your current answer (if phase 1
-   finds a way to read it) and the new answer, then `Accept this invitation? [y/N]` (or `Decline…`,
+   takes the event id you already see, and resolves the calendar item's own id.
+3. **See it before it happens.** First the item, its date, the group, your current answer (from the
+   event's `rsvp`) and the new answer, then `Accept this invitation? [y/N]` (or `Decline…`,
    `Answer tentative…`). `--yes` skips the question for scripts. Without a terminal and without
    `--yes`, nothing changes, as with `chat-send` and `helper`.
 4. **Refuse what cannot be right, before writing:** an item with `rsvpRequired: false`; an item in the
    past; a cancelled item; an answer other than the three.
-5. **The same answer again is not a write.** If your current answer can be read and is already the
-   one asked for, the client says so and sends nothing, like `mark-read` on an item that is read.
+5. **The same answer again is not a write.** If your current answer is already the one asked for,
+   the client says so and sends nothing, like `mark-read` on an item that is read.
 6. **Never repeated on its own.** No retry after a timeout or a `5xx`: the client says the outcome is
    unknown and to look at the item. Running the command again is safe, because the same answer
    changes nothing. The one resend is after a `401`, as for the other writes.
 7. **Output says what others see,** and that a first answer can be changed but not removed.
-8. **Your answer shows up.** If it can be read, `calendar --details` and the agenda show it next to
-   *RSVP needed*, and those items are fetched fresh instead of from the cache.
+8. **Your answer shows up.** The agenda shows it next to *RSVP needed*, and the details of those
+   items are fetched fresh instead of from the cache.
+9. **Other parents' answers stay out.** The client has no command for the list of respondents, and
+   the MCP tool `parro_get` refuses that path (decision 5). The spec describes it as an operation,
+   with a warning about the personal data it returns.
 
 ## 4. MCP
 
@@ -99,10 +110,10 @@ parent–teacher talk times (other calls, not captured), and answering a whole g
 
 | # | Phase | Done when |
 | --- | --- | --- |
-| 1 | **Live probe, GET only:** `GET …/calendaritem/{id}/calendaritemrsvp` and `…/{rsvpId}` with the calendar item's own id and with the event id; where your own answer can be read; whether other parents' answers are ever visible; any deadline field; how many upcoming items ask for an RSVP. Only counts and field names are printed | results in §1 |
-| 2 | **Spec and privacy:** sanitized sample (git-ignored); `POST` and any `GET` found, under a new *RSVP* section, with what is not known and what others see; the privacy scan covers `guardian` and `childNames` | spec validates; scan passes |
-| 3 | **Client:** the call, the checks of §3, `rsvp accept\|decline\|tentative`, the answer in the agenda if it can be read; the fake API accepts exactly this write and keeps the state | tests: nothing changes without confirmation, refusals, no retry, the right id in the path, only the three answers reach the body |
-| 4 | **MCP** (per decision 2): the tool, its switch and hints | tests, as in `test_tool_hints.py` |
+| 1 | ✅ **Live probe, GET only:** see *Probe results* in §1. Only counts and field names were printed | done |
+| 2 | **Spec and privacy:** sanitized sample (git-ignored); the `POST` and the `GET` of the respondents under a new *RSVP* section, with what is not known, what others see and the warning about the personal data in that list; the event's `rsvp` field; the privacy scan covers `guardian` and `childNames` | spec validates; scan passes |
+| 3 | **Client:** the call, the checks of §3, `rsvp accept\|decline\|tentative`, the answer in the agenda; the fake API accepts exactly this write and keeps the state | tests: nothing changes without confirmation, refusals, no retry, the right id in the path, only the three answers reach the body |
+| 4 | **MCP** (per decisions 2 and 5): the tool, its switch and hints; `parro_get` refuses the respondents path | tests, as in `test_tool_hints.py`, and that no spelling of the path gets through |
 | 5 | **Docs:** README promise, badge, an *Answering an invitation* section, FAQ, and the "no RSVPs" line under *Helping out*; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; spec-operations count; CHANGELOG **0.9.0** | links and pictures checked |
 | 6 | **Live check with you:** on the item *you* pick, `TENTATIVE`, then `DECLINE`, then back to the answer you want to end on (the values no capture shows, and replacing an answer); the Parro app agrees after each | in `docs/LIVE-CHECKS.md` |
 | 7 | Release **0.9.0** | published |
@@ -120,3 +131,7 @@ and not close to its date: teachers may be notified of each change.
 3. **Changing an answer you already gave:** allowed after the same preview and question, showing the
    old and the new answer. It is the only way to correct a mistake.
 4. **Which items:** only items with `rsvpRequired: true`.
+5. **The list of respondents (added 2026-11-09):** the spec describes
+   `GET /calendaritem/{id}/calendaritemrsvp`, and the MCP tool `parro_get` refuses that path, so an
+   assistant cannot read other parents' names and answers. The CLI's `get` keeps working: there you
+   ask for it yourself.
