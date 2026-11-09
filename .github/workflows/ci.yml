@@ -99,4 +99,4 @@ jobs:
         run: python -m pip install pytest -r requirements-gui.txt
 
       - name: Pytest, desktop app only
-        run: python -m pytest tests/test_gui_app.py tests/test_gui_boundaries.py
+        run: python -m pytest -k test_gui

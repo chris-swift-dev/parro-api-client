@@ -19,6 +19,8 @@ from parro.api_client import ParroClient  # noqa: E402
 from parro.errors import ApiError, ConfigurationError  # noqa: E402
 from parro_gui.window import (  # noqa: E402
     CHECKING_LOGIN,
+    LOGIN_EXPIRED,
+    LOGIN_HALTED,
     SECTIONS,
     MainWindow,
     describe_login,
@@ -26,6 +28,7 @@ from parro_gui.window import (  # noqa: E402
 from parro_gui.worker import Worker  # noqa: E402
 from tests import fakes  # noqa: E402
 from tests.conftest import load_sample  # noqa: E402
+from tests.gui_helpers import wait_until  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -73,14 +76,6 @@ def worker(application, make_client):
     created = Worker(make_client)
     yield created
     created.close()
-
-
-def wait_until(condition: Callable[[], bool], seconds: float = 5.0) -> None:
-    deadline = time.monotonic() + seconds
-    while not condition():
-        QApplication.processEvents()
-        assert time.monotonic() < deadline, "timed out"
-        time.sleep(0.002)
 
 
 def run_one(worker: Worker, task: Callable[[ParroClient], Any]) -> tuple[list[Any], list[str]]:
@@ -251,6 +246,8 @@ def test_closing_waits_for_the_worker(logged_in, application, make_client):
     ("status", "line"),
     [
         ({}, "Not logged in"),
+        ({"automatic_login_halted": "wrong password"}, LOGIN_HALTED),
+        ({"has_refresh_token": True, "login_expires_in_seconds": 0}, LOGIN_EXPIRED),
         ({"has_access_token": True, "error": "Login halted."}, "Login halted."),
         ({"has_refresh_token": True}, "Logged in"),
         (
