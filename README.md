@@ -15,7 +15,7 @@ invitation.
 ![Reads; marks as read, sends chat messages, signs up as helper and answers invitations only on request](https://img.shields.io/badge/API_access-reads_%2B_mark_read_%2B_send_chat_%2B_helper_signup_%2B_rsvp-blue)
 [![Code: MIT](https://img.shields.io/badge/code-MIT-yellow)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE-CODE)
 [![Spec: CC BY 4.0](https://img.shields.io/badge/spec-CC_BY_4.0-lightgrey)](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE)
-[![M8ven Score](https://m8ven.ai/badge/mcp/chris-swift-dev-parro-api-client-1lxl3d?v=a2fe9a75782c007b6f35ba102c2147ca)](https://m8ven.ai/mcp/chris-swift-dev-parro-api-client-1lxl3d?s=readme)
+[![M8ven Score](https://m8ven.ai/badge/mcp/chris-swift-dev-parro-api-client-1lxl3d)](https://m8ven.ai/mcp/chris-swift-dev-parro-api-client-1lxl3d?s=readme)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/terminal-overview-dark.svg">
