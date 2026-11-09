@@ -1,0 +1,2 @@
+# The desktop app and its tests. Only needed with the `gui` extra.
+PySide6-Essentials==6.12.0

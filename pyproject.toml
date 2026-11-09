@@ -1,6 +1,7 @@
 # The package `parro-api-client`: install it with `pipx install .` (or uv / pip) to get the
 # commands `parro-client` and `parro-client-mcp`. It needs nothing beyond the Python 3.10+ standard
-# library at run time; PyMuPDF / pypdf / Pillow are optional extras for reading attachments.
+# library at run time; PyMuPDF / pypdf / Pillow are optional extras for reading attachments, and the
+# `gui` extra adds Qt for the desktop app, `parro-client-gui`.
 # setuptools is needed only to build the package.
 
 [build-system]
@@ -32,16 +33,19 @@ classifiers = [
 [project.scripts]
 parro-client = "parro.cli:run"
 parro-client-mcp = "parro.mcp_server:run"
+parro-client-gui = "parro_gui.app:run"
 
 [project.urls]
 Repository = "https://github.com/chris-swift-dev/parro-api-client"
 Documentation = "https://chris-swift-dev.github.io/parro-api-client/"
 
 [tool.setuptools]
-packages = ["parro"]  # the client; parro_cli.py / parro_mcp.py are only for release archives
+# The client and the desktop app; parro_cli.py / parro_mcp.py are only for release archives.
+packages = ["parro", "parro_gui"]
 
 [project.optional-dependencies]
 attachments = ["pymupdf", "pypdf", "pillow"]
+gui = ["PySide6-Essentials>=6.11"]
 dev = ["pytest", "ruff", "mypy", "openapi-schema-validator"]
 
 [tool.pytest.ini_options]
@@ -62,7 +66,7 @@ ignore = ["N818"]
 
 [tool.mypy]
 python_version = "3.10"
-files = ["parro", "parro_cli.py", "parro_mcp.py", "tests"]
+files = ["parro", "parro_gui", "parro_cli.py", "parro_mcp.py", "tests"]
 exclude = ["^legacy/"]
 strict = true
 warn_unreachable = true
