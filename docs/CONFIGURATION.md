@@ -27,6 +27,7 @@ normal use. Back to the [README](../README.md).
 | `PARRO_ALLOW_MARK_READ` | `off`; `1` adds the MCP tool `parro_mark_read` ([the school sees it](../README.md#marking-as-read)). The CLI's `mark-read` needs no switch |
 | `PARRO_ALLOW_SEND_CHAT` | `off`; `1` adds the MCP tool `parro_send_chat_message` ([read this first](../README.md#sending-a-chat-message)). The CLI's `chat-send` needs no switch |
 | `PARRO_ALLOW_HELPER_SIGNUP` | `off`; `1` adds the MCP tools `parro_helper_signup` and `parro_helper_withdraw` ([read this first](../README.md#helping-out)). The CLI's `helper` needs no switch |
+| `PARRO_ALLOW_RSVP` | `off`; `1` adds the MCP tool `parro_rsvp` ([read this first](../README.md#answering-an-invitation)). The CLI's `rsvp` needs no switch |
 
 Switch to the acceptance environment by overriding `PARRO_BASE_URI`, `PARRO_LOGIN_URI` and
 `PARRO_CLIENT_ID`.

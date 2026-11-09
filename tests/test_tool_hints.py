@@ -50,6 +50,7 @@ EXPECTED = {
     "parro_send_chat_message": (False, True, False, True),
     "parro_helper_signup": (False, False, True, True),
     "parro_helper_withdraw": (False, True, True, True),
+    "parro_rsvp": (False, True, True, True),
 }
 
 READ_CALLS: dict[str, dict[str, Any]] = {
@@ -114,6 +115,7 @@ def all_tools() -> list[dict[str, Any]]:
         parro_mcp.SEND_CHAT_TOOL,
         parro_mcp.HELPER_SIGNUP_TOOL,
         parro_mcp.HELPER_WITHDRAW_TOOL,
+        parro_mcp.RSVP_TOOL,
     ]
 
 
@@ -133,6 +135,7 @@ def test_the_hints_reach_clients_through_tools_list(server, monkeypatch):
     monkeypatch.setenv("PARRO_ALLOW_MARK_READ", "1")
     monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
     monkeypatch.setenv("PARRO_ALLOW_HELPER_SIGNUP", "1")
+    monkeypatch.setenv("PARRO_ALLOW_RSVP", "1")
     listed = server.handle_request({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
     tools = {tool["name"]: tool["annotations"] for tool in listed["result"]["tools"]}
     assert set(tools) == set(EXPECTED)
@@ -234,3 +237,13 @@ def test_helper_tools_do_nothing_more_when_repeated(api, server, monkeypatch):
         result_of(server.call_tool(name, arguments))
         assert server.call_tool(name, arguments).is_error
         assert len(api.writes()) == writes
+
+
+def test_the_same_rsvp_answer_again_writes_nothing(api, server, monkeypatch):
+    """idempotentHint true: more in test_rsvp.py."""
+    monkeypatch.setenv("PARRO_ALLOW_RSVP", "1")
+    monkeypatch.setattr(operations, "current_time", lambda: BEFORE_THE_TRIP)
+    arguments = {"event_id": fakes.MUSEUM_TRIP_ID, "answer": "accept", "confirm": True}
+    assert result_of(server.call_tool("parro_rsvp", arguments))["changed"] is True
+    assert result_of(server.call_tool("parro_rsvp", arguments))["changed"] is False
+    assert len(api.writes()) == 1

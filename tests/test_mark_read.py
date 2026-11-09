@@ -121,7 +121,7 @@ def test_only_the_client_core_builds_api_requests():
             assert methods == set(), "_send passes the method on; it is GET, PUT or POST"
             assert 'Literal["GET", "PUT", "POST", "DELETE"]' in text
             assert text.count('method="PUT"') == 1 and text.count('method="POST"') == 1
-            assert text.count('"POST", body, (200, 201)') == 1
+            assert text.count('"POST", body, (200, 201)') == 2, "helper sign-up and RSVP"
             assert text.count('"DELETE", None, (200, 204)') == 1
         else:
             assert "HttpRequest(" not in text, path.name

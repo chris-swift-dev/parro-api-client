@@ -88,6 +88,8 @@ class Settings:
     # The MCP tools parro_helper_signup and parro_helper_withdraw exist only with
     # PARRO_ALLOW_HELPER_SIGNUP=1 (off by default).
     allow_helper_signup: bool = False
+    # The MCP tool parro_rsvp exists only with PARRO_ALLOW_RSVP=1 (off by default).
+    allow_rsvp: bool = False
     cache_max_bytes: int = DEFAULT_CACHE_MAX_MB * 1_000_000
 
     @classmethod
@@ -128,6 +130,7 @@ class Settings:
             allow_mark_read=parse_switch(env, "PARRO_ALLOW_MARK_READ", default=False),
             allow_send_chat=parse_switch(env, "PARRO_ALLOW_SEND_CHAT", default=False),
             allow_helper_signup=parse_switch(env, "PARRO_ALLOW_HELPER_SIGNUP", default=False),
+            allow_rsvp=parse_switch(env, "PARRO_ALLOW_RSVP", default=False),
             # Megabytes as people count them (1 MB = 1,000,000 bytes), like the sizes shown.
             cache_max_bytes=int(parse_number(env, "PARRO_CACHE_MAX_MB", DEFAULT_CACHE_MAX_MB))
             * 1_000_000,

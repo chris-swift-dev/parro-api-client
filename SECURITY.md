@@ -25,17 +25,20 @@ links, or names and messages from a real Parro account. Use invented data, like 
   `PUT /event/markannouncementsasread`, `PUT /chatroom/{id}/read`) and sending one text message
   (`POST /chatroom/{id}/chatmessage`) and signing up or withdrawing as a helper
   (`POST /calendaritem/{id}/resource/{resourceId}/commitment/`,
-  `DELETE /calendaritem/{id}/resource/{resourceId}/commitment/{commitmentId}`), or that sends one of
-  those without the user asking for it (for example through `parro_mark_read`,
-  `parro_send_chat_message`, `parro_helper_signup` or `parro_helper_withdraw` while its switch is
-  off, or a message or a helper change without confirmation); a message or a helper change that is
-  sent twice by the client on its own; the text of a message that ends up in a log or a file; a way
+  `DELETE /calendaritem/{id}/resource/{resourceId}/commitment/{commitmentId}`) and answering an
+  invitation (`POST /calendaritem/{id}/calendaritemrsvp`), or that sends one of those without the
+  user asking for it (for example through `parro_mark_read`, `parro_send_chat_message`,
+  `parro_helper_signup`, `parro_helper_withdraw` or `parro_rsvp` while its switch is off, or a
+  message, a helper change or an answer without confirmation); a message, a helper change or an
+  answer that is sent twice by the client on its own; a way for an MCP tool to read the list of
+  everyone an invitation went to (`GET /calendaritem/{id}/calendaritemrsvp`); the text of a message that ends up in a log or a file; a way
   around the lockout latch ([docs/LOGIN.md](docs/LOGIN.md)).
 
-The risk that text in Parro steers an assistant while `PARRO_ALLOW_SEND_CHAT=1` or
-`PARRO_ALLOW_HELPER_SIGNUP=1` is on is known and described in the README
-([messages](README.md#sending-a-chat-message), [helpers](README.md#helping-out)). A way to send a
-message or change a helper slot without the preview and `confirm: true` is in scope.
+The risk that text in Parro steers an assistant while `PARRO_ALLOW_SEND_CHAT=1`,
+`PARRO_ALLOW_HELPER_SIGNUP=1` or `PARRO_ALLOW_RSVP=1` is on is known and described in the README
+([messages](README.md#sending-a-chat-message), [helpers](README.md#helping-out),
+[invitations](README.md#answering-an-invitation)). A way to send a message, change a helper slot or
+answer an invitation without the preview and `confirm: true` is in scope.
 
 **Problems in Parro itself** (its API, the login server, the app) are not ours to fix: please
 report them to Topicus / ParnasSys directly.

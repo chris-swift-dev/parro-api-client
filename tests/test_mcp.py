@@ -183,6 +183,7 @@ def test_every_tool_has_an_implementation_and_a_description():
         parro_mcp.SEND_CHAT_TOOL,
         parro_mcp.HELPER_SIGNUP_TOOL,
         parro_mcp.HELPER_WITHDRAW_TOOL,
+        parro_mcp.RSVP_TOOL,
     ]
     assert set(parro_mcp.TOOL_FUNCTIONS) == {t["name"] for t in every_tool}
     for tool in every_tool:

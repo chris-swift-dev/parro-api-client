@@ -79,6 +79,26 @@ def test_a_name_in_a_helper_commitment_is_found():
     assert "/items/0/identity/surname" in findings[0]
 
 
+def test_names_in_the_list_of_respondents_are_found():
+    respondents = {
+        "items": [
+            {
+                "dtype": "identity.RRespondent",
+                "firstname": "Voornaam",
+                "surname": INVENTED_NAME,
+                "childNames": ["Voornaam", INVENTED_NAME],
+                "cachedAvatarUrl": "https://cdn.parro.test/avatar/8f3a",
+                "rsvp": "ACCEPT",
+            }
+        ]
+    }
+    found = load_tool().scan_text(json.dumps(respondents), "listRsvpRespondents.200.json")
+    assert len(found) == 3 and not any(INVENTED_NAME in line or "8f3a" in line for line in found)
+    assert any("/items/0/surname" in line for line in found)
+    assert any("/items/0/childNames/1" in line for line in found)
+    assert any("/items/0/cachedAvatarUrl" in line for line in found)
+
+
 def test_address_fields_are_checked_too():
     school = {"name": "Basisschool Voorbeeld", "city": "Zwolle"}
     assert findings(school) == ["sample.json: /city: not a placeholder (6 characters)"]

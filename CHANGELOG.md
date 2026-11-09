@@ -4,6 +4,34 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.9.0] - unreleased
+
+Say whether you are coming: `rsvp` answers a calendar item's invitation with accept, decline or
+tentative. **This changes the client's promise again:** it reads, and it can change four things,
+only when you ask: mark items as read, send a text message, sign you up or withdraw you as a helper,
+and answer an invitation. An answer is a statement in your name: the school sees it, and you can
+change it but not remove it.
+
+### Added
+- **`rsvp accept|decline|tentative EVENT`**. It shows the item, your current answer and the new one,
+  and asks first. `--yes` skips the question for scripts; without a terminal and without `--yes`,
+  nothing changes.
+- It refuses an item that does not ask for an answer, an item that is cancelled and an item in the
+  past. The answer you already gave is not sent again.
+- The agenda and `overview` show your answer in place of *RSVP needed*.
+- The MCP tool **`parro_rsvp`**, only when you set `PARRO_ALLOW_RSVP=1` (a switch of its own). Without
+  `confirm: true` it only returns the preview, and it is marked as destructive so MCP clients ask
+  first. Please read the warning in the README before you switch it on.
+- The spec describes answering an invitation, your own answer on the event, and the list of everyone
+  an invitation went to, with a warning about the personal data in it.
+
+### Changed
+- The MCP tools `parro_get` and `parro_attachment` refuse the list of everyone an invitation went to,
+  because it holds other people's names and answers. The command `get` still reaches it if you ask.
+- An answer is never repeated on its own: after a timeout or a server error the client says it may
+  or may not have gone through.
+- The README, the help text, `SECURITY.md` and the User-Agent describe the new promise.
+
 ## [0.8.0] - 2026-11-08
 
 Say you can help: `helper signup` and `helper withdraw` put you on a calendar item's helper slot, or

@@ -48,5 +48,13 @@ All in the spec; the important ones:
   (`amountCommitted`), not who. `commitedByMe` (the API's spelling) is the number of places you committed, and `amount` above 1
   works (checked with 2). Not known: how a
   full slot, a past item or closed sign-ups are answered, and whether teachers get a notification.
+- Invitations: `POST /calendaritem/{id}/calendaritemrsvp` with
+  `{"items":[{"dtype":"calendar.RCalendarItemRSVPPrimer","links":[],"rsvp":"ACCEPT"}]}` answers `201`
+  and `Location`. The same answer again changes nothing: an identical body, with the first call's
+  `lastModifiedAt`. `{id}` is the calendar item's own id; the event id answers `404`. Your own answer
+  is the event's `rsvp` field, absent until you answer. `GET` on that path lists everyone the
+  invitation went to, parents and teachers, with names, children's names and answers (`UNKNOWN` =
+  not answered), or answers `403` (5 of 20 items, reason not known). All three answers were sent in a live
+  check, and each replaced the one before. Not known: the answer for a past or cancelled item, and whether teachers get a notification.
 - `/conversations` and `/timeslot`, found in the web app's code, answer `404`. CORS preflights allow
   every method on every path, so they say nothing about what a path supports.

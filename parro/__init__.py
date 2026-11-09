@@ -1,7 +1,8 @@
 """Client for the Parro REST API (talk.parro.com), shared by the CLI and the MCP server.
 
-It reads; the only writes are marking items as read, sending a text message to a chat, and signing
-up or withdrawing as a helper, on request (see the rules in api_client.py).
+It reads; the only writes are marking items as read, sending a text message to a chat, signing up
+or withdrawing as a helper, and answering an invitation, on request (see the rules in
+api_client.py).
 
 Everything that talks to Parro or to the ParnasSys login server lives in this package. The two entry
 points only translate between their own interface (command line, MCP JSON-RPC) and this core.

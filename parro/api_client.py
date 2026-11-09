@@ -5,12 +5,13 @@ of it (get_account, list_groups, list_events, get_event, ...). They return the A
 untouched; summaries.py shapes it for people.
 
 Rules for this module:
-  * GET, plus exactly three kinds of write. mark_read() can only send the PUT requests in
+  * GET, plus exactly four kinds of write. mark_read() can only send the PUT requests in
     READ_STATE_WRITES (marking an announcement, a calendar item, a chat or a group's announcements
     as read). send_chat_message() can only send one text message to one chat.
     add_helper_commitment() and remove_helper_commitment() can only sign the user up on, or
-    withdraw them from, a calendar item's helper slot. There is no generic put(), post() or
-    delete(); nothing else can change anything at Parro.
+    withdraw them from, a calendar item's helper slot. answer_rsvp() can only answer one calendar
+    item's invitation. There is no generic put(), post() or delete(); nothing else can change
+    anything at Parro.
   * Requests only go to the configured API host, so a token can never be sent elsewhere.
   * A 401 leads to one refresh and one retry, never to a password login (PLAN-api-client §4, fix 3).
     A second 401 raises TokenRejected, which explains the `dtype` pitfall of GET /event/{id}.
@@ -51,6 +52,8 @@ GROUPS_PAGE_SIZE = 50
 PRIVACY_CHILD_DTYPE = "identity.RPrivacySettingChild"
 CHAT_TEXT_MESSAGE_DTYPE = "chat.RChatTextMessage"
 HELPER_COMMITMENT_DTYPE = "calendar.RCalendarItemResourceCommitmentPrimer"
+RSVP_DTYPE = "calendar.RCalendarItemRSVPPrimer"
+RSVP_ANSWERS = ("ACCEPT", "DECLINE", "TENTATIVE")
 
 EventKind = Literal["announcement", "calendar"]
 WriteMethod = Literal["GET", "PUT", "POST", "DELETE"]
@@ -60,7 +63,7 @@ SEND_OUTCOME_UNKNOWN = (
     "The message may or may not have arrived, and it was not sent again. Look at the chat before "
     "you try again."
 )
-HELPER_OUTCOME_UNKNOWN = (
+CALENDAR_OUTCOME_UNKNOWN = (
     "It may or may not have gone through, and it was not repeated. Look at the calendar item "
     "before you try again."
 )
@@ -230,7 +233,7 @@ class ParroClient:
         body = json.dumps({"items": [commitment]}, separators=(",", ":")).encode("utf-8")
         path = f"/calendaritem/{calendar_item_id}/resource/{resource_id}/commitment/"
         label = "POST /calendaritem/{id}/resource/{id}/commitment/"
-        response = self._change_helper_slot(path, label, "POST", body, (200, 201))
+        response = self._change_calendar_item(path, label, "POST", body, (200, 201))
         try:
             return ApiResponse(response.json(), response.header("Content-Range"))
         except ValueError:  # signed up all the same: the status says so
@@ -244,9 +247,28 @@ class ParroClient:
             _require_positive_integer(number, "Withdrawing from a helper slot")
         path = f"/calendaritem/{calendar_item_id}/resource/{resource_id}/commitment/{commitment_id}"
         label = "DELETE /calendaritem/{id}/resource/{id}/commitment/{id}"
-        self._change_helper_slot(path, label, "DELETE", None, (200, 204))
+        self._change_calendar_item(path, label, "DELETE", None, (200, 204))
 
-    def _change_helper_slot(
+    def answer_rsvp(self, calendar_item_id: int, answer: str) -> ApiResponse:
+        """POST the user's answer to a calendar item's invitation, as captured.
+
+        `calendar_item_id` is the calendar item's own id, not the event id (spec: answerRsvp).
+        Sent once, like every write; callers decide when.
+        """
+        _require_positive_integer(calendar_item_id, "An answer to an invitation")
+        if answer not in RSVP_ANSWERS:
+            raise ConfigurationError("An answer to an invitation is ACCEPT, DECLINE or TENTATIVE.")
+        rsvp = {"dtype": RSVP_DTYPE, "links": [], "rsvp": answer}
+        body = json.dumps({"items": [rsvp]}, separators=(",", ":")).encode("utf-8")
+        path = f"/calendaritem/{calendar_item_id}/calendaritemrsvp"
+        label = "POST /calendaritem/{id}/calendaritemrsvp"
+        response = self._change_calendar_item(path, label, "POST", body, (200, 201))
+        try:
+            return ApiResponse(response.json(), response.header("Content-Range"))
+        except ValueError:  # answered all the same: the status says so
+            return ApiResponse({}, None)
+
+    def _change_calendar_item(
         self,
         path: str,
         label: str,
@@ -261,14 +283,14 @@ class ParroClient:
                 url, headers, label, True, method=method, body=body
             )
         except (NetworkError, http.client.HTTPException) as failure:
-            raise NetworkError(f"{failure} {HELPER_OUTCOME_UNKNOWN}") from None
+            raise NetworkError(f"{failure} {CALENDAR_OUTCOME_UNKNOWN}") from None
         if response.status >= 500:
             raise ApiError(
-                f"{_api_error(label, response)} {HELPER_OUTCOME_UNKNOWN}", status=response.status
+                f"{_api_error(label, response)} {CALENDAR_OUTCOME_UNKNOWN}", status=response.status
             )
         if response.status not in success:
             raise _api_error(label, response)
-        log.info("changed a helper commitment")
+        log.info("changed a calendar item")
         return response
 
     def download_from_api_host(self, url: str) -> HttpResponse:

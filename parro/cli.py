@@ -32,6 +32,7 @@ from parro.rendering import (
     render,
     render_chat_preview,
     render_helper_preview,
+    render_rsvp_preview,
 )
 from parro.settings import LOGIN_METHODS, OUTPUT_FORMATS, Settings
 
@@ -40,10 +41,11 @@ log = logging.getLogger("parro_cli")
 EXIT_INTERRUPTED = 130
 
 DESCRIPTION = """\
-Client for Parro, the Dutch parent-school app. It reads. It can change three things, and only when
+Client for Parro, the Dutch parent-school app. It reads. It can change four things, and only when
 you ask: mark an announcement, calendar item or chat as read (`mark-read`, `--mark-read`; the
 school can see that), send a text message to a chat you are in (`chat-send`; it shows what would
-go to whom first), and sign you up or withdraw you as a helper (`helper`; it asks first).
+go to whom first), sign you up or withdraw you as a helper (`helper`; it asks first), and answer
+a calendar item's invitation (`rsvp`; it asks first).
 
 Logging in: set PARRO_USERNAME plus PARRO_PASSWORD_FILE (or PARRO_PASSWORD) and run `login`,
 or run `login --prompt` to type the password, or use the browser flow: `login-url`, log in in
@@ -211,6 +213,7 @@ def add_reading_commands(command: CommandFactory) -> None:
     add_mark_read_command(command)
     add_chat_send_command(command)
     add_helper_command(command)
+    add_rsvp_command(command)
     add_local_data_commands(command)
     get = command("get", "GET any API path, e.g. /accountsettings (read-only)")
     get.add_argument("path", help="path below /rest/v2, e.g. /absence/setting")
@@ -287,6 +290,13 @@ def add_helper_command(command: CommandFactory) -> None:
         help="signup: how many places you take, e.g. 3 children in your car (default 1)",
     )
     helper.add_argument("--yes", action="store_true", help="do it without asking")
+
+
+def add_rsvp_command(command: CommandFactory) -> None:
+    rsvp = command("rsvp", "answer a calendar item's invitation: the school sees your answer")
+    rsvp.add_argument("answer", choices=("accept", "decline", "tentative"), help="your answer")
+    rsvp.add_argument("event_id", type=int, help="the calendar item's id (see `calendar`)")
+    rsvp.add_argument("--yes", action="store_true", help="do it without asking")
 
 
 def add_calendar_commands(command: CommandFactory) -> None:
@@ -466,6 +476,7 @@ COMMAND_VIEWS = {
     "mark-read": "mark_read",
     "chat-send": "chat_send",
     "helper": "helper",
+    "rsvp": "rsvp",
     "get": "get",
     "cache": "cache",
     "sync": "sync",
@@ -547,6 +558,26 @@ def run_helper(client: ParroClient, args: argparse.Namespace) -> dict[str, Any]:
     return operations.apply_helper_change(client, prepared)
 
 
+RSVP_QUESTIONS = {
+    "ACCEPT": "Accept this invitation? [y/N] ",
+    "DECLINE": "Decline this invitation? [y/N] ",
+    "TENTATIVE": "Answer tentative to this invitation? [y/N] ",
+}
+
+
+def run_rsvp(client: ParroClient, args: argparse.Namespace) -> dict[str, Any]:
+    """Prepare, confirm, answer. Without --yes and without a person to ask, nothing changes."""
+    prepared = operations.prepare_rsvp(client, args.event_id, args.answer)
+    if not prepared["unchanged"] and not args.yes:
+        if not someone_can_answer():
+            raise ConfigurationError(
+                "Nothing changed: there is nobody to ask here. Run it at a terminal, or add --yes."
+            )
+        if not ask(render_rsvp_preview(prepared), RSVP_QUESTIONS[prepared["answer"]]):
+            return {"done": False, "event_id": args.event_id}
+    return operations.apply_rsvp(client, prepared)
+
+
 HANDLERS: dict[str, Handler] = {
     "login": run_login,
     "logout": lambda c, a: operations.logout(c),
@@ -593,6 +624,7 @@ HANDLERS: dict[str, Handler] = {
     ),
     "chat-send": run_chat_send,
     "helper": run_helper,
+    "rsvp": run_rsvp,
     "sync": lambda c, a: operations.sync_archive(
         c,
         operations.SyncOptions(

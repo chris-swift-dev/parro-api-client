@@ -26,7 +26,7 @@ from .attachments import extract_html_text, tidy_whitespace
 from .errors import ConfigurationError
 from .geon import parse_timestamp
 from .settings import OutputFormat
-from .summaries import wants_helpers
+from .summaries import rsvp_answer, wants_helpers
 
 Audience = Literal["cli", "mcp"]
 
@@ -42,6 +42,7 @@ PREVIEW_LINES = 3
 # Real descriptions often put a whole paragraph on one line (live look), so cap characters too.
 PREVIEW_CHARACTERS = 300
 GROUPS_SHOWN = 3
+RSVP_ANSWER_WORDS = {"ACCEPT": "Accept", "DECLINE": "Decline", "TENTATIVE": "Tentative"}
 
 
 @dataclass(frozen=True)
@@ -467,7 +468,7 @@ def agenda_entry(item: dict[str, Any], options: RenderOptions) -> str:
         title = f"{title} (cancelled)"
     markers = [
         short_list(group_names(item)),
-        "RSVP needed" if calendar_item.get("rsvpRequired") else "",
+        rsvp_marker(item),
         helper_status(item),
         f"{UNREAD_MARK} new" if item.get("read") is False else "",
         object_id(item.get("id")),
@@ -475,6 +476,14 @@ def agenda_entry(item: dict[str, Any], options: RenderOptions) -> str:
     lines = [f"- {time_span(item)}  {join_parts([title, *markers])}"]
     lines += [f"  {line}" for line in detail_lines(item, options)]
     return "\n".join(lines)
+
+
+def rsvp_marker(item: dict[str, Any]) -> str:
+    """'RSVP needed', or your answer once you gave one."""
+    if not (item.get("calendarItem") or {}).get("rsvpRequired"):
+        return ""
+    answer = rsvp_answer(item)
+    return f"RSVP: {answer}" if answer else "RSVP needed"
 
 
 def short_list(names: list[str], shown: int = GROUPS_SHOWN) -> str:
@@ -909,6 +918,45 @@ def render_helper_change(result: dict[str, Any], options: RenderOptions) -> str:
     return document(f"# Withdrawn: {slot}", helper_item_line(result))
 
 
+def answer_word(answer: Any) -> str:
+    return RSVP_ANSWER_WORDS.get(str(answer), str(answer))
+
+
+def render_rsvp_preview(prepared: dict[str, Any]) -> str:
+    """The item, your answer now and the new one: shown before anything is written."""
+    previous = prepared.get("previous")
+    lines = [
+        f"**Your answer now:** {answer_word(previous) if previous else 'none yet'}",
+        f"**New answer:** {answer_word(prepared.get('answer'))}",
+        "The school will see your answer. You can change it later, but not remove it.",
+    ]
+    item = join_parts([helper_item_line(prepared), short_list(prepared.get("groups") or [])])
+    wanted = prepared.get("answer")
+    verb = "Answer tentative to" if wanted == "TENTATIVE" else answer_word(wanted)
+    return document(f"# {verb} this invitation", item, "\n".join(lines))
+
+
+def render_rsvp(result: dict[str, Any], options: RenderOptions) -> str:
+    """The outcome of `rsvp`."""
+    if result.get("preview"):
+        return document(render_rsvp_preview(result), "Not done yet: nothing has changed.")
+    if not result.get("done"):
+        return document("# Nothing changed", "Nothing was written.")
+    word = answer_word(result.get("answer"))
+    if not result.get("changed"):
+        return document(
+            f"# Already answered: {word}", helper_item_line(result), "Nothing was sent."
+        )
+    previous = result.get("previous")
+    replaced = f"This replaces your earlier answer: {answer_word(previous)}." if previous else None
+    return document(
+        f"# Answered: {word}",
+        helper_item_line(result),
+        replaced,
+        "The school sees your answer. You can change it, but not remove it.",
+    )
+
+
 def render_chat_members(result: dict[str, Any], options: RenderOptions) -> str:
     """'- Sanne de Vries · parent of Mila, Daan · admin'."""
     lines = []
@@ -1099,6 +1147,7 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "mark_group_read": render_mark_group_read,
     "chat_send": render_chat_send,
     "helper": render_helper_change,
+    "rsvp": render_rsvp,
     "attachment": render_attachment,
     "cache": render_cache,
     "overview": render_overview,
