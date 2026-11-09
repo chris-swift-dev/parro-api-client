@@ -1,6 +1,6 @@
 # Plan 11: splitting the README again
 
-*Status: phases 1–3 done (2026-11-09); decisions taken in §6.*
+*Status: phases 1–4 done (2026-11-09); decisions taken in §6.*
 
 **Goal:** the README answers "what is this, what does it promise, and how do I start?", and links to
 the rest. It goes from 544 lines to about 300. **Moving, not rewriting:** the text stays as it is,
@@ -84,7 +84,7 @@ throwaway script; its result goes in the PR description.
 | 1 | ✅ **The guards:** the link test and the archive test, passing on today's files | tests pass |
 | 2 | ✅ **`docs/CHANGING-THINGS.md`:** move the four sections, state the shared rules once; README table and combined warning | content check; links pass |
 | 3 | ✅ **`docs/MCP.md` and `docs/CALENDAR-AND-ARCHIVE.md`;** the rest of the README trimmed per §2 | content check; links pass; README about 300 lines (it came to 352, with the collapsed blocks included) |
-| 4 | **Links and packaging:** `SECURITY.md`, `CONFIGURATION.md`, `CODE-TOUR`, `INCLUDED_FILES`; a look at the result on GitHub and with `twine check` | release archive holds the new files; rendering checked |
+| 4 | ✅ **Links and packaging:** `SECURITY.md`, `CONFIGURATION.md`, `CODE-TOUR`, `INCLUDED_FILES`; a look at the result on GitHub and with `twine check` | release archive holds the new files; rendering checked |
 | 5 | **PR**, then release **0.9.0** with the shorter README on PyPI | published |
 
 No code changes, so no live check against Parro is needed.
