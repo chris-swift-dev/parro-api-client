@@ -45,6 +45,7 @@ INCLUDED_FILES = [
     "LICENSE",
     "LICENSE-CODE",
     "requirements.txt",
+    "docs/CHANGING-THINGS.md",
     "docs/CODE-TOUR.md",
     "docs/LOGIN.md",
     "docs/CONFIGURATION.md",
