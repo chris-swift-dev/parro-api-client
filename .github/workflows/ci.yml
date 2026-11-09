@@ -81,7 +81,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python: ["3.10", "3.14"]
+        python: ["3.12", "3.14"]  # the app needs 3.12: see parro_gui/app.py
     env:
       QT_QPA_PLATFORM: offscreen
     steps:

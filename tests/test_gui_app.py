@@ -28,7 +28,7 @@ from parro_gui.window import (  # noqa: E402
 from parro_gui.worker import Worker  # noqa: E402
 from tests import fakes  # noqa: E402
 from tests.conftest import load_sample  # noqa: E402
-from tests.gui_helpers import wait_until  # noqa: E402
+from tests.gui_helpers import dispose, wait_until  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -194,7 +194,7 @@ def test_nothing_is_delivered_after_closing(application, make_client):
 def window(application, make_client):
     created = MainWindow(make_client)
     yield created
-    created.close()
+    dispose(created)
 
 
 def status_of(window: MainWindow) -> str:
@@ -231,7 +231,7 @@ def test_with_a_login_it_shows_until_when(logged_in, window, api):
 
 def test_closing_waits_for_the_worker(logged_in, application, make_client):
     window = MainWindow(make_client)
-    window.close()
+    dispose(window)
     QApplication.processEvents()
     assert window.worker._closed
 
@@ -260,4 +260,4 @@ def test_a_configuration_error_is_shown(logged_in, application, monkeypatch):
 
     window = MainWindow(refuses)
     assert status_of(window) == "Bad settings."
-    window.close()
+    dispose(window)

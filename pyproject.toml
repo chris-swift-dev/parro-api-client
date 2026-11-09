@@ -1,7 +1,7 @@
 # The package `parro-api-client`: install it with `pipx install .` (or uv / pip) to get the
 # commands `parro-client` and `parro-client-mcp`. It needs nothing beyond the Python 3.10+ standard
 # library at run time; PyMuPDF / pypdf / Pillow are optional extras for reading attachments, and the
-# `gui` extra adds Qt for the desktop app, `parro-client-gui`.
+# `gui` extra adds Qt for the desktop app, `parro-client-gui` (which needs Python 3.12 or newer).
 # setuptools is needed only to build the package.
 
 [build-system]
@@ -45,7 +45,8 @@ packages = ["parro", "parro_gui", "parro_gui.views"]
 
 [project.optional-dependencies]
 attachments = ["pymupdf", "pypdf", "pillow"]
-gui = ["PySide6-Essentials>=6.11"]
+# Python 3.12 and newer only: see parro_gui/app.py for why.
+gui = ['PySide6-Essentials>=6.11; python_version >= "3.12"']
 dev = ["pytest", "ruff", "mypy", "openapi-schema-validator"]
 
 [tool.pytest.ini_options]

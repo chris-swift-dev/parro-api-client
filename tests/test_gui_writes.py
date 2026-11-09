@@ -25,7 +25,7 @@ from parro_gui.views.base import LOADING  # noqa: E402
 from parro_gui.window import SECTIONS, MainWindow  # noqa: E402
 from tests import fakes  # noqa: E402
 from tests.conftest import load_sample  # noqa: E402
-from tests.gui_helpers import wait_until  # noqa: E402
+from tests.gui_helpers import dispose, wait_until  # noqa: E402
 
 BEFORE_THE_TRIP = datetime(2026, 11, 3, 9, 0, tzinfo=timezone.utc)
 AFTER_THE_TRIP = datetime(2026, 11, 13, 9, 0, tzinfo=timezone.utc)
@@ -71,7 +71,7 @@ def window(application, make_client):
     created = MainWindow(make_client)
     wait_until(lambda: created.logged_in)
     yield created
-    created.close()
+    dispose(created)
 
 
 @pytest.fixture

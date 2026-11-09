@@ -31,7 +31,7 @@ from parro_gui.window import SECTIONS, MainWindow  # noqa: E402
 from parro_gui.worker import LOG_IN_AGAIN  # noqa: E402
 from tests import fakes  # noqa: E402
 from tests.conftest import load_sample  # noqa: E402
-from tests.gui_helpers import wait_until  # noqa: E402
+from tests.gui_helpers import dispose, wait_until  # noqa: E402
 
 BEFORE_THE_TRIP = datetime(2026, 11, 3, 9, 0, tzinfo=timezone.utc)
 ROOM = 8000000001
@@ -73,7 +73,7 @@ def window(application, make_client):
     created = MainWindow(make_client)
     wait_until(lambda: created.logged_in)
     yield created
-    created.close()
+    dispose(created)
 
 
 def open_section(window: MainWindow, name: str) -> Any:
@@ -331,7 +331,7 @@ def test_without_a_login_nothing_is_fetched(application, make_client, api, envir
     window.sections.setCurrentRow(SECTIONS.index("Chats"))
     settle()
     assert not window.views["Chats"].loaded and api.api_requests() == []
-    window.close()
+    dispose(window)
 
 
 # ---------------------------------------------------------------------------- attachments

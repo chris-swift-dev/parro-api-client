@@ -173,7 +173,7 @@ def main(argv: list[str]) -> int:
     window = MainWindow()
     window.show()
     code = application.exec()
-    # In this order, before Python's own shutdown: left to chance, Qt can crash on the way out.
+    # Everything Qt owns goes before Python starts its own cleanup.
     window.close()
     del window
     application.shutdown()

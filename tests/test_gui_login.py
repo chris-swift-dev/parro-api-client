@@ -24,7 +24,7 @@ from parro_gui.login import LoginDialog  # noqa: E402
 from parro_gui.window import LOGIN_HALTED, MainWindow  # noqa: E402
 from tests import fakes  # noqa: E402
 from tests.conftest import load_sample  # noqa: E402
-from tests.gui_helpers import wait_until  # noqa: E402
+from tests.gui_helpers import dispose, wait_until  # noqa: E402
 
 WRONG_PASSWORD = "not-the-password-8f3a"
 
@@ -67,7 +67,7 @@ def make_client(api) -> Callable[[Any], ParroClient]:
 def window(application, make_client):
     created = MainWindow(make_client)
     yield created
-    created.close()
+    dispose(created)
 
 
 def status_of(window: MainWindow) -> str:
@@ -172,7 +172,7 @@ def test_the_configured_username_is_filled_in(application, make_client, monkeypa
     monkeypatch.setenv("PARRO_USERNAME", fakes.USERNAME)
     window = MainWindow(make_client)
     assert dialog_of(window).username.text() == fakes.USERNAME
-    window.close()
+    dispose(window)
 
 
 def test_the_warning_about_the_lockout_is_shown(window):
@@ -205,7 +205,7 @@ def test_the_periodic_check_never_spends_a_password(application, make_client, ap
     for _ in range(30):
         QApplication.processEvents()
     assert api.idp.credential_posts() == []
-    window.close()
+    dispose(window)
 
 
 # ----------------------------------------------------------------------------- the browser

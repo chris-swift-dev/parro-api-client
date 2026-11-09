@@ -17,6 +17,14 @@ from typing import Any
 
 import pytest
 
+# PySide6 crashes the interpreter before Python 3.12 (see parro_gui/app.py), and the app refuses to
+# start there, so its window tests do not run there either.
+collect_ignore = (
+    [f"test_gui_{name}.py" for name in ("app", "login", "views", "writes")]
+    if sys.version_info < (3, 12)
+    else []
+)
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "api"
 SAMPLES_DIR = PROJECT_ROOT / "samples"

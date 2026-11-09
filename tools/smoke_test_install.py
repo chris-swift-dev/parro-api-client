@@ -97,6 +97,7 @@ def check_commands(scripts: Path, environment: dict[str, str], work: Path) -> li
     elif json.loads(answer)["result"]["serverInfo"]["name"] != "parro":
         problems.append("parro-client-mcp: unexpected initialize answer")
     desktop = run("parro-client-gui")
+    # On Python before 3.12 it says that first; either way it names the extra to install.
     if desktop.returncode != 2 or b"parro-api-client[gui]" not in desktop.stderr:
         problems.append(f"parro-client-gui without Qt: exit {desktop.returncode}")
     return problems

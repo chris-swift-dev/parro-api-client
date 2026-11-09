@@ -28,7 +28,7 @@ on top of the existing `parro` package. No second implementation of login, API c
 | Packages installed | **2** | 53 to 56 | 54 | failed here: needs to compile PyGObject | 3, plus system Tk |
 | Installed size | 295 MB | 165 MB | not measured | - | small |
 | Network listener | **none** | `127.0.0.1`, on a port from 8000–8999 | not checked | none | none |
-| Works from `pipx` on Linux | **yes**: one wheel, Python 3.10+ | **not as is**: `[native]` installs `pywebview`, but no GTK or Qt binding, so there is no window | not checked | no | needs the system's Tk |
+| Works from `pipx` on Linux | **yes**: one wheel, Python 3.12+ (§9) | **not as is**: `[native]` installs `pywebview`, but no GTK or Qt binding, so there is no window | not checked | no | needs the system's Tk |
 | Licence | LGPLv3 / GPL / commercial | MIT (pulls in FastAPI, uvicorn, socket.io and more) | Apache-2.0 | BSD-3 | CC0 |
 | Rich text, tables, dialogs | **built in** | built in, as web components | built in | basic | basic, no rich text |
 | Offscreen tests | **`QT_QPA_PLATFORM=offscreen`** | a simulated user, no real webview | not checked | - | needs a display |
@@ -132,6 +132,18 @@ notifications, a web or phone version, and Dutch labels (labels stay English, as
 2. **How it ships:** the `[gui]` extra on PyPI, which needs Python on the computer.
 3. **Scope:** `token`, `get` and raw JSON are left out.
 4. **Marking as read:** asks once, because the school sees it.
+
+## 9. Python 3.12 or newer (2026-11-09)
+
+Found while CI ran phase 3: PySide6 loses references to `None`, `True` and `False` each time a signal
+reaches a Python method. On Python 3.10 and 3.11 those counts can reach zero, which aborts the
+interpreter, at exit and also while running. Ten lines without any of this project's code reproduce it
+(import, define a signal, connect it to a method, emit it), on PySide6 6.9 to 6.12. Python 3.12 made
+these objects immortal, and 3.12, 3.13 and 3.14 are clean. PySide6 6.8.3 passes the ten lines, but the
+desktop tests still crashed on it.
+
+**Decision:** the desktop app needs Python 3.12 or newer, and says so at startup. The `gui` extra only
+requests Qt from 3.12 on. The CLI and the MCP server stay on Python 3.10 or newer.
 
 Sources: [NiceGUI configuration and deployment](https://nicegui.io/documentation/section_configuration_deployment),
 [pywebview installation](https://pywebview.flowrl.com/guide/installation.html),
