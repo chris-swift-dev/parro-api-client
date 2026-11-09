@@ -1,6 +1,7 @@
 # Plan 10: answering a calendar item's invitation (RSVP)
 
-*Status: phases 1–6 done (2026-11-09); decisions taken in §7.*
+*Status: done (2026-11-09): phases 1–6 merged in #16, released as 0.9.0 (phase 7). Decisions in §7.
+What was not checked live is in `docs/LIVE-CHECKS.md`.*
 
 **Goal:** the spec describes answering a calendar item with `ACCEPT`, `DECLINE` or `TENTATIVE`, and the
 client can do it. Source: `findings/accept-calendar-item.har` (git-ignored).
@@ -114,7 +115,7 @@ parent–teacher talk times (other calls, not captured), and answering a whole g
 | 4 | ✅ **MCP** (per decisions 2 and 5): the tool, its switch and hints; `parro_get` and `parro_attachment` refuse the respondents path | tests, as in `test_tool_hints.py`, and that no spelling of the path gets through |
 | 5 | ✅ **Docs:** README promise, badge, an *Answering an invitation* section, FAQ, and the "no RSVPs" line under *Helping out*; `SECURITY.md` scope; help text, User-Agent, package description, CODE-TOUR, API-NOTES, CONFIGURATION; spec-operations count; CHANGELOG **0.9.0** | links and pictures checked |
 | 6 | ✅ **Live check with you:** on the item *you* pick, `TENTATIVE`, then `DECLINE`, then back to the answer you want to end on (the values no capture shows, and replacing an answer); the Parro app agrees after each | in `docs/LIVE-CHECKS.md` |
-| 7 | Release **0.9.0** | published |
+| 7 | ✅ Release **0.9.0** | published |
 
 For phase 6, use the item you already answered in the capture. A first answer cannot be removed, so an
 item that is still unanswered would stay answered. Pick one where a short-lived change bothers nobody,
