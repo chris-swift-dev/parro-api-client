@@ -61,6 +61,9 @@ class Section(QWidget):
     def clear(self) -> None:
         """Forget what is shown."""
 
+    def stop(self) -> None:
+        """The window is closing: end long-running work."""
+
     def load(self) -> None:
         self.loaded = True
         self._generation += 1

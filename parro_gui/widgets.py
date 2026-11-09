@@ -23,6 +23,15 @@ def ask(parent: QWidget | None, question: str) -> bool:
     return answer == QMessageBox.StandardButton.Yes
 
 
+def open_folder(path: str) -> bool:
+    return QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+
+def choose_save_file(parent: QWidget | None, suggested: str, kinds: str) -> str:
+    """A file name picked by the user, or '' if they cancelled."""
+    return QFileDialog.getSaveFileName(parent, "Save as", suggested, kinds)[0]
+
+
 def choose_folder(parent: QWidget | None) -> str:
     """A folder picked by the user, or '' if they cancelled."""
     return QFileDialog.getExistingDirectory(parent, "Save in which folder?")

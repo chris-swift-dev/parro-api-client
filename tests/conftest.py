@@ -20,7 +20,7 @@ import pytest
 # PySide6 crashes the interpreter before Python 3.12 (see parro_gui/app.py), and the app refuses to
 # start there, so its window tests do not run there either.
 collect_ignore = (
-    [f"test_gui_{name}.py" for name in ("app", "login", "views", "writes")]
+    [f"test_gui_{name}.py" for name in ("app", "local", "login", "views", "writes")]
     if sys.version_info < (3, 12)
     else []
 )

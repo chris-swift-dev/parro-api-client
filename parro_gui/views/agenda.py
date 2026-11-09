@@ -1,6 +1,7 @@
 """The calendar: what is coming up, or what has been."""
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import Qt
@@ -15,8 +16,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from parro import operations
+from parro import icalendar, operations
 from parro.api_client import ParroClient
+from parro.cache import write_private_file
 from parro.rendering import (
     format_date,
     group_names,
@@ -27,13 +29,20 @@ from parro.rendering import (
     time_span,
 )
 
+from .. import widgets
 from ..text import bullets, document, heading, meta, paragraph, subheading
 from ..worker import Worker
 from .attachments import AttachmentBar
 from .base import ListDetailSection
 from .previews import ANSWER_WORDS, helper_preview, rsvp_preview
+from .secrets import show_secret
 
 MAX_ITEMS = 30  # each item costs one more request for its details
+MAX_EXPORTED_ITEMS = 500
+LINK_QUESTION = (
+    "Show your calendar subscription link? Anyone who has it can read your Parro calendar without "
+    "logging in."
+)
 
 
 def agenda_row(item: dict[str, Any]) -> str:
@@ -145,6 +154,12 @@ class AgendaSection(ListDetailSection):
         self.add_filter(self.past)
         self.group.activated.connect(self.load)
         self.past.toggled.connect(self.load)
+        self.export_button = QPushButton("Export .ics…")
+        self.link_button = QPushButton("Subscription link…")
+        self.add_filter(self.export_button)
+        self.add_filter(self.link_button)
+        self.export_button.clicked.connect(self.export)
+        self.link_button.clicked.connect(self.show_link)
         self._groups_added = False
         self.attachments = AttachmentBar(worker, self.notice.setText)
         self.side_layout.addWidget(self.attachments)
@@ -180,6 +195,34 @@ class AgendaSection(ListDetailSection):
         row = self.list.currentRow()
         if 0 <= row < len(self.items):
             self.mark_read("calendar", self.items[row].get("id"))
+
+    def export(self) -> None:
+        """What the list shows, as an iCalendar file: dates only, like `calendar --ics`."""
+        name = widgets.choose_save_file(self, "parro.ics", "iCalendar (*.ics)")
+        if not name:
+            return
+        past, group = self.past.isChecked(), self.group.currentData()
+
+        def task(client: ParroClient) -> int:
+            agenda = operations.list_calendar(client, group, MAX_EXPORTED_ITEMS, None, past=past)
+            text = icalendar.build_icalendar(agenda, operations.current_time())
+            write_private_file(Path(name), text.encode("utf-8"))
+            return int(agenda["count"])
+
+        self.worker.submit(
+            task,
+            lambda count: self.notice.setText(f"Exported {count} calendar items."),
+            self.notice.setText,
+        )
+
+    def show_link(self) -> None:
+        """A secret: only on request, and never kept or written anywhere."""
+        if not widgets.ask(self, LINK_QUESTION):
+            return
+        self.worker.submit(operations.calendar_link, self._link_arrived, self.notice.setText)
+
+    def _link_arrived(self, result: dict[str, Any]) -> None:
+        show_secret(self, "Calendar subscription link", result["warning"], result["calendar_link"])
 
     def answer(self, event_id: Any, answer: str) -> None:
         """Reads first: the preview, or nothing at all if this is already your answer."""

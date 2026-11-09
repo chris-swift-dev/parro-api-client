@@ -3,16 +3,23 @@
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtWidgets import QCheckBox, QWidget
+from PySide6.QtWidgets import QCheckBox, QComboBox, QPushButton, QWidget
 
 from parro import operations
 from parro.api_client import ParroClient
 from parro.rendering import format_date, join_parts
 
+from .. import widgets
 from ..text import bullets, document, heading, meta, subheading
 from ..widgets import SafeTextBrowser
 from ..worker import Worker
 from .base import Section
+from .secrets import show_secret
+
+LINK_QUESTION = (
+    "Show the link to this child's privacy page? It opens that page without logging in, so keep it "
+    "to yourself."
+)
 
 
 def family_html(found: dict[str, Any]) -> str:
@@ -57,6 +64,12 @@ class FamilySection(Section):
         self.previous = QCheckBox("Last year's groups")
         self.add_filter(self.previous)
         self.previous.toggled.connect(self.load)
+        self.child = QComboBox()
+        self.link_button = QPushButton("Privacy page link…")
+        self.link_button.setEnabled(False)
+        self.link_button.clicked.connect(self.show_privacy_link)
+        self.add_filter(self.child)
+        self.add_filter(self.link_button)
         self.page = SafeTextBrowser()
         self.main.addWidget(self.page, 1)
 
@@ -75,6 +88,25 @@ class FamilySection(Section):
 
     def show_result(self, result: dict[str, Any]) -> None:
         self.page.setHtml(family_html(result))
+        self.child.clear()
+        for child in result["privacy"].get("children", []):
+            self.child.addItem(str(child.get("name")), child.get("id"))
+        self.link_button.setEnabled(self.child.count() > 0)
 
     def clear(self) -> None:
         self.page.clear()
+        self.child.clear()
+        self.link_button.setEnabled(False)
+
+    def show_privacy_link(self) -> None:
+        """A secret: only on request, and never kept or written anywhere."""
+        child_id = self.child.currentData()
+        if child_id is None or not widgets.ask(self, LINK_QUESTION):
+            return
+        self.worker.submit(
+            lambda client: operations.privacy_link(client, child_id),
+            lambda result: show_secret(
+                self, "Privacy page link", result["warning"], result["privacy_link"]
+            ),
+            self.notice.setText,
+        )

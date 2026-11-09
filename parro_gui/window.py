@@ -5,17 +5,15 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QApplication,
-    QLabel,
     QListWidget,
     QMainWindow,
     QPushButton,
     QSplitter,
     QStackedWidget,
-    QWidget,
 )
 
 from parro import __version__, operations
@@ -26,6 +24,7 @@ from parro.settings import Settings
 
 from .login import LoginDialog
 from .views.agenda import AgendaSection
+from .views.archive import ArchiveSection
 from .views.base import LOG_IN_FIRST, Section
 from .views.chats import ChatsSection
 from .views.family import FamilySection
@@ -80,9 +79,10 @@ class MainWindow(QMainWindow):
             "Calendar": AgendaSection(self.worker),
             "Chats": ChatsSection(self.worker),
             "Family": FamilySection(self.worker),
+            "Archive": ArchiveSection(self.worker),
         }
         for name in SECTIONS:
-            self.pages.addWidget(self.views.get(name) or self._placeholder(name))
+            self.pages.addWidget(self.views[name])
         for view in self.views.values():
             view.reset(LOG_IN_FIRST)
         self.sections.currentRowChanged.connect(self._section_chosen)
@@ -103,12 +103,6 @@ class MainWindow(QMainWindow):
         self.login_timer.timeout.connect(self.refresh_login)
         self.login_timer.start()
         self.refresh_login()
-
-    @staticmethod
-    def _placeholder(name: str) -> QWidget:
-        label = QLabel(f"{name}: not built yet.")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        return label
 
     def _section_chosen(self, row: int) -> None:
         self.pages.setCurrentIndex(row)
@@ -162,6 +156,8 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(text)
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 (Qt's name)
+        for view in self.views.values():
+            view.stop()
         self.worker.close()
         super().closeEvent(event)
 
