@@ -150,6 +150,9 @@ parro-client get /accountsettings
 parro-client token                       # paste into Swagger UI → Authorize → bearerToken
 ```
 
+<details>
+<summary>All commands and options</summary>
+
 Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-finish <url>`,
 `overview [--all]`, `me`, `children`, `privacy [--link CHILD_ID]`, `groups [--previous]`, `unread`,
 `system-news [--full]`, `announcements [--group ID] [--limit N] [--unread-only] [--full]`,
@@ -167,6 +170,8 @@ Global options: `--format auto|json|markdown`, `--login-method`, `--raw`, `--com
 `--no-cache`, `--verbose`. `--full` shows whole texts instead of a 3-line preview.
 
 Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in · `4` login halted.
+
+</details>
 
 ## Changing things in Parro
 
@@ -203,34 +208,10 @@ Ask Claude about school, and it reads Parro for you. An illustration with the in
 > talks for group 3 on 17 November (pick a ten-minute slot). Friday 13 November is a study day:
 > no school, but the after-school care is open.*
 
-| Tool | What it gives you |
-| --- | --- |
-| `parro_auth_status` | Login state, account, role, token expiry, whether automatic login is halted. Start here when something fails. |
-| `parro_login` | Log in with `PARRO_USERNAME` and the password; optional `method`. |
-| `parro_login_url` / `parro_login_finish` | Browser login without a stored password (OAuth2 + PKCE). |
-| `parro_logout` | Revoke the tokens at the IdP and forget them. |
-| `parro_me` | Account and school. |
-| `parro_children` | Children linked to the account. |
-| `parro_groups` | Classes and school-wide groups, with the ids other tools need. |
-| `parro_announcements` | The main feed. Merges all groups, newest first, full text + attachment list. |
-| `parro_announcement` | One announcement by id, with author. |
-| **`parro_attachment`** | **Downloads an attachment of an announcement or calendar item and returns its text (PDF/docx/txt/csv/html) or the image.** |
-| `parro_calendar` | Calendar items from today on, soonest first; `details: true` adds location, description and helper slots, `past: true` earlier items. |
-| `parro_chatrooms` / `parro_chat_messages` | Conversations: `unread`, `archived`, `type` and `schoolyear` filters; messages `since` a date. |
-| `parro_chat_members` | Who is in a chat: parents (with their children) and teachers, and who is admin. |
-| `parro_unread` | Unread counts per category. |
-| `parro_get` | Escape hatch: GET any `/rest/v2` path not covered above. |
-| `parro_overview` | What is new: unread counts, unread announcements, new calendar items, unread chats; `all: true` shows everything. |
-| `parro_calendar_link` | The personal link to subscribe to the Parro agenda (keep it secret). |
-| `parro_privacy` | Per child: can parents change the privacy choices now, and when were they last changed; `link: true` gives the page to change them (keep it secret). |
-| `parro_mark_read` | Only with `PARRO_ALLOW_MARK_READ=1`: mark one announcement, calendar item or chat as read ([the school sees it](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#marking-as-read)). |
-| `parro_send_chat_message` | Only with `PARRO_ALLOW_SEND_CHAT=1`: a preview of a chat message, or with `confirm: true` the message itself ([real people receive it](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#sending-a-chat-message)). |
-| `parro_helper_signup` / `parro_helper_withdraw` | Only with `PARRO_ALLOW_HELPER_SIGNUP=1`: a preview of signing up on a calendar item's helper slot (optional `count`) or withdrawing, or with `confirm: true` the change itself ([it is a promise in your name](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#helping-out)). |
-| `parro_rsvp` | Only with `PARRO_ALLOW_RSVP=1`: a preview of answering a calendar item's invitation, or with `confirm: true` the answer itself ([the school sees it](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#answering-an-invitation)). |
-
-Every tool takes an optional `format`: `json` (default) or `markdown`, a readable view that keeps
-every id. The first 16 tools have the same names and arguments as the original server, so existing
-MCP configurations keep working.
+It has tools for announcements, attachments (including the text inside PDFs), the calendar, chats,
+class info and what is new, and for logging in. The tools that change something are off unless you
+switch them on: see [Changing things in Parro](#changing-things-in-parro). All 25 tools are listed in
+**[docs/MCP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/MCP.md)**.
 
 With the package installed (Quick start), Claude Code:
 
@@ -281,78 +262,27 @@ Credentials: `PARRO_USERNAME` plus `PARRO_PASSWORD_FILE` (or `PARRO_PASSWORD`), 
 lockout latch and why there is no automatic browser redirect: **[docs/LOGIN.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/LOGIN.md)**.
 Every environment variable: **[docs/CONFIGURATION.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CONFIGURATION.md)**.
 
-## The agenda in your own calendar app
+## Also in the box
 
-- **`calendar-link`** prints Parro's own subscription link (`GET /calendar/sync`). Paste it into
-  Google Calendar (*Other calendars → From URL*), Apple Calendar (*New Calendar Subscription*) or
-  Outlook (*Subscribe from web*), and the calendar keeps itself up to date. **The link is a secret**:
-  anyone who has it can read your Parro calendar without logging in. ParnasSys lists agenda syncing
-  as a feature of the paid *Parro Ouderapp*, so not every school may offer it.
-- **`calendar --ics FILE`** writes an iCalendar file of the upcoming items (`--past` for earlier
-  ones, `--details` for locations and descriptions, `-` for standard output). It works without the
-  subscription feature, but it is a snapshot: export again to update. Every event keeps the same
-  UID, so importing a newer file updates events instead of duplicating them.
+- **The agenda in your own calendar app:** `calendar-link` prints Parro's own subscription link (a
+  secret), and `calendar --ics FILE` writes an iCalendar file.
+- **Your children's privacy choices:** `privacy` shows per child whether you can still change them,
+  and when and by whom they were last changed.
+- **Your own archive:** `sync` keeps a local copy of everything your account can see, as files that
+  stay readable without Parro.
 
-## Your children's privacy choices
-
-Schools ask parents every year what they may do with photos and data of their children.
-`parro-client privacy` shows per child whether you can still change those choices, and when and by
-whom they were last changed. The choices themselves are not in the API: `privacy --link CHILD_ID`
-prints the link to the ParnasSys page where you set them. **That link is a secret too**: it opens
-the page without logging in.
-
-## Your own archive: `sync`
-
-`parro-client sync` keeps a local copy of everything your account can see, as files that stay
-readable without Parro:
-
-```
-~/.parro/data/archive/
-  announcements/2026-10-22-nieuwsbrief-nr-3-5000000101.md   (+ .json, + attachments/)
-  calendar/2026-11-11-sint-maartenviering-7000000101.md     (+ .json, + attachments/)
-  chats/rijden-naar-het-natuurmuseum-8000000001.md          (+ .json)
-  index.md                                                  (everything, newest first)
-```
-
-- Each `.md` file starts with a small YAML header (id, type, title, date, groups), so notes apps
-  such as Obsidian can use it; the `.json` next to it holds the same data for scripts.
-- **Run it again to update.** Unchanged items are not rewritten and a saved file is never
-  downloaded again. Nothing is ever deleted: an item that disappears from Parro stays, marked
-  *(no longer in Parro)* in `index.md`.
-- Documents are always saved; photos only with `--photos` (a school year of photos can run to
-  several GB). `--to DIR` writes elsewhere.
-- **Run `sync --previous` once as well**, especially around the start of a school year: schools
-  sometimes post the first dates of the new year in last year's groups.
-- The archive holds your children's names, photos and school letters: its folders are readable
-  only by you (0700, files 0600), and no file contains a download or avatar link.
-
-**The cache.** Attachments (and their text) and calendar details are also kept in
-`~/.parro/data/cache`, so a newsletter is downloaded once, not every time an assistant reads it.
-Lists are never cached: they are how the client learns what is new; neither are the details of items
-that ask for helpers, because sign-ups change. Same privacy rules as the
-archive. `cache info` shows its size, `cache clear` empties it, `--no-cache` switches it off.
+All three are explained in **[docs/CALENDAR-AND-ARCHIVE.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CALENDAR-AND-ARCHIVE.md)**.
 
 ## The OpenAPI specification
 
 <a href="https://chris-swift-dev.github.io/parro-api-client/"><img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
 
 [`openapi/parro.public.openapi.json`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/parro.public.openapi.json) describes the API as
-observed from the web client: 34 operations of the Parro API (account, children and their privacy
-settings, groups, announcements, calendar items, chats with their filters and members, unread
-counts, system news, absence and photo-export settings, the agenda subscription link, the three
-calls that mark items as read, sending a chat message, signing up and withdrawing as a helper, and answering an invitation), each seen in a live call or a capture of the web app, and the login
-server's OAuth2 endpoints. It explains the non-obvious parts: the geon media type and headers,
-`Range`-based paging, `dtype` polymorphism, which id opens a chat, and where attachments live.
+observed from the web client: 34 operations of the Parro API and the login server's OAuth2 endpoints,
+each seen in a live call or a capture of the web app. **[openapi/README.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/README.md)**
+says what it covers and how it is generated; [docs/API-NOTES.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/API-NOTES.md) lists the
+facts the client relies on.
 
-<details>
-<summary>An operation in Swagger UI: <code>GET /calendar/sync</code></summary>
-
-<img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-calendar-sync.png" width="800" alt="Swagger UI with GET /calendar/sync expanded: what the subscription link looks like, that it is a secret, and what was checked live.">
-</details>
-
-- Response schemas contain **only fields seen in real responses**; the published spec carries no
-  example payloads. [`openapi/README.md`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/README.md) explains how it is generated and
-  published; [docs/API-NOTES.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/API-NOTES.md) lists the facts the client relies on.
 - **"Try it out"** works once you paste an access token into **Authorize → bearerToken**
   (`parro-client token` prints one).
 - **Don't log in through Swagger UI.** The code flow can't complete there, and failed password
