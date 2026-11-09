@@ -31,12 +31,6 @@ from tests.conftest import load_sample  # noqa: E402
 from tests.gui_helpers import wait_until  # noqa: E402
 
 
-@pytest.fixture(scope="module")
-def application() -> QApplication:
-    existing = QApplication.instance()
-    return existing if isinstance(existing, QApplication) else QApplication([])
-
-
 @pytest.fixture(autouse=True)
 def environment(tmp_path, monkeypatch):
     for name in list(os.environ):

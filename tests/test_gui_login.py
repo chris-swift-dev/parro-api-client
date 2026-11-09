@@ -29,12 +29,6 @@ from tests.gui_helpers import wait_until  # noqa: E402
 WRONG_PASSWORD = "not-the-password-8f3a"
 
 
-@pytest.fixture(scope="module")
-def application() -> QApplication:
-    existing = QApplication.instance()
-    return existing if isinstance(existing, QApplication) else QApplication([])
-
-
 @pytest.fixture(autouse=True)
 def token_file(tmp_path, monkeypatch):
     for name in list(os.environ):

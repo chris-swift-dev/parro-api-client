@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtWidgets import QCheckBox, QComboBox, QWidget
+from PySide6.QtWidgets import QCheckBox, QComboBox, QPushButton, QWidget
 
 from parro import operations
 from parro.api_client import ParroClient
@@ -14,6 +14,7 @@ from ..text import document, heading, meta, paragraph
 from ..worker import Worker
 from .attachments import AttachmentBar
 from .base import ListDetailSection
+from .previews import group_read_preview
 
 MAX_ITEMS = 50
 PARRO_NEWS = -1
@@ -49,6 +50,13 @@ class NewsSection(ListDetailSection):
         self.unread_only.toggled.connect(self.load)
         self.attachments = AttachmentBar(worker, self.notice.setText)
         self.side_layout.addWidget(self.attachments)
+        self.mark_button = self.add_mark_button()
+        self.mark_button.clicked.connect(self._mark_current)
+        self.group_button = QPushButton("Mark this group as read…")
+        self.group_button.setEnabled(False)
+        self.group_button.clicked.connect(self.mark_group)
+        self.add_filter(self.group_button)
+        self.source.currentIndexChanged.connect(self._source_changed)
         self._groups_added = False
 
     def make_task(self) -> Callable[[ParroClient], Any]:
@@ -82,8 +90,41 @@ class NewsSection(ListDetailSection):
             for item in result["announcements"].get("announcements", [])
         ]
 
+    def _source_changed(self) -> None:
+        source = self.source.currentData()
+        self.group_button.setEnabled(source is not None and source != PARRO_NEWS)
+
+    def _mark_current(self) -> None:
+        row = self.list.currentRow()
+        if 0 <= row < len(self.items):
+            self.mark_read("announcement", self.items[row]["announcement"].get("id"))
+
+    def mark_group(self) -> None:
+        """Counts first; only Confirm in the dialog marks them."""
+        group_id = self.source.currentData()
+        self.worker.submit(
+            lambda client: operations.mark_group_announcements_read(client, group_id),
+            lambda counted: self._confirm_group(group_id, counted),
+            self.notice.setText,
+        )
+
+    def _confirm_group(self, group_id: int, counted: dict[str, Any]) -> None:
+        if not counted.get("unread"):
+            self.notice.setText("This group has no unread announcements.")
+            return
+        self.ask_to_confirm(
+            "Mark as read",
+            group_read_preview(counted),
+            "Mark them as read",
+            lambda client: operations.mark_group_announcements_read(
+                client, group_id, confirmed=True
+            ),
+            lambda _result: self.reload_here("Marked as read."),
+        )
+
     def show_item(self, item: dict[str, Any]) -> None:
         self.attachments.clear()
+        self.mark_button.setEnabled(item.get("announcement", {}).get("read") is False)
         if "news" in item:
             news = item["news"]
             body = tidy_whitespace(extract_html_text(str(news.get("contents") or "")))

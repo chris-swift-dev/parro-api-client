@@ -3,7 +3,14 @@
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtWidgets import QCheckBox, QComboBox, QSpinBox, QWidget
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QPlainTextEdit,
+    QPushButton,
+    QSpinBox,
+    QWidget,
+)
 
 from parro import operations
 from parro.api_client import ParroClient
@@ -13,6 +20,7 @@ from parro.rendering import format_timestamp, full_name_of, join_parts, member_r
 from ..text import document, heading, meta, paragraph
 from ..worker import Worker
 from .base import ListDetailSection
+from .previews import chat_preview
 
 MAX_CHATS = 60
 MAX_MESSAGES = 100
@@ -67,6 +75,16 @@ class ChatsSection(ListDetailSection):
         self.archived.activated.connect(self.load)
         self.kind.activated.connect(self.load)
         self.year.editingFinished.connect(self.load)
+        self.mark_button = self.add_mark_button()
+        self.mark_button.clicked.connect(self._mark_current)
+        self.compose = QPlainTextEdit()
+        self.compose.setPlaceholderText("Write a message…")
+        self.compose.setMaximumHeight(90)
+        self.send_button = QPushButton("Send…")
+        self.send_button.setEnabled(False)
+        self.send_button.clicked.connect(self.send)
+        self.side_layout.addWidget(self.compose)
+        self.side_layout.addWidget(self.send_button)
 
     def make_task(self) -> Callable[[ParroClient], Any]:
         year = None if self.year.value() == NO_YEAR else self.year.value()
@@ -78,7 +96,43 @@ class ChatsSection(ListDetailSection):
     def rows(self, result: dict[str, Any]) -> list[tuple[str, Any]]:
         return [(chat_row(room), room) for room in result.get("chatrooms", [])]
 
+    def _current_room(self) -> dict[str, Any] | None:
+        row = self.list.currentRow()
+        return self.items[row] if 0 <= row < len(self.items) else None
+
+    def _mark_current(self) -> None:
+        room = self._current_room()
+        if room is not None:
+            self.mark_read("chat", room.get("id"))
+
+    def send(self) -> None:
+        """Reads first: the chat, who receives it and the exact text. Only Confirm sends."""
+        room = self._current_room()
+        if room is None:
+            return
+        room_id, text = room.get("id"), self.compose.toPlainText()
+        self.worker.submit(
+            lambda client: operations.prepare_chat_message(client, room_id, text),
+            self._confirm_send,
+            self.notice.setText,
+        )
+
+    def _confirm_send(self, prepared: dict[str, Any]) -> None:
+        self.ask_to_confirm(
+            "Send a message",
+            chat_preview(prepared),
+            "Send",
+            lambda client: operations.send_prepared_message(client, prepared),
+            self._sent,
+        )
+
+    def _sent(self, _result: dict[str, Any]) -> None:
+        self.compose.clear()
+        self.reload_here("Sent.")
+
     def show_item(self, room: dict[str, Any]) -> None:
+        self.send_button.setEnabled(True)
+        self.mark_button.setEnabled(bool(room.get("unreadCount")))
         room_id = room.get("id")
 
         def task(client: ParroClient) -> tuple[Any, Any]:

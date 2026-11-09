@@ -172,4 +172,9 @@ def main(argv: list[str]) -> int:
     application.setApplicationName(APP_NAME)
     window = MainWindow()
     window.show()
-    return application.exec()
+    code = application.exec()
+    # In this order, before Python's own shutdown: left to chance, Qt can crash on the way out.
+    window.close()
+    del window
+    application.shutdown()
+    return code

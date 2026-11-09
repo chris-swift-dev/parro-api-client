@@ -1,7 +1,9 @@
 """What keeps the desktop app an optional layer. These run without Qt."""
 
 import importlib
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -50,3 +52,30 @@ def test_without_qt_it_says_what_to_install(monkeypatch, capsys):
         app.run()
     assert stop.value.code == 2
     assert 'parro-api-client[gui]"' in capsys.readouterr().err
+
+
+def test_the_real_entry_point_exits_cleanly(tmp_path):
+    """In a process of its own: a crash on the way out only shows in the exit code."""
+    script = (
+        "import sys\n"
+        "from PySide6.QtWidgets import QApplication\n"
+        "QApplication.exec = staticmethod(lambda: 0)\n"
+        "from parro_gui import window\n"
+        "sys.exit(window.main(['parro-client-gui']))\n"
+    )
+    environment = {k: v for k, v in os.environ.items() if not k.startswith("PARRO_")}
+    environment.update(
+        QT_QPA_PLATFORM="offscreen",
+        PARRO_TOKEN_FILE=str(tmp_path / "tokens.json"),
+        PARRO_DATA_DIR=str(tmp_path / "data"),
+    )
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
+    finished = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=ROOT,
+        env=environment,
+        capture_output=True,
+        timeout=60,
+        check=False,
+    )
+    assert finished.returncode == 0, finished.stderr.decode(errors="replace")[-500:]

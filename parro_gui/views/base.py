@@ -13,14 +13,18 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from parro import operations
 from parro.api_client import ParroClient
 
+from .. import widgets
 from ..widgets import SafeTextBrowser
 from ..worker import Worker
+from .confirm import ConfirmDialog
 
 LOADING = "Loading…"
 EMPTY = "Nothing to show."
 LOG_IN_FIRST = "Log in to see this."
+MARK_READ_QUESTION = "Mark this as read? The school can see that you did."
 
 
 class Section(QWidget):
@@ -31,6 +35,8 @@ class Section(QWidget):
         self.worker = worker
         self.loaded = False
         self._generation = 0
+        self.next_notice = ""  # shown when the next load has finished
+        self.confirmation: ConfirmDialog | None = None
         self.notice = QLabel()
         self.notice.setWordWrap(True)
         self.refresh_button = QPushButton("Refresh")
@@ -79,12 +85,26 @@ class Section(QWidget):
 
     def _arrived(self, generation: int, result: Any) -> None:
         if generation == self._generation:
-            self.notice.clear()
+            self.notice.setText(self.next_notice)
+            self.next_notice = ""
             self.show_result(result)
 
     def _failed(self, generation: int, text: str) -> None:
         if generation == self._generation:
             self.notice.setText(text)
+
+    def ask_to_confirm(
+        self,
+        title: str,
+        preview_html: str,
+        confirm_label: str,
+        task: Callable[[ParroClient], Any],
+        on_done: Callable[[Any], None],
+    ) -> None:
+        self.confirmation = ConfirmDialog(
+            self.worker, title, preview_html, confirm_label, task, on_done, self
+        )
+        self.confirmation.open()
 
 
 class ListDetailSection(Section):
@@ -94,6 +114,7 @@ class ListDetailSection(Section):
         super().__init__(worker, parent)
         self.items: list[Any] = []
         self._detail_generation = 0
+        self._wanted_row = 0
         self.list = QListWidget()
         self.list.setWordWrap(True)
         self.list.currentRowChanged.connect(self._row_chosen)
@@ -121,9 +142,10 @@ class ListDetailSection(Section):
         self.items = [item for _text, item in rows]
         self.list.addItems([text for text, _item in rows])
         if rows:
-            self.list.setCurrentRow(0)
-        else:
+            self.list.setCurrentRow(min(self._wanted_row, len(rows) - 1))
+        elif not self.notice.text():
             self.notice.setText(EMPTY)
+        self._wanted_row = 0
 
     def clear(self) -> None:
         self._detail_generation += 1
@@ -135,6 +157,30 @@ class ListDetailSection(Section):
         self._detail_generation += 1
         if 0 <= row < len(self.items):
             self.show_item(self.items[row])
+
+    def reload_here(self, message: str) -> None:
+        """Load again after a change, staying on the same row, and say what happened."""
+        self._wanted_row = max(self.list.currentRow(), 0)
+        self.next_notice = message
+        self.load()
+
+    def add_mark_button(self) -> QPushButton:
+        button = QPushButton("Mark as read")
+        button.setEnabled(False)
+        self.side_layout.addWidget(button)
+        return button
+
+    def mark_read(self, kind: str, item_id: Any) -> None:
+        """Only ever from a button, and it asks first: the school sees it."""
+        if not widgets.ask(self, MARK_READ_QUESTION):
+            return
+        self.worker.submit(
+            lambda client: operations.mark_read(client, kind, item_id),
+            lambda result: self.reload_here(
+                "Marked as read." if result.get("marked_read") else "It was already read."
+            ),
+            self.notice.setText,
+        )
 
     def fetch_detail(self, task: Callable[[ParroClient], Any], done: Callable[[Any], None]) -> None:
         """Fetch more about the chosen item. An answer for an item left behind is dropped."""

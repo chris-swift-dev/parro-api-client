@@ -37,12 +37,6 @@ BEFORE_THE_TRIP = datetime(2026, 11, 3, 9, 0, tzinfo=timezone.utc)
 ROOM = 8000000001
 
 
-@pytest.fixture(scope="module")
-def application() -> QApplication:
-    existing = QApplication.instance()
-    return existing if isinstance(existing, QApplication) else QApplication([])
-
-
 @pytest.fixture(autouse=True)
 def environment(tmp_path, monkeypatch):
     for name in list(os.environ):

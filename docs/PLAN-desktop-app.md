@@ -1,6 +1,6 @@
 # Plan 12: a cross-platform desktop app
 
-*Status: phases 1–3 built (2026-11-09). A real window has opened on Linux; Windows and macOS still to
+*Status: phases 1–4 built (2026-11-09). A real window has opened on Linux; Windows and macOS still to
 open one. Decisions taken in §8.*
 
 **Goal:** `parro-client-gui`, a desktop app for Windows, macOS and Linux that does what the CLI does,
@@ -115,7 +115,7 @@ progress callback. The CLI's behaviour stays the same.
 | 1 | **Skeleton:** the `[gui]` extra, entry point, window, worker, import-boundary tests, offscreen tests in CI on all three systems | **a real window opens on Windows, macOS and Linux**, which you check where I cannot; CI is green |
 | 2 | ✅ **Login and status:** both ways of logging in, the latch, expiry | tests against the fake login server; never more than one password check per click |
 | 3 | ✅ **Reading:** home, news with attachments, agenda, chats, account | every read command has its view, tested against the fake API; the window stays responsive |
-| 4 | **Changing things:** the four writes, in dialogs | tests: nothing happens without *Confirm*, refusals, no retry, opening never marks as read |
+| 4 | ✅ **Changing things:** the four writes, in dialogs | tests: nothing happens without *Confirm*, refusals, no retry, opening never marks as read |
 | 5 | **Local data:** `sync` with progress, cache, `.ics`, secrets | tests; a cancelled or failed sync leaves the archive intact |
 | 6 | **Docs and packaging:** a README section and picture, `docs/DESKTOP-APP.md`, `SECURITY.md` scope, changelog | links and pictures checked; install from a built wheel works |
 | 7 | **Live check with you:** log in, read everything, one write of your choice | in `docs/LIVE-CHECKS.md` |
