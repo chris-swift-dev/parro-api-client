@@ -1,7 +1,7 @@
 # Plan 12: a cross-platform desktop app
 
-*Status: phases 1–6 built (2026-11-09). A real window has opened on Linux; Windows and macOS still to
-open one. Decisions taken in §8.*
+*Status: phases 1–7 done (2026-11-09). A real window has opened on Linux only; Windows and macOS are
+covered by offscreen tests in CI. Decisions taken in §8.*
 
 **Goal:** `parro-client-gui`, a desktop app for Windows, macOS and Linux that does what the CLI does,
 on top of the existing `parro` package. No second implementation of login, API calls or safety rules.
@@ -118,7 +118,7 @@ progress callback. The CLI's behaviour stays the same.
 | 4 | ✅ **Changing things:** the four writes, in dialogs | tests: nothing happens without *Confirm*, refusals, no retry, opening never marks as read |
 | 5 | ✅ **Local data:** `sync` with progress, cache, `.ics`, secrets | tests; a cancelled or failed sync leaves the archive intact |
 | 6 | ✅ **Docs and packaging:** a README section and picture, `docs/DESKTOP-APP.md`, `SECURITY.md` scope, changelog | links and pictures checked; install from a built wheel works |
-| 7 | **Live check with you:** log in, read everything, one write of your choice | in `docs/LIVE-CHECKS.md` |
+| 7 | ✅ **Live check with you:** log in, read everything, one write of your choice | in `docs/LIVE-CHECKS.md` |
 | 8 | Release **0.10.0** | published |
 
 ## 7. Out of scope

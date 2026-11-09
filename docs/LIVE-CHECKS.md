@@ -142,3 +142,17 @@ owner had already accepted in the web app, ending on that same answer. Personal 
 | MCP `parro_get` on the respondents path | OK: refused before any request |
 | Not checked live | A timeout, how the API itself answers a past or cancelled item or one that asks for no answer (the client refuses those before writing), whether teachers get a notification, and `confirm: true` on the other write tools |
 
+## Live check (2026-11-09, release 0.10.0: the desktop app)
+
+The account owner used the app on a real display (Linux, Wayland, Python 3.14), went through its
+sections and reported what they saw. The previous login had expired. **One password check**, typed by
+the owner in the app's login dialog. One real write, chosen by the owner. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| Starting with an expired login | OK: the login dialog opened; the failed token refresh was logged without any token (`invalid_grant`), and no password was spent |
+| Logging in with a password | OK: one attempt; the login lasts 8 hours from then, and the command line sees the same login |
+| Overview, Announcements, Calendar, Chats, Family, Archive | OK: the owner reports that all of them look right and work on real data |
+| One write: sending a text message to a chat | OK, as reported by the owner, through the preview dialog and Confirm |
+| Closing the window | OK: exit code 0 |
+| Not checked live | Marking as read from the app (nothing was unread), signing up, withdrawing and answering an invitation from the app (the same core calls as the command line, checked live there), a timeout, and **a real window on Windows and macOS** (CI runs the tests there without a display) |
