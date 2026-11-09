@@ -4,6 +4,25 @@
 https://editor.swagger.io (File → Import file). "Try it out" works with a pasted bearer
 token. Logging in through Swagger UI's OAuth2 dialog does not work (see the warning in the spec).
 
+## What it covers
+
+34 operations of the Parro API (account, children and their privacy settings, groups, announcements,
+calendar items, chats with their filters and members, unread counts, system news, absence and
+photo-export settings, the agenda subscription link, the three calls that mark items as read, sending
+a chat message, signing up and withdrawing as a helper, and answering an invitation), each seen in a
+live call or a capture of the web app, and the login server's OAuth2 endpoints. It explains the
+non-obvious parts: the geon media type and headers, `Range`-based paging, `dtype` polymorphism, which
+id opens a chat, and where attachments live.
+
+Response schemas contain **only fields seen in real responses**; the published spec carries no
+example payloads.
+
+<details>
+<summary>An operation in Swagger UI: <code>GET /calendar/sync</code></summary>
+
+<img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-calendar-sync.png" width="800" alt="Swagger UI with GET /calendar/sync expanded: what the subscription link looks like, that it is a secret, and what was checked live.">
+</details>
+
 ## Rebuilding
 
 The spec is generated. **Don't edit the JSON by hand**: change `tools/build_spec.py` or add samples.

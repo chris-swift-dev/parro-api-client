@@ -36,8 +36,8 @@ links, or names and messages from a real Parro account. Use invented data, like 
 
 The risk that text in Parro steers an assistant while `PARRO_ALLOW_SEND_CHAT=1`,
 `PARRO_ALLOW_HELPER_SIGNUP=1` or `PARRO_ALLOW_RSVP=1` is on is known and described in the README
-([messages](README.md#sending-a-chat-message), [helpers](README.md#helping-out),
-[invitations](README.md#answering-an-invitation)). A way to send a message, change a helper slot or
+([messages](docs/CHANGING-THINGS.md#sending-a-chat-message), [helpers](docs/CHANGING-THINGS.md#helping-out),
+[invitations](docs/CHANGING-THINGS.md#answering-an-invitation)). A way to send a message, change a helper slot or
 answer an invitation without the preview and `confirm: true` is in scope.
 
 **Problems in Parro itself** (its API, the login server, the app) are not ours to fix: please

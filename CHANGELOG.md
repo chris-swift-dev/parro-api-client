@@ -31,6 +31,8 @@ change it but not remove it.
 - An answer is never repeated on its own: after a timeout or a server error the client says it may
   or may not have gone through.
 - The README, the help text, `SECURITY.md` and the User-Agent describe the new promise.
+- The README is shorter again. The details moved to three guides that come with every download:
+  `docs/CHANGING-THINGS.md`, `docs/MCP.md` and `docs/CALENDAR-AND-ARCHIVE.md`.
 
 ## [0.8.0] - 2026-11-08
 

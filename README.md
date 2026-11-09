@@ -77,9 +77,8 @@ client speaks that API and adds three things:
    visible, so the next command is always at hand.
 
 It **reads**. It can change four things in Parro, and only when you ask for it:
-[mark an item as read](#marking-as-read), [send a text message](#sending-a-chat-message) to a chat
-you are in, [sign up or withdraw as a helper](#helping-out), and
-[answer an invitation](#answering-an-invitation). Apart from those three `PUT …/read` calls, the
+mark an item as read, send a text message to a chat you are in, sign up or withdraw as a helper, and
+answer an invitation: see [Changing things in Parro](#changing-things-in-parro). Apart from those three `PUT …/read` calls, the
 `POST` of a message, the `POST` and `DELETE` of a helper sign-up and the `POST` of an answer, the
 Parro API only receives `GET`; the other `POST` requests go to the login server's token, revoke and login-form
 endpoints. Standard library only; PyMuPDF / pypdf (PDF text)
@@ -151,6 +150,9 @@ parro-client get /accountsettings
 parro-client token                       # paste into Swagger UI → Authorize → bearerToken
 ```
 
+<details>
+<summary>All commands and options</summary>
+
 Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-finish <url>`,
 `overview [--all]`, `me`, `children`, `privacy [--link CHILD_ID]`, `groups [--previous]`, `unread`,
 `system-news [--full]`, `announcements [--group ID] [--limit N] [--unread-only] [--full]`,
@@ -169,148 +171,29 @@ Global options: `--format auto|json|markdown`, `--login-method`, `--raw`, `--com
 
 Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in · `4` login halted.
 
-## Marking as read
+</details>
 
-`overview` shows only what you have not read yet. Reading something here does not change that:
-**nothing is ever marked as read on its own**, not by showing an announcement, opening a chat or
-running `sync`. You mark items yourself:
+## Changing things in Parro
 
-```bash
-parro-client mark-read announcement <id>      # also: calendar <id>, chat <chatroom-id>
-parro-client announcement <id> --mark-read    # show it, then mark it
-parro-client mark-read group <group-id>       # how many unread announcements a group has …
-parro-client mark-read group <group-id> --yes # … and mark them all
-```
+It reads. It can change four things, and only when you ask. Reading something never changes it. The
+**[guide](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md)** has the commands, the refusals and what can be undone.
 
-**The school sees it.** Teachers see who read an announcement ("read by 31 of 45"), chats show read
-receipts, and the Parro app on your phone shows the item as read too. So mark only what you have
-actually read. The client first fetches the item, so a wrong id is an error, not a write; an item
-that is already read is left alone.
+| What | Command | MCP tool and its switch | Who notices |
+| --- | --- | --- | --- |
+| [Mark as read](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#marking-as-read) | `mark-read announcement <id>` | `parro_mark_read`, `PARRO_ALLOW_MARK_READ=1` | The school: read counts and read receipts |
+| [Send a text message](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#sending-a-chat-message) to a chat you are in | `chat-send <chatroom-id> "text"` | `parro_send_chat_message`, `PARRO_ALLOW_SEND_CHAT=1` | Real people, under your name. It cannot be taken back |
+| [Sign up or withdraw as a helper](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#helping-out) | `helper signup <event-id>`, `helper withdraw <event-id>` | `parro_helper_signup`, `parro_helper_withdraw`, `PARRO_ALLOW_HELPER_SIGNUP=1` | The school sees your name, and you may take the last place |
+| [Answer an invitation](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#answering-an-invitation) | `rsvp accept <event-id>` (or `decline`, `tentative`) | `parro_rsvp`, `PARRO_ALLOW_RSVP=1` | The school sees your answer. You can change it, not remove it |
 
-The MCP tool `parro_mark_read` (one item at a time, no groups) is **off unless you switch it on**
-with `PARRO_ALLOW_MARK_READ=1`, so an assistant cannot mark things while summarising them. MCP
-clients see it marked as not read-only, so they ask before calling it.
+Sending, signing up and answering show what would happen and ask first. Called without
+`confirm: true`, their MCP tools only return that preview.
 
-## Sending a chat message
-
-`chat-send` sends a text message to a chat you are already in:
-
-```bash
-parro-client chat-send <chatroom-id> "Ik kan rijden op de 12e"
-parro-client chat-send <chatroom-id> --file bericht.txt   # or --file - for standard input
-```
-
-It first shows the chat, **who will receive the message** and the exact text, and asks
-`Send this message? [y/N]`. Anything but `y` sends nothing. `--yes` skips the question for scripts;
-without a terminal and without `--yes`, nothing is sent.
-
-**Real people receive it, under your name:** the teacher, or everyone in a group chat. As far as we
-know a message cannot be taken back, so treat sending as final.
-
-- It refuses empty text and chats that are archived, that you have left, that have replies switched
-  off, or that are with a bot.
-- A message is **never sent twice** on its own. After a timeout or a server error, the client says
-  the message may or may not have arrived. Look at `chat-messages <chatroom-id>` before you try again.
-- The text is never logged or stored, and sending does not mark the chat as read.
-- Only text, only existing chats: no new chats, replies to one message, attachments, editing or
-  deleting.
-
-**From an assistant.** The MCP tool `parro_send_chat_message` is **off unless you switch it on** with
-its own `PARRO_ALLOW_SEND_CHAT=1`. Called without `confirm: true` it sends nothing and returns the
-preview, so the assistant can show you who would receive what.
-
-> **Think before you switch this on.** An assistant also reads what other people write in Parro.
-> Text in a chat or a newsletter could try to talk it into sending a message, and whatever it can
-> read (your children's names, school letters) could end up in that message. The tool is marked as
-> destructive, so MCP clients that honour this ask you before each call. **Leave that approval on
-> for this tool**, and read the preview before you agree.
-
-## Helping out
-
-Some calendar items ask parents to help (driving, reading aloud) or to bring something.
-`calendar --details` shows each slot with its id, how many signed up and whether you did. `helper`
-signs you up or withdraws you, with the event id you already see:
-
-```bash
-parro-client helper signup <event-id>            # one place
-parro-client helper signup <event-id> --count 3  # for example three children in your car
-parro-client helper withdraw <event-id>
-```
-
-If an item has several slots, add `--slot <slot-id>`; without it the client lists them. It first
-shows the item, its date, the slot, how many places are taken and your count, and asks
-`Sign up for this slot? [y/N]` (or `Withdraw from this slot? [y/N]`). Anything but `y` changes
-nothing. `--yes` skips the question for scripts; without a terminal and without `--yes`, nothing
-changes.
-
-**A sign-up is a promise.** The school sees your name on the slot, other parents at least see the
-count go up, and you may take the last place. Withdrawing frees your place, and nobody may notice in
-time. Whether teachers get a notification is not known.
-
-- It refuses an item that asks for no helpers, an item in the past, a full slot, a count that does
-  not fit the places left, signing up where you already have, and withdrawing where you have not.
-- To change your count: withdraw and sign up again.
-- A change is **never repeated** on its own. After a timeout or a server error, the client says it
-  may or may not have gone through. Running the command again is safe, because it first reads
-  whether you are signed up.
-- Only helper slots, only for yourself: no parent–teacher talk times, no signing up someone else.
-  To answer an invitation, see [below](#answering-an-invitation).
-
-**From an assistant.** The MCP tools `parro_helper_signup` and `parro_helper_withdraw` are **off
-unless you switch them on** with their own `PARRO_ALLOW_HELPER_SIGNUP=1`. Called without
-`confirm: true` they change nothing and return the preview, so the assistant can show you what
-would happen.
-
-> **Think before you switch this on.** An assistant also reads what other people write in Parro, and
-> a newsletter that says "sign up for this" could try to talk it into making a promise in your
-> name. These tools send no free text, and a sign-up can be undone, but only if you notice it. MCP
-> clients that honour the hints ask before a withdrawal; **also keep approval on for the sign-up**,
-> which is not marked as destructive, and read the preview before you agree.
-
-## Answering an invitation
-
-Some calendar items ask for an answer; the agenda marks them *RSVP needed*, and shows your answer
-once you gave one. `rsvp` answers with the event id you already see:
-
-```bash
-parro-client rsvp accept <event-id>
-parro-client rsvp decline <event-id>
-parro-client rsvp tentative <event-id>
-```
-
-It first shows the item, its date and group, your current answer and the new one, and asks
-`Accept this invitation? [y/N]`. Anything but `y` changes nothing. `--yes` skips the question for
-scripts; without a terminal and without `--yes`, nothing changes.
-
-**The school sees your answer, under your name,** and it may decide what gets arranged. The Parro app
-does not show parents who answered what, but the API does return it to a parent's login, so don't
-treat your answer as hidden from other parents. Whether teachers get a notification is not known.
-
-- **You can change an answer, not remove it.** A new answer replaces the old one, and the client
-  shows both before asking. There is no way back to "not answered".
-- It refuses an item that does not ask for an answer, an item that is cancelled and an item in the
-  past.
-- The answer you already gave is not sent again.
-- An answer is **never repeated** on its own. After a timeout or a server error, the client says it
-  may or may not have gone through. Running the command again is safe, because it first reads your
-  current answer.
-- Only for yourself and one item at a time, and without a note. Parent–teacher talk times are
-  something else, and not covered.
-
-**Other people's answers.** The API also returns everyone an invitation went to, with their names,
-their children's names and their answers. The client has no command for that list, and the MCP tools
-`parro_get` and `parro_attachment` refuse it, so an assistant cannot read it. Only the command
-`get` can, if you ask for that path yourself. Please be careful with what it shows.
-
-**From an assistant.** The MCP tool `parro_rsvp` is **off unless you switch it on** with its own
-`PARRO_ALLOW_RSVP=1`. Called without `confirm: true` it changes nothing and returns the preview, so
-the assistant can show you what would happen.
-
-> **Think before you switch this on.** An assistant also reads what other people write in Parro, and
-> a newsletter that says "please accept this" could try to talk it into answering in your name. The
-> tool sends no free text, but a wrong answer can only be replaced, not removed. It is marked as
-> destructive, so MCP clients that honour this ask you before each call. **Leave that approval on**,
-> and read the preview before you agree.
+> **Think before you switch on a tool for an assistant.** An assistant also reads what other people
+> write in Parro. Text in a chat or a newsletter could try to talk it into sending a message, signing
+> you up or answering in your name, and whatever it can read (your children's names, school letters)
+> could end up in a message. Not every one of these tools is marked as destructive, so **set your MCP
+> client to ask before each of them**, and read the preview before you agree. The
+> [guide](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md) has the warning for each.
 
 ## MCP server
 
@@ -325,34 +208,10 @@ Ask Claude about school, and it reads Parro for you. An illustration with the in
 > talks for group 3 on 17 November (pick a ten-minute slot). Friday 13 November is a study day:
 > no school, but the after-school care is open.*
 
-| Tool | What it gives you |
-| --- | --- |
-| `parro_auth_status` | Login state, account, role, token expiry, whether automatic login is halted. Start here when something fails. |
-| `parro_login` | Log in with `PARRO_USERNAME` and the password; optional `method`. |
-| `parro_login_url` / `parro_login_finish` | Browser login without a stored password (OAuth2 + PKCE). |
-| `parro_logout` | Revoke the tokens at the IdP and forget them. |
-| `parro_me` | Account and school. |
-| `parro_children` | Children linked to the account. |
-| `parro_groups` | Classes and school-wide groups, with the ids other tools need. |
-| `parro_announcements` | The main feed. Merges all groups, newest first, full text + attachment list. |
-| `parro_announcement` | One announcement by id, with author. |
-| **`parro_attachment`** | **Downloads an attachment of an announcement or calendar item and returns its text (PDF/docx/txt/csv/html) or the image.** |
-| `parro_calendar` | Calendar items from today on, soonest first; `details: true` adds location, description and helper slots, `past: true` earlier items. |
-| `parro_chatrooms` / `parro_chat_messages` | Conversations: `unread`, `archived`, `type` and `schoolyear` filters; messages `since` a date. |
-| `parro_chat_members` | Who is in a chat: parents (with their children) and teachers, and who is admin. |
-| `parro_unread` | Unread counts per category. |
-| `parro_get` | Escape hatch: GET any `/rest/v2` path not covered above. |
-| `parro_overview` | What is new: unread counts, unread announcements, new calendar items, unread chats; `all: true` shows everything. |
-| `parro_calendar_link` | The personal link to subscribe to the Parro agenda (keep it secret). |
-| `parro_privacy` | Per child: can parents change the privacy choices now, and when were they last changed; `link: true` gives the page to change them (keep it secret). |
-| `parro_mark_read` | Only with `PARRO_ALLOW_MARK_READ=1`: mark one announcement, calendar item or chat as read ([the school sees it](#marking-as-read)). |
-| `parro_send_chat_message` | Only with `PARRO_ALLOW_SEND_CHAT=1`: a preview of a chat message, or with `confirm: true` the message itself ([real people receive it](#sending-a-chat-message)). |
-| `parro_helper_signup` / `parro_helper_withdraw` | Only with `PARRO_ALLOW_HELPER_SIGNUP=1`: a preview of signing up on a calendar item's helper slot (optional `count`) or withdrawing, or with `confirm: true` the change itself ([it is a promise in your name](#helping-out)). |
-| `parro_rsvp` | Only with `PARRO_ALLOW_RSVP=1`: a preview of answering a calendar item's invitation, or with `confirm: true` the answer itself ([the school sees it](#answering-an-invitation)). |
-
-Every tool takes an optional `format`: `json` (default) or `markdown`, a readable view that keeps
-every id. The first 16 tools have the same names and arguments as the original server, so existing
-MCP configurations keep working.
+It has tools for announcements, attachments (including the text inside PDFs), the calendar, chats,
+class info and what is new, and for logging in. The tools that change something are off unless you
+switch them on: see [Changing things in Parro](#changing-things-in-parro). All 25 tools are listed in
+**[docs/MCP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/MCP.md)**.
 
 With the package installed (Quick start), Claude Code:
 
@@ -403,78 +262,27 @@ Credentials: `PARRO_USERNAME` plus `PARRO_PASSWORD_FILE` (or `PARRO_PASSWORD`), 
 lockout latch and why there is no automatic browser redirect: **[docs/LOGIN.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/LOGIN.md)**.
 Every environment variable: **[docs/CONFIGURATION.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CONFIGURATION.md)**.
 
-## The agenda in your own calendar app
+## Also in the box
 
-- **`calendar-link`** prints Parro's own subscription link (`GET /calendar/sync`). Paste it into
-  Google Calendar (*Other calendars → From URL*), Apple Calendar (*New Calendar Subscription*) or
-  Outlook (*Subscribe from web*), and the calendar keeps itself up to date. **The link is a secret**:
-  anyone who has it can read your Parro calendar without logging in. ParnasSys lists agenda syncing
-  as a feature of the paid *Parro Ouderapp*, so not every school may offer it.
-- **`calendar --ics FILE`** writes an iCalendar file of the upcoming items (`--past` for earlier
-  ones, `--details` for locations and descriptions, `-` for standard output). It works without the
-  subscription feature, but it is a snapshot: export again to update. Every event keeps the same
-  UID, so importing a newer file updates events instead of duplicating them.
+- **The agenda in your own calendar app:** `calendar-link` prints Parro's own subscription link (a
+  secret), and `calendar --ics FILE` writes an iCalendar file.
+- **Your children's privacy choices:** `privacy` shows per child whether you can still change them,
+  and when and by whom they were last changed.
+- **Your own archive:** `sync` keeps a local copy of everything your account can see, as files that
+  stay readable without Parro.
 
-## Your children's privacy choices
-
-Schools ask parents every year what they may do with photos and data of their children.
-`parro-client privacy` shows per child whether you can still change those choices, and when and by
-whom they were last changed. The choices themselves are not in the API: `privacy --link CHILD_ID`
-prints the link to the ParnasSys page where you set them. **That link is a secret too**: it opens
-the page without logging in.
-
-## Your own archive: `sync`
-
-`parro-client sync` keeps a local copy of everything your account can see, as files that stay
-readable without Parro:
-
-```
-~/.parro/data/archive/
-  announcements/2026-10-22-nieuwsbrief-nr-3-5000000101.md   (+ .json, + attachments/)
-  calendar/2026-11-11-sint-maartenviering-7000000101.md     (+ .json, + attachments/)
-  chats/rijden-naar-het-natuurmuseum-8000000001.md          (+ .json)
-  index.md                                                  (everything, newest first)
-```
-
-- Each `.md` file starts with a small YAML header (id, type, title, date, groups), so notes apps
-  such as Obsidian can use it; the `.json` next to it holds the same data for scripts.
-- **Run it again to update.** Unchanged items are not rewritten and a saved file is never
-  downloaded again. Nothing is ever deleted: an item that disappears from Parro stays, marked
-  *(no longer in Parro)* in `index.md`.
-- Documents are always saved; photos only with `--photos` (a school year of photos can run to
-  several GB). `--to DIR` writes elsewhere.
-- **Run `sync --previous` once as well**, especially around the start of a school year: schools
-  sometimes post the first dates of the new year in last year's groups.
-- The archive holds your children's names, photos and school letters: its folders are readable
-  only by you (0700, files 0600), and no file contains a download or avatar link.
-
-**The cache.** Attachments (and their text) and calendar details are also kept in
-`~/.parro/data/cache`, so a newsletter is downloaded once, not every time an assistant reads it.
-Lists are never cached: they are how the client learns what is new; neither are the details of items
-that ask for helpers, because sign-ups change. Same privacy rules as the
-archive. `cache info` shows its size, `cache clear` empties it, `--no-cache` switches it off.
+All three are explained in **[docs/CALENDAR-AND-ARCHIVE.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CALENDAR-AND-ARCHIVE.md)**.
 
 ## The OpenAPI specification
 
 <a href="https://chris-swift-dev.github.io/parro-api-client/"><img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
 
 [`openapi/parro.public.openapi.json`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/parro.public.openapi.json) describes the API as
-observed from the web client: 34 operations of the Parro API (account, children and their privacy
-settings, groups, announcements, calendar items, chats with their filters and members, unread
-counts, system news, absence and photo-export settings, the agenda subscription link, the three
-calls that mark items as read, sending a chat message, signing up and withdrawing as a helper, and answering an invitation), each seen in a live call or a capture of the web app, and the login
-server's OAuth2 endpoints. It explains the non-obvious parts: the geon media type and headers,
-`Range`-based paging, `dtype` polymorphism, which id opens a chat, and where attachments live.
+observed from the web client: 34 operations of the Parro API and the login server's OAuth2 endpoints,
+each seen in a live call or a capture of the web app. **[openapi/README.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/README.md)**
+says what it covers and how it is generated; [docs/API-NOTES.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/API-NOTES.md) lists the
+facts the client relies on.
 
-<details>
-<summary>An operation in Swagger UI: <code>GET /calendar/sync</code></summary>
-
-<img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-calendar-sync.png" width="800" alt="Swagger UI with GET /calendar/sync expanded: what the subscription link looks like, that it is a secret, and what was checked live.">
-</details>
-
-- Response schemas contain **only fields seen in real responses**; the published spec carries no
-  example payloads. [`openapi/README.md`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/README.md) explains how it is generated and
-  published; [docs/API-NOTES.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/API-NOTES.md) lists the facts the client relies on.
 - **"Try it out"** works once you paste an access token into **Authorize → bearerToken**
   (`parro-client token` prints one).
 - **Don't log in through Swagger UI.** The code flow can't complete there, and failed password
@@ -486,9 +294,9 @@ server's OAuth2 endpoints. It explains the non-obvious parts: the geon media typ
 or Parro. It uses the same API calls as the Parro web app, as observed from that app.
 
 **Can it post, change or delete anything in Parro?** It can do four things, and only when you
-ask: [mark an item as read](#marking-as-read), [send a text message](#sending-a-chat-message) to a
-chat you are in, [sign up or withdraw as a helper](#helping-out), and
-[answer an invitation](#answering-an-invitation). Assistants can do these only if you switch that
+ask: [mark an item as read](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#marking-as-read), [send a text message](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#sending-a-chat-message)
+to a chat you are in, [sign up or withdraw as a helper](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#helping-out), and
+[answer an invitation](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#answering-an-invitation). Assistants can do these only if you switch that
 on, separately for each. Apart from taking back your own helper sign-up, it cannot delete anything,
 and it cannot start new chats or send attachments. Those are three fixed `PUT …/read` calls, three
 fixed `POST` calls and one fixed `DELETE`; every other request to the Parro

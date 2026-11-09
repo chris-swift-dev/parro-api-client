@@ -29,6 +29,13 @@ comparison with the original server in `legacy/`) skip without them, as in CI.
 | `.github/workflows/release.yml` | on a `v*` tag: checks, archives, wheel and sdist, draft GitHub release |
 | `.github/workflows/publish.yml` | on publishing a release: its wheel and sdist to PyPI; run by hand: a fresh build to TestPyPI |
 
+## Where documentation goes
+
+The README says what this is, what it promises and how to start, and stays short. A new way to change
+something in Parro gets a section in `docs/CHANGING-THINGS.md` and a row in the README's table. A new
+MCP tool gets a row in `docs/MCP.md`. A new guide goes in `INCLUDED_FILES` in
+`tools/build_release.py`; `tests/test_doc_links.py` checks that, and every link.
+
 ## The README pictures
 
 The terminal pictures in the README (`docs/images/terminal-*.svg`, light and dark) are drawn from
