@@ -51,6 +51,7 @@ INCLUDED_FILES = [
     "docs/LOGIN.md",
     "docs/MCP.md",
     "docs/CONFIGURATION.md",
+    "docs/DESKTOP-APP.md",
     "docs/API-NOTES.md",
     "openapi/parro.public.openapi.json",
 ]

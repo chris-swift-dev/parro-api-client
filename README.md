@@ -1,6 +1,6 @@
 # Parro API client and OpenAPI spec
 
-**Read your child's school news from the terminal or from Claude:** an unofficial client and API
+**Read your child's school news from the terminal, a desktop app or Claude:** an unofficial client and API
 description for [Parro](https://talk.parro.com), the Dutch parent–school communication app by
 Topicus (ParnasSys). It reads announcements, newsletters (**including the text inside PDF
 attachments**), the calendar, chats and class info, and shows what you have not read yet. It can
@@ -52,7 +52,8 @@ Update with `pipx upgrade parro-api-client`. **Without installing anything:** do
 from the [Releases page](https://github.com/chris-swift-dev/parro-api-client/releases), unpack it,
 and run `python3 parro_cli.py` wherever this README says `parro-client`.
 
-For Claude and other MCP clients, see [MCP server](#mcp-server). **API explorers:** the spec is
+A window instead of a terminal: see [Desktop app](#desktop-app). For Claude and other MCP clients, see
+[MCP server](#mcp-server). **API explorers:** the spec is
 browsable in **[Swagger UI](https://chris-swift-dev.github.io/parro-api-client/)**.
 
 ## What it does
@@ -61,7 +62,8 @@ browsable in **[Swagger UI](https://chris-swift-dev.github.io/parro-api-client/)
 | --- | --- |
 | `parro-client` | a command-line client: readable markdown at a terminal, JSON when piped (`jq`) |
 | `parro-client-mcp` | an MCP server over stdio for Claude and other MCP clients |
-| `parro/` | the library both use: login, API calls, summaries, attachments |
+| `parro-client-gui` | a [desktop app](#desktop-app) for Windows, macOS and Linux (optional, Python 3.12+) |
+| `parro/` | the library they all use: login, API calls, summaries, attachments |
 | `openapi/parro.public.openapi.json` | the OpenAPI 3.0.3 description of the API (contract version 224) |
 
 The Parro web app talks to a Topicus "geon" REST API at `https://rest-v2.parro.com/rest/v2`. This
@@ -88,6 +90,8 @@ and Pillow (photo downscaling) are optional.
 flowchart LR
   you([You, at a terminal]) --> cli[parro-client]
   claude([Claude or another MCP client]) --> mcp[parro-client-mcp]
+  desktop([You, in a window]) --> gui[parro-client-gui]
+  gui --> core
   cli --> core["parro/<br>login · API calls · summaries · markdown"]
   mcp --> core
   core -- "GET; mark as read, send a message, sign up as helper, answer an invitation when you ask" --> api[(Parro REST API)]
@@ -172,6 +176,21 @@ Global options: `--format auto|json|markdown`, `--login-method`, `--raw`, `--com
 Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in · `4` login halted.
 
 </details>
+
+## Desktop app
+
+Prefer a window? `parro-client-gui` does what the command line does, on Windows, macOS and Linux. It
+needs **Python 3.12 or newer**, and Qt, which adds about 300 MB:
+
+```bash
+pipx install "parro-api-client[gui]"
+parro-client-gui
+```
+
+<img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/desktop-app.png" width="800" alt="The desktop app showing the Calendar section: a list of calendar items, the details of a school trip, its attachment, buttons to answer the invitation and to sign up as a helper. Invented example data.">
+
+There is no web server or open port, and text from others stays text. It shares its login, cache and
+archive with the command line. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
 
 ## Changing things in Parro
 

@@ -4,6 +4,23 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.10.0] - unreleased
+
+A desktop app: `parro-client-gui` does what the command line does, in a window on Windows, macOS and
+Linux. It is optional, and it needs Python 3.12 or newer. The command line and the MCP server do not
+change and keep working on Python 3.10 or newer.
+
+### Added
+- **`parro-client-gui`**, installed with `pipx install "parro-api-client[gui]"`: an overview,
+  announcements with attachments, the calendar, chats, your family's details and the local archive.
+- It shares its login, cache and archive with the command line.
+- The four changes the client can make are all there, and need a click on **Confirm** in a dialog that
+  shows exactly what would happen. Nothing changes because you opened or read something.
+- `docs/DESKTOP-APP.md` explains it.
+
+### Changed
+- `sync_archive` can report its progress, for the desktop app. The command line behaves as before.
+
 ## [0.9.0] - 2026-11-09
 
 Say whether you are coming: `rsvp` answers a calendar item's invitation with accept, decline or

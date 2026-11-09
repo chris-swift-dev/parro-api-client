@@ -16,7 +16,7 @@ links, or names and messages from a real Parro account. Use invented data, like 
 
 ## What is in scope
 
-- This repository: `parro/`, `parro_cli.py`, `parro_mcp.py`, the release archives, the packages on
+- This repository: `parro/`, `parro_gui/`, `parro_cli.py`, `parro_mcp.py`, the release archives, the packages on
   PyPI (`parro-api-client`), the GitHub
   Actions workflows and the published OpenAPI spec.
 - For example: a token, password or download link that ends up in a log, a file or an error
@@ -33,6 +33,10 @@ links, or names and messages from a real Parro account. Use invented data, like 
   answer that is sent twice by the client on its own; a way for an MCP tool to read the list of
   everyone an invitation went to (`GET /calendaritem/{id}/calendaritemrsvp`); the text of a message that ends up in a log or a file; a way
   around the lockout latch ([docs/LOGIN.md](docs/LOGIN.md)).
+
+For the desktop app, also: a change made without a click on Confirm (or the question for marking as
+read), a script or remote resource from Parro's content that gets loaded, and a link that opens
+without showing its address first.
 
 The risk that text in Parro steers an assistant while `PARRO_ALLOW_SEND_CHAT=1`,
 `PARRO_ALLOW_HELPER_SIGNUP=1` or `PARRO_ALLOW_RSVP=1` is on is known and described in the README
