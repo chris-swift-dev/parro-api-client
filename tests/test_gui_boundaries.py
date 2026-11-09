@@ -23,7 +23,7 @@ def test_the_core_never_imports_qt_or_the_app():
 
 def test_the_app_never_talks_to_the_network_itself():
     """Every request goes through parro.operations and ParroClient."""
-    for path in sorted((ROOT / "parro_gui").glob("*.py")):
+    for path in sorted((ROOT / "parro_gui").rglob("*.py")):
         assert not NETWORK.search(path.read_text(encoding="utf-8")), path.name
 
 

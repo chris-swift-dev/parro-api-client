@@ -41,7 +41,7 @@ Documentation = "https://chris-swift-dev.github.io/parro-api-client/"
 
 [tool.setuptools]
 # The client and the desktop app; parro_cli.py / parro_mcp.py are only for release archives.
-packages = ["parro", "parro_gui"]
+packages = ["parro", "parro_gui", "parro_gui.views"]
 
 [project.optional-dependencies]
 attachments = ["pymupdf", "pypdf", "pillow"]

@@ -12,10 +12,12 @@ from typing import Any
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal, Slot
 
 from parro.api_client import ParroClient
-from parro.errors import ParroError
+from parro.errors import CredentialsRejected, LoginHalted, NotLoggedIn, ParroError
 from parro.settings import Settings
 
 log = logging.getLogger("parro_gui")
+# The core's own messages name CLI commands, which mean nothing in a window.
+LOG_IN_AGAIN = "You are not logged in. Use the Log in button at the bottom right."
 
 Task = Callable[[ParroClient], Any]
 Done = Callable[[Any], None]
@@ -41,6 +43,10 @@ class _Job(QRunnable):
         value, error = None, None
         try:
             value = self.task(self.worker.client())
+        except CredentialsRejected as problem:
+            error = str(problem)
+        except (NotLoggedIn, LoginHalted):
+            error = LOG_IN_AGAIN
         except ParroError as problem:
             error = str(problem)
         except Exception as unexpected:  # keep running: one broken call must not end the app

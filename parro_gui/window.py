@@ -12,7 +12,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QMainWindow,
-    QMessageBox,
     QPushButton,
     QSplitter,
     QStackedWidget,
@@ -26,9 +25,15 @@ from parro.rendering import format_timestamp
 from parro.settings import Settings
 
 from .login import LoginDialog
+from .views.agenda import AgendaSection
+from .views.base import LOG_IN_FIRST, Section
+from .views.chats import ChatsSection
+from .views.family import FamilySection
+from .views.news import NewsSection
+from .views.overview import OverviewSection
+from .widgets import APP_NAME, ask
 from .worker import Worker
 
-APP_NAME = "Parro"
 SECTIONS = ("Overview", "Announcements", "Calendar", "Chats", "Family", "Archive")
 CHECKING_LOGIN = "Checking the login…"
 LOGIN_HALTED = "Login stopped after a rejected password. Check it, then log in."
@@ -58,35 +63,35 @@ def is_logged_in(status: dict[str, Any]) -> bool:
     return describe_login(status).startswith("Logged in")
 
 
-def ask(parent: QWidget, question: str) -> bool:
-    """A yes/no question. No is the default."""
-    no = QMessageBox.StandardButton.No
-    answer = QMessageBox.question(
-        parent, APP_NAME, question, QMessageBox.StandardButton.Yes | no, no
-    )
-    return answer == QMessageBox.StandardButton.Yes
-
-
 class MainWindow(QMainWindow):
     def __init__(self, make_client: Callable[[Settings], ParroClient] = ParroClient) -> None:
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} {__version__}")
         self.resize(1000, 680)
         self.worker = Worker(make_client, self)
+        self.logged_in = False
         self.sections = QListWidget()
         self.sections.addItems(SECTIONS)
         self.sections.setMaximumWidth(220)
         self.pages = QStackedWidget()
+        self.views: dict[str, Section] = {
+            "Overview": OverviewSection(self.worker),
+            "Announcements": NewsSection(self.worker),
+            "Calendar": AgendaSection(self.worker),
+            "Chats": ChatsSection(self.worker),
+            "Family": FamilySection(self.worker),
+        }
         for name in SECTIONS:
-            self.pages.addWidget(self._placeholder(name))
-        self.sections.currentRowChanged.connect(self.pages.setCurrentIndex)
+            self.pages.addWidget(self.views.get(name) or self._placeholder(name))
+        for view in self.views.values():
+            view.reset(LOG_IN_FIRST)
+        self.sections.currentRowChanged.connect(self._section_chosen)
         self.sections.setCurrentRow(0)
         splitter = QSplitter()
         splitter.addWidget(self.sections)
         splitter.addWidget(self.pages)
         splitter.setStretchFactor(1, 1)
         self.setCentralWidget(splitter)
-        self.logged_in = False
         self.login_dialog: LoginDialog | None = None
         self._offered_login = False
         self.account_button = QPushButton("Log in")
@@ -105,12 +110,25 @@ class MainWindow(QMainWindow):
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         return label
 
+    def _section_chosen(self, row: int) -> None:
+        self.pages.setCurrentIndex(row)
+        self._load_current()
+
+    def _load_current(self) -> None:
+        view = self.views.get(SECTIONS[self.pages.currentIndex()])
+        if view is not None and self.logged_in:
+            view.ensure_loaded()
+
     def refresh_login(self) -> None:
         self.worker.submit(operations.auth_status, self._show_login, self.statusBar().showMessage)
 
     def _show_login(self, status: dict[str, Any]) -> None:
         self.statusBar().showMessage(describe_login(status))
-        self.logged_in = is_logged_in(status)
+        was_logged_in, self.logged_in = self.logged_in, is_logged_in(status)
+        if self.logged_in != was_logged_in:
+            for view in self.views.values():
+                view.reset("" if self.logged_in else LOG_IN_FIRST)
+            self._load_current()
         self.account_button.setText("Log out" if self.logged_in else "Log in")
         if not self.logged_in and not self._offered_login:
             self._offered_login = True

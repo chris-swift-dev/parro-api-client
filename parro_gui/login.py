@@ -7,8 +7,7 @@ Nothing retries, and the password is never stored: it goes straight to `operatio
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QUrl, Signal
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QDialog,
     QFormLayout,
@@ -23,6 +22,7 @@ from PySide6.QtWidgets import (
 from parro import operations
 from parro.api_client import ParroClient
 
+from .widgets import open_url
 from .worker import Worker
 
 LOCKOUT_WARNING = (
@@ -36,10 +36,6 @@ BROWSER_STEPS = (
     "a code works only once.\n"
     "3. Paste it here."
 )
-
-
-def open_url(address: str) -> bool:
-    return QDesktopServices.openUrl(QUrl(address))
 
 
 class LoginDialog(QDialog):
