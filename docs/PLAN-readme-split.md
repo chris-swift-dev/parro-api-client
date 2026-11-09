@@ -1,6 +1,6 @@
 # Plan 11: splitting the README again
 
-*Status: planned (2026-11-09); decisions taken in §6. No phase started yet.*
+*Status: phase 1 done (2026-11-09); decisions taken in §6.*
 
 **Goal:** the README answers "what is this, what does it promise, and how do I start?", and links to
 the rest. It goes from 544 lines to about 300. **Moving, not rewriting:** the text stays as it is,
@@ -61,7 +61,7 @@ about 40 lines to the middle of the page.
 | Point | What to do |
 | --- | --- |
 | The README is also the PyPI page | Links to the new documents use full GitHub addresses, as the current `docs/` links do. Links within a document stay `#anchors` |
-| Release archives ship `docs/` files by name | Add the three new documents to `INCLUDED_FILES` in `tools/build_release.py`, or downloads have dead links |
+| Release archives ship `docs/` files by name | Add the three new documents to `INCLUDED_FILES` in `tools/build_release.py`. The README's full addresses keep working from a download, but the relative links between shipped documents do not, and a guide should come with the download |
 | Links into sections that move | `SECURITY.md` (3), `docs/CONFIGURATION.md` (4), and the README's own 11. `docs/LOGIN.md` links to *Logging in*, which stays |
 | Pictures | `tests/test_readme_images.py` and the swagger picture keep working; no picture moves |
 | Spec text | Nothing in `tools/build_spec.py` points at the moved sections |
@@ -70,7 +70,8 @@ about 40 lines to the middle of the page.
 
 - A committed link test (today's link check is a throwaway script): every relative link and `#anchor`
   in tracked Markdown resolves, and every `blob/main/...` address in the README names a tracked file.
-- A test that every document the README links to is in `INCLUDED_FILES`.
+- A test that the guides the README links to are in `INCLUDED_FILES`, apart from an explicit list of
+  developer documents, and that relative links in shipped documents stay inside the archive.
 
 **A content check for this one change:** every sentence of the old README is found in the new README or
 one of the new documents, except a written list of the ones deliberately merged in §2. It is a
@@ -80,7 +81,7 @@ throwaway script; its result goes in the PR description.
 
 | # | Phase | Done when |
 | --- | --- | --- |
-| 1 | **The guards:** the link test and the archive test, passing on today's files | tests pass |
+| 1 | ✅ **The guards:** the link test and the archive test, passing on today's files | tests pass |
 | 2 | **`docs/CHANGING-THINGS.md`:** move the four sections, state the shared rules once; README table and combined warning | content check; links pass |
 | 3 | **`docs/MCP.md` and `docs/CALENDAR-AND-ARCHIVE.md`;** the rest of the README trimmed per §2 | content check; links pass; README about 300 lines |
 | 4 | **Links and packaging:** `SECURITY.md`, `CONFIGURATION.md`, `CODE-TOUR`, `INCLUDED_FILES`; a look at the result on GitHub and with `twine check` | release archive holds the new files; rendering checked |
