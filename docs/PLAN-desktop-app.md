@@ -1,6 +1,6 @@
 # Plan 12: a cross-platform desktop app
 
-*Status: phases 1–7 done (2026-11-09). A real window has opened on Linux only; Windows and macOS are
+*Status: phases 1–7 done (2026-11-10). A real window has opened on Linux and macOS; Windows is
 covered by offscreen tests in CI. Decisions taken in §8.*
 
 **Goal:** `parro-client-gui`, a desktop app for Windows, macOS and Linux that does what the CLI does,
