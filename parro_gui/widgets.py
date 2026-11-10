@@ -6,6 +6,8 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QTextBrowser, QWidget
 
+from .theme import document_css
+
 APP_NAME = "Parro"
 OPENABLE_SCHEMES = ("http", "https")
 
@@ -45,6 +47,17 @@ class SafeTextBrowser(QTextBrowser):
         self.setOpenLinks(False)
         self.setOpenExternalLinks(False)
         self.anchorClicked.connect(self._follow)
+        self._html = ""
+        self.document().setDefaultStyleSheet(document_css())
+
+    def setHtml(self, text: str) -> None:  # noqa: N802 (Qt's name)
+        self._html = text
+        super().setHtml(text)
+
+    def restyle(self) -> None:
+        """The theme changed: show the same text in the new colours."""
+        self.document().setDefaultStyleSheet(document_css())
+        super().setHtml(self._html)
 
     def loadResource(self, _type: int, _name: QUrl | str) -> Any:  # noqa: N802 (Qt's name)
         return None  # no remote images, no local files

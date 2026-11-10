@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -120,6 +121,7 @@ class ListDetailSection(Section):
         self._wanted_row = 0
         self.list = QListWidget()
         self.list.setWordWrap(True)
+        self.list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.list.currentRowChanged.connect(self._row_chosen)
         self.detail = SafeTextBrowser()
         self.side = QWidget()

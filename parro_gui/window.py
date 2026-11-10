@@ -5,7 +5,7 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QSize, QTimer
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -23,6 +23,7 @@ from parro.rendering import format_timestamp
 from parro.settings import Settings
 
 from .login import LoginDialog
+from .theme import apply_theme
 from .views.agenda import AgendaSection
 from .views.archive import ArchiveSection
 from .views.base import LOG_IN_FIRST, Section
@@ -34,6 +35,7 @@ from .widgets import APP_NAME, ask
 from .worker import Worker
 
 SECTIONS = ("Overview", "Announcements", "Calendar", "Chats", "Family", "Archive")
+SECTION_ROW_HEIGHT = 36
 CHECKING_LOGIN = "Checking the login…"
 LOGIN_HALTED = "Login stopped after a rejected password. Check it, then log in."
 LOGIN_EXPIRED = "Your login has expired. A login lasts up to 8 hours."
@@ -70,8 +72,12 @@ class MainWindow(QMainWindow):
         self.worker = Worker(make_client, self)
         self.logged_in = False
         self.sections = QListWidget()
+        self.sections.setObjectName("sections")
         self.sections.addItems(SECTIONS)
-        self.sections.setMaximumWidth(220)
+        self.sections.setFixedWidth(190)
+        self.sections.setSpacing(1)
+        for row in range(self.sections.count()):
+            self.sections.item(row).setSizeHint(QSize(0, SECTION_ROW_HEIGHT))
         self.pages = QStackedWidget()
         self.views: dict[str, Section] = {
             "Overview": OverviewSection(self.worker),
@@ -166,6 +172,7 @@ def main(argv: list[str]) -> int:
     logging.basicConfig(level=logging.WARNING, format="[parro-gui] %(message)s", stream=sys.stderr)
     application = QApplication(argv)
     application.setApplicationName(APP_NAME)
+    apply_theme(application)
     window = MainWindow()
     window.show()
     code = application.exec()

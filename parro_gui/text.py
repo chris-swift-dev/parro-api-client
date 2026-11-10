@@ -38,7 +38,7 @@ def subheading(text: object) -> str:
 def meta(*parts: object) -> str:
     """A small grey line: 'Tue 3 Nov 2026 · Groep 6'. Empty parts are left out."""
     shown = " · ".join(html.escape(str(part)) for part in parts if part not in (None, ""))
-    return f'<p style="color: gray;">{shown}</p>' if shown else ""
+    return f'<p class="meta">{shown}</p>' if shown else ""
 
 
 def paragraph(text: object) -> str:

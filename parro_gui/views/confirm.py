@@ -37,6 +37,7 @@ class ConfirmDialog(QDialog):
         self.message.setTextFormat(Qt.TextFormat.PlainText)
         self.message.setWordWrap(True)
         self.confirm_button = QPushButton(confirm_label)
+        self.confirm_button.setProperty("confirm", True)  # the one coloured button (see theme.py)
         self.cancel_button = QPushButton("Cancel")
         # Enter must not do it: only a deliberate click on Confirm does.
         self.confirm_button.setAutoDefault(False)
