@@ -155,5 +155,6 @@ the owner in the app's login dialog. One real write, chosen by the owner. Person
 | Overview, Announcements, Calendar, Chats, Family, Archive | OK: the owner reports that all of them look right and work on real data |
 | One write: sending a text message to a chat | OK, as reported by the owner, through the preview dialog and Confirm |
 | Closing the window | OK: exit code 0 |
-| Not checked live | Marking as read from the app (nothing was unread), signing up, withdrawing and answering an invitation from the app (the same core calls as the command line, checked live there), a timeout, and **a real window on Windows** (CI runs the tests there without a display) |
+| Not checked live | Marking as read from the app (nothing was unread), signing up, withdrawing and answering an invitation from the app (the same core calls as the command line, checked live there) and a timeout |
 | macOS, on the owner's computer (2026-11-10) | OK: installed from the branch; the owner reports it looks and works the same as on Linux |
+| Windows, in a virtual machine (2026-11-10) | OK: the owner installed Python and the app from scratch, and reports it looks and works the same as on Linux and macOS |
