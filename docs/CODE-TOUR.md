@@ -158,6 +158,11 @@ late, and showing errors. `views/confirm.py` is the dialog in front of every cha
 its Confirm button stays off, so a write that may have arrived is never repeated from there.
 `text.py` escapes everything written by others before it is displayed.
 
+How it looks is in `theme.py`: the colours for light and dark, and one stylesheet built on them, which
+follows the system's setting. `tests/test_gui_theme.py` checks the contrast of those colours.
+`views/rows.py` draws the list rows, from the same two lines of text the views produce. The sidebar's
+icons are in `icon_files/`, and `icons.py` colours them for the theme.
+
 It needs Python 3.12 (`app.py`): before that, PySide6 can crash the interpreter
 (`docs/PLAN-desktop-app.md` §9).
 

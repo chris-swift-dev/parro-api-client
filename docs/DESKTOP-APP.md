@@ -66,6 +66,11 @@ The app can change the same four things as the command line:
 - The calendar subscription link and privacy links work without logging in, so they are only
   fetched when you ask, and stay in their own dialog.
 
+## Light and dark
+
+The app follows your system's light or dark setting, also when you change it while the app is open.
+It looks the same on Windows, macOS and Linux, and text uses your system's font size.
+
 ## Good to know
 
 - Requests run one at a time, so other sections wait while a sync is running. Stopping the sync frees

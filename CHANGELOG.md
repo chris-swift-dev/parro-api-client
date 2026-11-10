@@ -14,6 +14,8 @@ change and keep working on Python 3.10 or newer.
 - **`parro-client-gui`**, installed with `pipx install "parro-api-client[gui]"`: an overview,
   announcements with attachments, the calendar, chats, your family's details and the local archive.
 - It shares its login, cache and archive with the command line.
+- It follows your system's light or dark setting. The sidebar's icons are from Lucide (ISC licence),
+  and their licence comes with the app.
 - The four changes the client can make are all there, and need a click on **Confirm** in a dialog that
   shows exactly what would happen. Nothing changes because you opened or read something.
 - `docs/DESKTOP-APP.md` explains it.

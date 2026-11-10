@@ -187,10 +187,13 @@ pipx install "parro-api-client[gui]"
 parro-client-gui
 ```
 
-<img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/desktop-app.png" width="800" alt="The desktop app showing the Calendar section: a list of calendar items, the details of a school trip, its attachment, buttons to answer the invitation and to sign up as a helper. Invented example data.">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/desktop-app-dark.png">
+  <img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/desktop-app-light.png" width="800" alt="The desktop app showing the Calendar section: a sidebar with icons, a list of calendar items with labels, the details of a school trip, its attachment, and buttons to answer the invitation and to sign up as a helper. Invented example data.">
+</picture>
 
-There is no web server or open port, and text from others stays text. It shares its login, cache and
-archive with the command line. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
+It follows your system's light or dark setting. There is no web server or open port, and text from
+others stays text. It shares its login, cache and archive with the command line. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
 
 ## Changing things in Parro
 
@@ -359,9 +362,11 @@ Inspired by **[fobatai/parro-mcp](https://github.com/fobatai/parro-mcp)**, a rea
 Parro by fobatai. Its working login and API calls were the starting point for this follow-up. The
 client here is an independent implementation based on the OpenAPI specification in this repository.
 
+The desktop app's icons are from [Lucide](https://lucide.dev) ([ISC licence](https://github.com/chris-swift-dev/parro-api-client/blob/main/parro_gui/icon_files/LICENSE)).
+
 ## License
 
-- **Code** (`parro/`, `parro_cli.py`, `parro_mcp.py`, `tests/`, `tools/`): [MIT](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE-CODE).
+- **Code** (`parro/`, `parro_gui/`, `parro_cli.py`, `parro_mcp.py`, `tests/`, `tools/`): [MIT](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE-CODE).
 - **Specification and documentation** (`openapi/`, `docs/`, the README files):
   [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)
   (see [`LICENSE`](https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE)). You may share and adapt them for any purpose, provided you give

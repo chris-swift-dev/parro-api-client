@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw docs/images/desktop-app.png: the desktop app with the invented data of the test suite.
+"""Draw docs/images/desktop-app-{light,dark}.png: the desktop app with the test suite's invented data.
 
 Needs Qt (`pip install -r requirements-gui.txt`) and no display, and never contacts Parro.
     python3 tools/make_desktop_picture.py
@@ -23,6 +23,7 @@ def main() -> int:
 
     from parro import operations
     from parro.api_client import ParroClient
+    from parro_gui import theme
     from parro_gui.window import SECTIONS, MainWindow
     from tests import fakes
     from tests.conftest import load_sample
@@ -42,6 +43,7 @@ def main() -> int:
     os.environ.update(PARRO_TOKEN_FILE=str(tokens), PARRO_DATA_DIR=str(folder / "data"))
     operations.current_time = lambda: datetime(2026, 11, 3, 9, 0, tzinfo=timezone.utc)
     application = QApplication([])
+    theme.apply_theme(application)
     api = fakes.FakeParroApi(load_sample)
     window = MainWindow(lambda settings: ParroClient(settings, transport=api))
     window.resize(1100, 700)
@@ -54,9 +56,15 @@ def main() -> int:
     for _ in range(40):
         application.processEvents()
         time.sleep(0.005)
-    target = ROOT / "docs" / "images" / "desktop-app.png"
-    window.grab().save(str(target))
-    print(f"wrote {target.relative_to(ROOT)}")
+    for mode in ("light", "dark"):
+        theme.is_dark = lambda chosen=mode: chosen == "dark"
+        theme.refresh(application)
+        for _ in range(40):
+            application.processEvents()
+            time.sleep(0.005)
+        target = ROOT / "docs" / "images" / f"desktop-app-{mode}.png"
+        window.grab().save(str(target))
+        print(f"wrote {target.relative_to(ROOT)}")
     dispose(window)
     application.shutdown()
     return 0
