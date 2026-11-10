@@ -50,5 +50,10 @@ def bullets(lines: list[str]) -> str:
     return "<ul>" + "".join(f"<li>{safe_html(line)}</li>" for line in lines) + "</ul>"
 
 
+def placeholder(text: object) -> str:
+    """A quiet line in the middle of an empty pane."""
+    return f'<p class="meta" align="center"><br><br>{html.escape(str(text))}</p>'
+
+
 def document(*blocks: str) -> str:
     return "".join(block for block in blocks if block)

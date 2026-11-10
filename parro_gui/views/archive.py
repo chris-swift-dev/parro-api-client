@@ -14,13 +14,14 @@ from parro.operations import SyncOptions
 from parro.rendering import format_size, join_parts, plural
 
 from .. import widgets
-from ..text import bullets, document, heading, meta, subheading
+from ..text import bullets, document, heading, meta, placeholder, subheading
 from ..widgets import SafeTextBrowser
 from ..worker import Worker
 from .base import Section
 
 STOPPED = "Stopped. What was saved stays, and nothing was marked as gone. Run it again to finish."
 KINDS = {"announcement": "Announcements", "calendar": "Calendar items", "chat": "Chats"}
+NOT_SYNCED = "Sync now keeps a copy of everything your account can see in this folder."
 CLEAR_QUESTION = "Empty the cache? Attachments are downloaded again when you next read them."
 
 
@@ -77,6 +78,7 @@ class ArchiveSection(Section):
         self.cache_label = QLabel()
         self.clear_button = QPushButton("Empty the cache…")
         self.report = SafeTextBrowser()
+        self.report.setHtml(placeholder(NOT_SYNCED))
         self.add_filter(self.choose_button)
         self.add_filter(self.open_button)
         self.main.addWidget(self.folder_label)
@@ -175,6 +177,6 @@ class ArchiveSection(Section):
         self._stop.set()
 
     def clear(self) -> None:
-        self.report.clear()
+        self.report.setHtml(placeholder(NOT_SYNCED))
         self.status.clear()
         self.cache_label.clear()

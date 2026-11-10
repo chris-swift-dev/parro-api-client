@@ -77,8 +77,10 @@ class ActionBar(QWidget):
     def __init__(self, section: "AgendaSection") -> None:
         super().__init__(section)
         self.section = section
+        widgets.make_card(self)
+        self.setVisible(False)
         self.rows = QVBoxLayout(self)
-        self.rows.setContentsMargins(0, 0, 0, 0)
+        self.rows.setContentsMargins(*widgets.CARD_MARGINS)
         self.rsvp_buttons: dict[str, QPushButton] = {}
         self.slot_rows: list[tuple[QSpinBox, QPushButton, QPushButton]] = []
 
@@ -89,6 +91,7 @@ class ActionBar(QWidget):
             if widget is not None:
                 widget.deleteLater()
         self.rsvp_buttons, self.slot_rows = {}, []
+        self.setVisible(False)
 
     def show_actions(self, item: dict[str, Any]) -> None:
         self.clear()
@@ -97,6 +100,7 @@ class ActionBar(QWidget):
             self._add_rsvp_row(event_id)
         for slot in (item.get("details") or {}).get("helpers") or []:
             self._add_slot_row(event_id, slot)
+        self.setVisible(bool(self.rsvp_buttons or self.slot_rows))
 
     def _add_rsvp_row(self, event_id: Any) -> None:
         row, layout = self._row()
@@ -147,6 +151,7 @@ class ActionBar(QWidget):
 class AgendaSection(ListDetailSection):
     def __init__(self, worker: Worker, parent: QWidget | None = None) -> None:
         super().__init__(worker, parent)
+        self.empty_text = "Nothing in the calendar for this choice."
         self.group = QComboBox()
         self.group.addItem("All groups", None)
         self.past = QCheckBox("Earlier items")

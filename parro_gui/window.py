@@ -9,11 +9,12 @@ from PySide6.QtCore import QSize, QTimer
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QApplication,
+    QHBoxLayout,
     QListWidget,
     QMainWindow,
     QPushButton,
-    QSplitter,
     QStackedWidget,
+    QWidget,
 )
 
 from parro import __version__, operations
@@ -92,15 +93,18 @@ class MainWindow(QMainWindow):
         }
         for name in SECTIONS:
             self.pages.addWidget(self.views[name])
-        for view in self.views.values():
+        for name, view in self.views.items():
+            view.set_title(name)
             view.reset(LOG_IN_FIRST)
         self.sections.currentRowChanged.connect(self._section_chosen)
         self.sections.setCurrentRow(0)
-        splitter = QSplitter()
-        splitter.addWidget(self.sections)
-        splitter.addWidget(self.pages)
-        splitter.setStretchFactor(1, 1)
-        self.setCentralWidget(splitter)
+        central = QWidget()
+        layout = QHBoxLayout(central)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self.sections)
+        layout.addWidget(self.pages, 1)
+        self.setCentralWidget(central)
         self.login_dialog: LoginDialog | None = None
         self._offered_login = False
         self.account_button = QPushButton("Log in")

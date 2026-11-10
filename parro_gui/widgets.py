@@ -2,14 +2,15 @@
 
 from typing import Any
 
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QTextBrowser, QWidget
+from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QMessageBox, QTextBrowser, QWidget
 
 from .theme import document_css
 
 APP_NAME = "Parro"
 OPENABLE_SCHEMES = ("http", "https")
+CARD_MARGINS = (10, 8, 10, 8)
 
 
 def open_url(address: str) -> bool:
@@ -39,6 +40,21 @@ def choose_folder(parent: QWidget | None) -> str:
     return QFileDialog.getExistingDirectory(parent, "Save in which folder?")
 
 
+def right_aligned(*items: QWidget) -> QHBoxLayout:
+    """A row with its widgets at the right-hand side."""
+    row = QHBoxLayout()
+    row.addStretch(1)
+    for item in items:
+        row.addWidget(item)
+    return row
+
+
+def make_card(widget: QWidget) -> None:
+    """Give a widget the panel look of the theme (`#card`)."""
+    widget.setObjectName("card")
+    widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+
+
 class SafeTextBrowser(QTextBrowser):
     """Shows text from others: loads nothing by itself, and links go to the browser after asking."""
 
@@ -53,6 +69,10 @@ class SafeTextBrowser(QTextBrowser):
     def setHtml(self, text: str) -> None:  # noqa: N802 (Qt's name)
         self._html = text
         super().setHtml(text)
+
+    def clear(self) -> None:
+        self._html = ""  # or a later theme change would bring it back, also after logging out
+        super().clear()
 
     def restyle(self) -> None:
         """The theme changed: show the same text in the new colours."""

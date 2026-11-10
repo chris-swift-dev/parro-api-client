@@ -18,6 +18,7 @@ from parro.operations import ChatFilter
 from parro.rendering import format_timestamp, full_name_of, join_parts, member_role, message_text
 
 from ..text import document, heading, meta, paragraph
+from ..widgets import right_aligned
 from ..worker import Worker
 from .base import ListDetailSection
 from .previews import chat_preview
@@ -54,6 +55,7 @@ def conversation_html(room: dict[str, Any], messages: Any, members: Any) -> str:
 class ChatsSection(ListDetailSection):
     def __init__(self, worker: Worker, parent: QWidget | None = None) -> None:
         super().__init__(worker, parent)
+        self.empty_text = "No chats for this choice."
         self.unread = QCheckBox("Unread only")
         self.archived = QComboBox()
         for label, value in (
@@ -84,7 +86,7 @@ class ChatsSection(ListDetailSection):
         self.send_button.setEnabled(False)
         self.send_button.clicked.connect(self.send)
         self.side_layout.addWidget(self.compose)
-        self.side_layout.addWidget(self.send_button)
+        self.side_layout.addLayout(right_aligned(self.send_button))
 
     def make_task(self) -> Callable[[ParroClient], Any]:
         year = None if self.year.value() == NO_YEAR else self.year.value()

@@ -66,8 +66,10 @@ class AttachmentBar(QWidget):
         self.worker = worker
         self.report_problem = report_problem
         self.dialog: ReadingDialog | None = None
+        widgets.make_card(self)
+        self.setVisible(False)
         self.rows = QVBoxLayout(self)
-        self.rows.setContentsMargins(0, 0, 0, 0)
+        self.rows.setContentsMargins(*widgets.CARD_MARGINS)
         self.read_buttons: list[QPushButton] = []
         self.save_buttons: list[QPushButton] = []
 
@@ -75,6 +77,7 @@ class AttachmentBar(QWidget):
         self.clear()
         for attachment in attachments:
             self._add_row(event_id, attachment)
+        self.setVisible(bool(attachments))
 
     def clear(self) -> None:
         while self.rows.count():
@@ -83,6 +86,7 @@ class AttachmentBar(QWidget):
             if widget is not None:
                 widget.deleteLater()
         self.read_buttons, self.save_buttons = [], []
+        self.setVisible(False)
 
     def _add_row(self, event_id: Any, attachment: dict[str, Any]) -> None:
         row = QWidget()

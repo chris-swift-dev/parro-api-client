@@ -1,6 +1,6 @@
 # Plan 13: a more modern look for the desktop app
 
-*Status: phases 1–2 built (2026-11-10); decisions taken in §6.*
+*Status: phases 1–3 built (2026-11-10); decisions taken in §6.*
 
 **Goal:** the app looks like a current desktop app, in light and dark, with nothing lost in safety or
 behaviour. Today it uses Qt's default widgets without any styling, and plain text rows.
@@ -61,7 +61,7 @@ stays visible. Sizes are in points, so the system's font size is respected.
 | --- | --- | --- |
 | 1 | ✅ **Theme:** tokens, stylesheet, Fusion, following light and dark | every dialog and section styled; contrast test passes |
 | 2 | ✅ **Rows and sidebar:** drawn rows, labels, icons | tests: rows show the same information as now |
-| 3 | **Layout, cards, dialogs, empty states** | all sections and dialogs checked in both themes |
+| 3 | ✅ **Layout, cards, dialogs, empty states** | all sections and dialogs checked in both themes |
 | 4 | **Look at it on real screens:** Linux and macOS, with you | you are happy with it |
 | 5 | **Docs and picture**, then release | new picture, light and dark |
 

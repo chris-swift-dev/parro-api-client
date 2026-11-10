@@ -64,6 +64,9 @@ QStatusBar {{ background: {background}; color: {muted}; border-top: 1px solid {l
 QStatusBar::item {{ border: none; }}
 QSplitter::handle {{ background: transparent; }}
 
+QLabel#sectionTitle {{ font-size: 16pt; font-weight: 600; }}
+#card {{ background: {surface}; border: 1px solid {line}; border-radius: 10px; }}
+
 QListWidget#sections {{
     background: {sidebar}; border: none; padding: 10px 8px; outline: none;
 }}

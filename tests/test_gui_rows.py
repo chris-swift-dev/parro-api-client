@@ -13,7 +13,7 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 QtWidgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
 from PySide6.QtGui import QImage, QPainter  # noqa: E402
-from PySide6.QtWidgets import QListWidget, QStyleOptionViewItem  # noqa: E402
+from PySide6.QtWidgets import QApplication, QListWidget, QStyleOptionViewItem  # noqa: E402
 
 from parro import operations  # noqa: E402
 from parro.api_client import ParroClient  # noqa: E402
@@ -176,3 +176,49 @@ def test_a_message_from_parro_is_shown_as_plain_text(window):
     from PySide6.QtCore import Qt
 
     assert window.views["Calendar"].notice.textFormat() == Qt.TextFormat.PlainText
+
+
+# ------------------------------------------------------------------------------- the layout
+
+
+def test_the_sidebar_sits_directly_against_the_content(window):
+    window.resize(1100, 700)
+    window.show()
+    settled = window.pages.geometry().left() - window.sections.geometry().right()
+    assert settled <= 1
+
+
+def test_every_section_has_its_title(window):
+    assert [window.views[name].title.text() for name in SECTIONS] == list(SECTIONS)
+
+
+def chosen(view: Any, text: str) -> None:
+    view.list.setCurrentRow(
+        next(i for i in range(view.list.count()) if text in view.list.item(i).text())
+    )
+    for _ in range(40):
+        QApplication.processEvents()
+        time.sleep(0.002)
+
+
+def test_cards_appear_only_when_there_is_something_in_them(window):
+    view = agenda(window)
+    chosen(view, "Natuurmuseum")
+    assert not view.action_bar.isHidden() and not view.attachments.isHidden()
+    chosen(view, "Studiedag")
+    assert view.action_bar.isHidden() and view.attachments.isHidden()
+
+
+def test_an_empty_list_says_so_in_the_pane(window):
+    view = agenda(window)
+    view.show_result({"calendar": {"items": []}, "groups": None})
+    assert view.empty_text in view.detail.toPlainText()
+
+
+def test_what_was_cleared_does_not_come_back_with_the_theme(window):
+    view = agenda(window)
+    chosen(view, "Natuurmuseum")
+    assert "Natuurmuseum" in view.detail.toPlainText()
+    view.reset("")
+    view.detail.restyle()
+    assert view.detail.toPlainText() == ""

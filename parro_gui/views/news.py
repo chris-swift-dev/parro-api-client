@@ -40,6 +40,7 @@ def announcement_html(item: dict[str, Any]) -> str:
 class NewsSection(ListDetailSection):
     def __init__(self, worker: Worker, parent: QWidget | None = None) -> None:
         super().__init__(worker, parent)
+        self.empty_text = "No announcements for this choice."
         self.source = QComboBox()
         self.source.addItem("All groups", None)
         self.source.addItem("News from Parro", PARRO_NEWS)

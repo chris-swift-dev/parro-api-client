@@ -33,11 +33,12 @@ def unread_line(counts: list[dict[str, Any]]) -> str:
 class OverviewSection(ListDetailSection):
     def __init__(self, worker: Worker, parent: QWidget | None = None) -> None:
         super().__init__(worker, parent)
+        self.empty_text = "Nothing new. You are up to date."
         self.everything = QCheckBox("Everything, read or not")
         self.add_filter(self.everything)
         self.everything.toggled.connect(self.load)
         self.counts = QLabel()
-        self.main.insertWidget(1, self.counts)
+        self.main.insertWidget(2, self.counts)
 
     def make_task(self) -> Callable[[ParroClient], Any]:
         unread_only = not self.everything.isChecked()

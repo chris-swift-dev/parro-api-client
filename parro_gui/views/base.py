@@ -18,8 +18,8 @@ from parro import operations
 from parro.api_client import ParroClient
 
 from .. import widgets
-from ..text import safe_html
-from ..widgets import SafeTextBrowser
+from ..text import placeholder, safe_html
+from ..widgets import SafeTextBrowser, right_aligned
 from ..worker import Worker
 from .confirm import ConfirmDialog
 from .rows import RowDelegate
@@ -27,6 +27,9 @@ from .rows import RowDelegate
 LOADING = "Loading…"
 EMPTY = "Nothing to show."
 LOG_IN_FIRST = "Log in to see this."
+NOTHING_CHOSEN = "Nothing to show here."
+SECTION_MARGINS = (20, 14, 20, 12)
+LIST_WIDTH = 330
 MARK_READ_QUESTION = "Mark this as read? The school can see that you did."
 
 
@@ -43,17 +46,29 @@ class Section(QWidget):
         self.notice = QLabel()
         self.notice.setTextFormat(Qt.TextFormat.PlainText)
         self.notice.setWordWrap(True)
+        self.title = QLabel()
+        self.title.setObjectName("sectionTitle")
+        self.title.setTextFormat(Qt.TextFormat.PlainText)
         self.refresh_button = QPushButton("Refresh")
         self.refresh_button.clicked.connect(self.load)
+        header = QHBoxLayout()
+        header.addWidget(self.title)
+        header.addStretch(1)
+        header.addWidget(self.refresh_button)
         self.filters = QHBoxLayout()
         self.filters.addStretch(1)
-        self.filters.addWidget(self.refresh_button)
         self.main = QVBoxLayout(self)
+        self.main.setContentsMargins(*SECTION_MARGINS)
+        self.main.setSpacing(8)
+        self.main.addLayout(header)
         self.main.addLayout(self.filters)
         self.main.addWidget(self.notice)
 
     def add_filter(self, widget: QWidget) -> None:
-        self.filters.insertWidget(self.filters.count() - 2, widget)
+        self.filters.insertWidget(self.filters.count() - 1, widget)
+
+    def set_title(self, title: str) -> None:
+        self.title.setText(title)
 
     def make_task(self) -> Callable[[ParroClient], Any]:
         """Read the filters here, on the window's thread; the task itself must not touch widgets."""
@@ -120,6 +135,7 @@ class ListDetailSection(Section):
     def __init__(self, worker: Worker, parent: QWidget | None = None) -> None:
         super().__init__(worker, parent)
         self.items: list[Any] = []
+        self.empty_text = NOTHING_CHOSEN
         self._detail_generation = 0
         self._wanted_row = 0
         self.list = QListWidget()
@@ -132,11 +148,15 @@ class ListDetailSection(Section):
         self.side = QWidget()
         self.side_layout = QVBoxLayout(self.side)
         self.side_layout.setContentsMargins(0, 0, 0, 0)
-        self.side_layout.addWidget(self.detail)
+        self.side_layout.setSpacing(8)
+        self.side_layout.addWidget(self.detail, 1)
         splitter = QSplitter()
+        splitter.setHandleWidth(12)
+        splitter.setChildrenCollapsible(False)
         splitter.addWidget(self.list)
         splitter.addWidget(self.side)
-        splitter.setStretchFactor(1, 2)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([LIST_WIDTH, 700])
         self.main.addWidget(splitter, 1)
 
     def rows(self, result: Any) -> list[tuple[str, Any]]:
@@ -156,8 +176,10 @@ class ListDetailSection(Section):
             self.list.item(row).setToolTip(f"<p>{safe_html(text)}</p>")
         if rows:
             self.list.setCurrentRow(min(self._wanted_row, len(rows) - 1))
-        elif not self.notice.text():
-            self.notice.setText(EMPTY)
+        else:
+            self.detail.setHtml(placeholder(self.empty_text))
+            if not self.notice.text():
+                self.notice.setText(EMPTY)
         self._wanted_row = 0
 
     def clear(self) -> None:
@@ -180,7 +202,7 @@ class ListDetailSection(Section):
     def add_mark_button(self) -> QPushButton:
         button = QPushButton("Mark as read")
         button.setEnabled(False)
-        self.side_layout.addWidget(button)
+        self.side_layout.addLayout(right_aligned(button))
         return button
 
     def mark_read(self, kind: str, item_id: Any) -> None:
