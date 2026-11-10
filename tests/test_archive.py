@@ -279,3 +279,37 @@ def test_helper_slots_are_archived_and_older_archives_are_updated_once(tmp_path)
     result = sync(tmp_path, make_api())
     assert result["calendar"]["written"] == 1 and result["calendar"]["unchanged"] == 8
     assert sync(tmp_path, make_api())["calendar"]["written"] == 0
+
+
+def logged_in_client(tmp_path: Path) -> ParroClient:
+    settings = Settings(
+        role_override="GUARDIAN:1", data_dir=tmp_path / "data", token_file=tmp_path / "tokens.json"
+    )
+    client = ParroClient(settings, transport=make_api())
+    client.token_store.save_token_response({"access_token": fakes.ACCESS_TOKEN})
+    return client
+
+
+def test_the_sync_says_what_it_is_doing(tmp_path):
+    heard: list[str] = []
+    client = logged_in_client(tmp_path)
+    operations.sync_archive(client, operations.SyncOptions(tmp_path / "archive"), heard.append)
+    assert "Reading the announcements" in heard and "Reading the chats" in heard
+    assert any(text.startswith("Calendar item 1 of") for text in heard)
+
+
+def test_a_sync_that_is_stopped_marks_nothing_as_gone(tmp_path):
+    class Stop(Exception):
+        pass
+
+    def stop_on_the_calendar(what: str) -> None:
+        if what == "Reading the calendar":
+            raise Stop
+
+    target = tmp_path / "archive"
+    client = logged_in_client(tmp_path)
+    operations.sync_archive(client, operations.SyncOptions(target))
+    index = (target / "index.md").read_text(encoding="utf-8")
+    with pytest.raises(Stop):
+        operations.sync_archive(client, operations.SyncOptions(target), stop_on_the_calendar)
+    assert (target / "index.md").read_text(encoding="utf-8") == index

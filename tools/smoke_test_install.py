@@ -6,6 +6,7 @@ Checks what a user gets from `pipx install` / `uv tool install` / `pip install`,
   * `parro-client-mcp tools` lists every MCP tool;
   * `parro-client privacy` without a login exits 3 and says to run `parro-client login`;
   * the MCP server answers `initialize` over stdio with one "\\n"-ended line;
+  * `parro-client-gui` without the `gui` extra says what to install;
   * nothing is written to the (empty, private) home folder.
 Never contacts Parro: there is no login, so every command stops before the network.
 
@@ -20,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import venv
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -95,7 +97,18 @@ def check_commands(scripts: Path, environment: dict[str, str], work: Path) -> li
         problems.append(f"parro-client-mcp: answer not one LF-ended line: {answer[-20:]!r}")
     elif json.loads(answer)["result"]["serverInfo"]["name"] != "parro":
         problems.append("parro-client-mcp: unexpected initialize answer")
+    desktop = run("parro-client-gui")
+    # On Python before 3.12 it says that first; either way it names the extra to install.
+    if desktop.returncode != 2 or b"parro-api-client[gui]" not in desktop.stderr:
+        problems.append(f"parro-client-gui without Qt: exit {desktop.returncode}")
+    packaged = zipfile.ZipFile(wheel_of(work)).namelist() if wheel_of(work) else []
+    if packaged and "parro_gui/icon_files/house.svg" not in packaged:
+        problems.append("the desktop app's icons are not in the wheel")
     return problems
+
+
+def wheel_of(work: Path) -> Path | None:
+    return next(iter(sorted((work / "wheel").glob("*.whl"))), None)
 
 
 if __name__ == "__main__":

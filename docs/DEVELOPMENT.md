@@ -24,6 +24,8 @@ comparison with the original server in `legacy/`) skip without them, as in CI.
 | `tools/build_release.py` | builds the release archives, checksums and notes (`--packages`: with the wheel and sdist) |
 | `tools/smoke_test_install.py` | builds the wheel, installs it into a fresh venv with an empty home, runs both commands |
 | `tools/make_readme_images.py`, `tools/swagger_screenshots.py` | the README pictures |
+| `tools/make_desktop_picture.py` | the pictures of the desktop app, light and dark, from the invented test data |
+| `parro_gui/` | the desktop app (optional: the `gui` extra); its tests need `requirements-gui.txt` and Python 3.12+ |
 | `.github/workflows/ci.yml` | lint and types; tests and the install smoke test on Windows, macOS and Linux, Python 3.10 and 3.14 |
 | `.github/workflows/pages.yml` | validates the spec and deploys Swagger UI to GitHub Pages |
 | `.github/workflows/release.yml` | on a `v*` tag: checks, archives, wheel and sdist, draft GitHub release |

@@ -7,13 +7,26 @@ samples/ and openapi/parro.openapi.json hold redacted real-world data and are gi
 contract test reads them (load_real_sample), and it skips when they are absent.
 """
 
+import gc
 import json
 import sys
+from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 import pytest
+
+# PySide6 crashes the interpreter before Python 3.12 (see parro_gui/app.py), and the app refuses to
+# start there, so its window tests do not run there either.
+collect_ignore = (
+    [
+        f"test_gui_{name}.py"
+        for name in ("app", "local", "login", "rows", "theme", "views", "writes")
+    ]
+    if sys.version_info < (3, 12)
+    else []
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = PROJECT_ROOT / "tests" / "fixtures" / "api"
@@ -63,3 +76,20 @@ def fixed_today(monkeypatch: pytest.MonkeyPatch) -> datetime:
 
     monkeypatch.setattr(operations, "current_time", lambda: FIXED_NOW)
     return FIXED_NOW
+
+
+@pytest.fixture(scope="session")
+def application() -> Iterator[Any]:
+    """The one QApplication of the test run, shut down properly so Qt cannot crash at exit."""
+    from PySide6.QtCore import QCoreApplication, QEvent
+    from PySide6.QtWidgets import QApplication
+
+    existing = QApplication.instance()
+    app = existing if isinstance(existing, QApplication) else QApplication([])
+    yield app
+    for widget in app.topLevelWidgets():
+        widget.close()
+    gc.collect()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    app.processEvents()
+    app.shutdown()

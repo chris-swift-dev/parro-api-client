@@ -1,7 +1,7 @@
 # Configuration
 
-Every setting is an environment variable; the command line and the MCP tools need none of them for
-normal use. Back to the [README](../README.md).
+Every setting is an environment variable; the command line, the desktop app and the MCP tools need
+none of them for normal use. Back to the [README](../README.md).
 
 | Variable | Default |
 | --- | --- |

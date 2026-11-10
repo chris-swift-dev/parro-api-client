@@ -968,12 +968,25 @@ class SyncProgress:
     bytes_saved: int = 0
     photos_not_saved: int = 0
     problems: list[str] = field(default_factory=list)
+    report: Callable[[str], None] | None = None  # told what is being done, item by item
+
+    def note(self, what: str) -> None:
+        if self.report is not None:
+            self.report(what)
 
 
-def sync_archive(client: ParroClient, options: SyncOptions) -> dict[str, Any]:
-    """Write or update the local archive (PLAN-readable-output §3b). Read-only towards Parro."""
+def sync_archive(
+    client: ParroClient,
+    options: SyncOptions,
+    report: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Write or update the local archive (PLAN-readable-output §3b). Read-only towards Parro.
+
+    `report` hears what is being done. If it raises, the run stops there, and the archive keeps
+    what it had: only a run that reaches the end marks items as gone.
+    """
     target = archive.Archive(options.target)
-    progress = SyncProgress()
+    progress = SyncProgress(report=report)
     scope = "previous" if options.previous_year else "current"
     groups = (
         previous_group_names(client) if options.previous_year else client.list_current_group_names()
@@ -1040,8 +1053,11 @@ def sync_announcements(
     options: SyncOptions,
     progress: SyncProgress,
 ) -> None:
+    progress.note("Reading the announcements")
     feed = collect_all_events(client, groups, ANNOUNCEMENT_LIST_DTYPE)
-    for item, names in summaries.merge_duplicates(feed):
+    merged = summaries.merge_duplicates(feed)
+    for number, (item, names) in enumerate(merged, 1):
+        progress.note(f"Announcement {number} of {len(merged)}")
         event_id = get_object_id(item.event)
         if event_id is None:
             continue
@@ -1070,10 +1086,12 @@ def sync_calendar_items(
     options: SyncOptions,
     progress: SyncProgress,
 ) -> None:
+    progress.note("Reading the calendar")
     feed = collect_all_events(client, groups, CALENDAR_LIST_DTYPE)
     ordered = sorted(feed, key=lambda entry: entry.event.get("sortDate") or "")
     entries = summaries.one_per_calendar_item([e for e, _ in summaries.merge_duplicates(ordered)])
-    for entry in entries:
+    for number, entry in enumerate(entries, 1):
+        progress.note(f"Calendar item {number} of {len(entries)}")
         sync_calendar_item(client, target, entry, scope, options, progress)
 
 
@@ -1121,10 +1139,12 @@ def sync_chats(client: ParroClient, target: archive.Archive, progress: SyncProgr
     """Every chat as one file; the messages are fetched only when the chat changed."""
     # The API leaves archived chats out unless asked (spec: `archived`); the archive keeps them all.
     everything = {"archived": "BOTH"}
+    progress.note("Reading the chats")
     rooms = read_all_pages(
         lambda offset: client.list_chatrooms(SYNC_PAGE_SIZE, offset, filters=everything)
     )
-    for room in rooms:
+    for number, room in enumerate(rooms, 1):
+        progress.note(f"Chat {number} of {len(rooms)}")
         room_id = get_object_id(room)
         if room_id is None:
             continue
