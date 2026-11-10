@@ -22,8 +22,9 @@ from parro.errors import ParroError
 from parro.rendering import format_timestamp
 from parro.settings import Settings
 
+from .icons import ICON_SIZE, section_icon
 from .login import LoginDialog
-from .theme import apply_theme
+from .theme import apply_theme, current_colours
 from .views.agenda import AgendaSection
 from .views.archive import ArchiveSection
 from .views.base import LOG_IN_FIRST, Section
@@ -76,8 +77,10 @@ class MainWindow(QMainWindow):
         self.sections.addItems(SECTIONS)
         self.sections.setFixedWidth(190)
         self.sections.setSpacing(1)
+        self.sections.setIconSize(ICON_SIZE)
         for row in range(self.sections.count()):
             self.sections.item(row).setSizeHint(QSize(0, SECTION_ROW_HEIGHT))
+        self.restyle()
         self.pages = QStackedWidget()
         self.views: dict[str, Section] = {
             "Overview": OverviewSection(self.worker),
@@ -109,6 +112,12 @@ class MainWindow(QMainWindow):
         self.login_timer.timeout.connect(self.refresh_login)
         self.login_timer.start()
         self.refresh_login()
+
+    def restyle(self) -> None:
+        """The theme changed: draw the icons in the new colours."""
+        colours = current_colours()
+        for row, name in enumerate(SECTIONS):
+            self.sections.item(row).setIcon(section_icon(name, colours))
 
     def _section_chosen(self, row: int) -> None:
         self.pages.setCurrentIndex(row)

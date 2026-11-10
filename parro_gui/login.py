@@ -7,7 +7,7 @@ Nothing retries, and the password is never stored: it goes straight to `operatio
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QDialog,
     QFormLayout,
@@ -58,6 +58,7 @@ class LoginDialog(QDialog):
         self.finish_button = QPushButton("Finish logging in")
         self.finish_button.setEnabled(False)
         self.message = QLabel()
+        self.message.setTextFormat(Qt.TextFormat.PlainText)
         self.message.setWordWrap(True)
         self.log_in_button.clicked.connect(self.log_in_with_password)
         self.open_button.clicked.connect(self.open_login_page)

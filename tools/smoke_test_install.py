@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import venv
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -100,7 +101,14 @@ def check_commands(scripts: Path, environment: dict[str, str], work: Path) -> li
     # On Python before 3.12 it says that first; either way it names the extra to install.
     if desktop.returncode != 2 or b"parro-api-client[gui]" not in desktop.stderr:
         problems.append(f"parro-client-gui without Qt: exit {desktop.returncode}")
+    packaged = zipfile.ZipFile(wheel_of(work)).namelist() if wheel_of(work) else []
+    if packaged and "parro_gui/icon_files/house.svg" not in packaged:
+        problems.append("the desktop app's icons are not in the wheel")
     return problems
+
+
+def wheel_of(work: Path) -> Path | None:
+    return next(iter(sorted((work / "wheel").glob("*.whl"))), None)
 
 
 if __name__ == "__main__":

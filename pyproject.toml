@@ -13,8 +13,9 @@ name = "parro-api-client"
 version = "0.9.0"
 description = "Parro API client: a standalone CLI, an MCP server and a desktop app sharing one core; reads, and on request marks items as read, sends chat messages, signs up as helper and answers invitations"
 readme = "README.md"
-license = "MIT AND CC-BY-4.0"  # the code is MIT; the README (in every package) and docs CC BY 4.0
-license-files = ["LICENSE-CODE", "LICENSE"]
+# The code is MIT; the README (in every package) and docs CC BY 4.0; the desktop app's icons ISC.
+license = "MIT AND CC-BY-4.0 AND ISC"
+license-files = ["LICENSE-CODE", "LICENSE", "parro_gui/icon_files/LICENSE"]
 requires-python = ">=3.10"
 dependencies = []
 keywords = ["parro", "parnassys", "school", "cli", "mcp", "openapi"]
@@ -42,6 +43,9 @@ Documentation = "https://chris-swift-dev.github.io/parro-api-client/"
 [tool.setuptools]
 # The client and the desktop app; parro_cli.py / parro_mcp.py are only for release archives.
 packages = ["parro", "parro_gui", "parro_gui.views"]
+
+[tool.setuptools.package-data]
+parro_gui = ["icon_files/*"]  # the sidebar's icons and their licence
 
 [project.optional-dependencies]
 attachments = ["pymupdf", "pypdf", "pillow"]

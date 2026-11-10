@@ -5,7 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QPushButton, QWidget
 
 from parro import operations
@@ -63,6 +63,7 @@ class ArchiveSection(Section):
         self._chosen_folder = False
         self._stop = threading.Event()
         self.folder_label = QLabel()
+        self.folder_label.setTextFormat(Qt.TextFormat.PlainText)
         self.choose_button = QPushButton("Choose folder…")
         self.open_button = QPushButton("Open folder")
         self.previous = QCheckBox("Last school year")
@@ -71,6 +72,7 @@ class ArchiveSection(Section):
         self.stop_button = QPushButton("Stop")
         self.stop_button.setEnabled(False)
         self.status = QLabel()
+        self.status.setTextFormat(Qt.TextFormat.PlainText)
         self.status.setWordWrap(True)
         self.cache_label = QLabel()
         self.clear_button = QPushButton("Empty the cache…")

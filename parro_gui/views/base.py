@@ -18,9 +18,11 @@ from parro import operations
 from parro.api_client import ParroClient
 
 from .. import widgets
+from ..text import safe_html
 from ..widgets import SafeTextBrowser
 from ..worker import Worker
 from .confirm import ConfirmDialog
+from .rows import RowDelegate
 
 LOADING = "Loading…"
 EMPTY = "Nothing to show."
@@ -39,6 +41,7 @@ class Section(QWidget):
         self.next_notice = ""  # shown when the next load has finished
         self.confirmation: ConfirmDialog | None = None
         self.notice = QLabel()
+        self.notice.setTextFormat(Qt.TextFormat.PlainText)
         self.notice.setWordWrap(True)
         self.refresh_button = QPushButton("Refresh")
         self.refresh_button.clicked.connect(self.load)
@@ -122,6 +125,8 @@ class ListDetailSection(Section):
         self.list = QListWidget()
         self.list.setWordWrap(True)
         self.list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.list.setItemDelegate(RowDelegate(self.list))
+        self.list.setMouseTracking(True)  # for the hover colour
         self.list.currentRowChanged.connect(self._row_chosen)
         self.detail = SafeTextBrowser()
         self.side = QWidget()
@@ -146,6 +151,9 @@ class ListDetailSection(Section):
         self.clear()
         self.items = [item for _text, item in rows]
         self.list.addItems([text for text, _item in rows])
+        for row, (text, _item) in enumerate(rows):
+            # Rows cut long text short. Escaped, because a tooltip would read HTML in a title.
+            self.list.item(row).setToolTip(f"<p>{safe_html(text)}</p>")
         if rows:
             self.list.setCurrentRow(min(self._wanted_row, len(rows) - 1))
         elif not self.notice.text():
