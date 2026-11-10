@@ -4,7 +4,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
-## [0.10.0] - unreleased
+## [0.10.0] - 2026-11-10
 
 A desktop app: `parro-client-gui` does what the command line does, in a window on Windows, macOS and
 Linux. It is optional, and it needs Python 3.12 or newer. The command line and the MCP server do not
