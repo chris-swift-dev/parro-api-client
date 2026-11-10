@@ -1,6 +1,6 @@
 # Plan 13: a more modern look for the desktop app
 
-*Status: phases 1–5 done (2026-11-10), release with 0.10.0; the owner approved the look; decisions taken in §6.*
+*Status: done (2026-11-10): phases 1–5 merged in #19, released as 0.10.0; the owner approved the look; decisions taken in §6.*
 
 **Goal:** the app looks like a current desktop app, in light and dark, with nothing lost in safety or
 behaviour. Today it uses Qt's default widgets without any styling, and plain text rows.
