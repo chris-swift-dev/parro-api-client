@@ -160,6 +160,12 @@ small task: find out what M8ven needs, for example an entry in the MCP registry 
 | 7 | ✅ **Live check with you:** the two items that broke the layout, switching sections, save all, and logging in by itself **once** (one password check) | in `docs/LIVE-CHECKS.md`; M8ven's report after the push |
 | 8 | Release **0.11.0** | published |
 
+**Added during the release (2026-11-12):** a quick second click on a button that starts a request
+could start it twice. Found by checking every such button after the owner asked; the worst case was
+*Send…*, which opened two previews and could send a message twice. Every such button is now off
+until its answer is in, a section runs one action at a time, and `tests/test_gui_double_clicks.py`
+clicks twice on each kind.
+
 Phase 1 comes first: it is small, it does not touch the app, and M8ven's report can update while we
 work on the rest.
 

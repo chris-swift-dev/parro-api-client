@@ -108,10 +108,10 @@ class NewsSection(ListDetailSection):
     def mark_group(self) -> None:
         """Counts first; only Confirm in the dialog marks them."""
         group_id = self.source.currentData()
-        self.worker.submit(
+        self.run_action(
+            self.group_button,
             lambda client: operations.mark_group_announcements_read(client, group_id),
             lambda counted: self._confirm_group(group_id, counted),
-            self.notice.setText,
         )
 
     def _confirm_group(self, group_id: int, counted: dict[str, Any]) -> None:

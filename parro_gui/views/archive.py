@@ -173,9 +173,7 @@ class ArchiveSection(Section):
 
     def clear_cache(self) -> None:
         if widgets.ask(self, CLEAR_QUESTION):
-            self.worker.submit(
-                operations.cache_clear, lambda _result: self.load(), self.notice.setText
-            )
+            self.run_action(self.clear_button, operations.cache_clear, lambda _result: self.load())
 
     def stop(self) -> None:
         self._stop.set()

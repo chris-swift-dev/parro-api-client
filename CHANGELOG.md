@@ -30,6 +30,11 @@ hints can now be seen by services that read the code instead of running the serv
   code, so services that read the code see them. What clients receive is unchanged.
 
 ### Fixed
+- **A quick second click in the desktop app could send a chat message twice:** two clicks on *Send…*
+  opened two previews, and confirming both sent it twice. Every button that starts a request now stays
+  off until the answer is in, and a section runs one action at a time. The same goes for answers,
+  helper sign-ups, *Mark as read* (which asked twice), *Refresh*, the subscription and privacy links,
+  and reading or saving an attachment.
 - In the desktop app, *Mark as read* and the last answer or helper rows could fall off the bottom of
   the window for an item with a lot in it, and could not be reached.
 - Saving an attachment claims the file name and writes it in one step, so a file that appears in the

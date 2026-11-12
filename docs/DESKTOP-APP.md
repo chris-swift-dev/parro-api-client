@@ -104,6 +104,8 @@ The app can change the same four things as the command line:
   happen, and only **Confirm** does it. Enter does not. Marking as read asks once.
 - After a timeout or a server error the app says it may or may not have gone through, and offers no
   button to try again.
+- A button that starts something stays off until it is done, and a section does one thing at a time,
+  so a quick second click cannot open a second preview or send something twice.
 
 ## What it protects
 

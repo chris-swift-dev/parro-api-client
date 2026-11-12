@@ -109,7 +109,9 @@ class ActionBar(QWidget):
         for answer, word in ANSWER_WORDS.items():
             button = QPushButton(f"{word}…")
             button.clicked.connect(
-                lambda _checked=False, chosen=answer: self.section.answer(event_id, chosen)
+                lambda _checked=False, chosen=answer, clicked=button: self.section.answer(
+                    event_id, chosen, clicked
+                )
             )
             layout.addWidget(button)
             self.rsvp_buttons[answer] = button
@@ -132,9 +134,11 @@ class ActionBar(QWidget):
         withdraw.setEnabled(mine)
         slot_id = slot.get("id")
         signup.clicked.connect(
-            lambda: self.section.change_slot("signup", event_id, slot_id, count.value())
+            lambda: self.section.change_slot("signup", event_id, slot_id, count.value(), signup)
         )
-        withdraw.clicked.connect(lambda: self.section.change_slot("withdraw", event_id, slot_id, 1))
+        withdraw.clicked.connect(
+            lambda: self.section.change_slot("withdraw", event_id, slot_id, 1, withdraw)
+        )
         layout.addWidget(label, 1)
         for widget in (count, signup, withdraw):
             layout.addWidget(widget)
@@ -219,27 +223,27 @@ class AgendaSection(ListDetailSection):
             write_private_file(Path(name), text.encode("utf-8"))
             return int(agenda["count"])
 
-        self.worker.submit(
+        self.run_action(
+            self.export_button,
             task,
             lambda count: self.notice.setText(f"Exported {count} calendar items."),
-            self.notice.setText,
         )
 
     def show_link(self) -> None:
         """A secret: only on request, and never kept or written anywhere."""
         if not widgets.ask(self, LINK_QUESTION):
             return
-        self.worker.submit(operations.calendar_link, self._link_arrived, self.notice.setText)
+        self.run_action(self.link_button, operations.calendar_link, self._link_arrived)
 
     def _link_arrived(self, result: dict[str, Any]) -> None:
         show_secret(self, "Calendar subscription link", result["warning"], result["calendar_link"])
 
-    def answer(self, event_id: Any, answer: str) -> None:
+    def answer(self, event_id: Any, answer: str, button: QPushButton) -> None:
         """Reads first: the preview, or nothing at all if this is already your answer."""
-        self.worker.submit(
+        self.run_action(
+            button,
             lambda client: operations.prepare_rsvp(client, event_id, answer),
             self._confirm_answer,
-            self.notice.setText,
         )
 
     def _confirm_answer(self, prepared: dict[str, Any]) -> None:
@@ -255,13 +259,15 @@ class AgendaSection(ListDetailSection):
             lambda _result: self.reload_here(f"Answered: {word}."),
         )
 
-    def change_slot(self, action: str, event_id: Any, slot_id: Any, count: int) -> None:
-        self.worker.submit(
+    def change_slot(
+        self, action: str, event_id: Any, slot_id: Any, count: int, button: QPushButton
+    ) -> None:
+        self.run_action(
+            button,
             lambda client: operations.prepare_helper_change(
                 client, action, event_id, slot_id, count
             ),
             self._confirm_slot,
-            self.notice.setText,
         )
 
     def _confirm_slot(self, prepared: dict[str, Any]) -> None:

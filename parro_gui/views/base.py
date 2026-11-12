@@ -22,7 +22,7 @@ from .. import widgets
 from ..memory import Kept, Memory
 from ..text import placeholder, safe_html
 from ..widgets import SafeTextBrowser
-from ..worker import Worker
+from ..worker import Worker, submit_from
 from .confirm import ConfirmDialog
 from .rows import RowDelegate
 
@@ -52,6 +52,7 @@ class Section(QWidget):
         self.shown: Kept | None = None  # the answer on screen, kept or fresh
         self._shown_key: tuple[Hashable, ...] | None = None
         self.next_notice = ""  # shown when the next load has finished
+        self._action_running = False
         self.confirmation: ConfirmDialog | None = None
         self.notice = QLabel()
         self.notice.setTextFormat(Qt.TextFormat.PlainText)
@@ -121,6 +122,7 @@ class Section(QWidget):
             self._show(kept, key)
             return
         self.notice.setText(LOADING)
+        self.refresh_button.setEnabled(False)  # on again when this answer is in
         self.worker.submit(
             self.make_task(),
             lambda result: self._arrived(generation, key, result),
@@ -145,6 +147,7 @@ class Section(QWidget):
         self.loaded = False
         self._generation += 1  # an answer still on its way is out of date
         self.shown, self._shown_key = None, None
+        self.refresh_button.setEnabled(True)
         self.fetched.clear()
         self.clear()
         self.notice.setText(message)
@@ -159,6 +162,7 @@ class Section(QWidget):
             self._show(kept, key)
 
     def _show(self, kept: Kept, key: tuple[Hashable, ...] | None) -> None:
+        self.refresh_button.setEnabled(True)
         self.notice.setText(self.next_notice)
         self.next_notice = ""
         self.shown, self._shown_key = kept, key
@@ -167,7 +171,33 @@ class Section(QWidget):
 
     def _failed(self, generation: int, text: str) -> None:
         if generation == self._generation:
+            self.refresh_button.setEnabled(True)
             self.notice.setText(text)
+
+    def run_action(
+        self,
+        button: QPushButton,
+        task: Callable[[ParroClient], Any],
+        done: Callable[[Any], None],
+        keep_off: bool = False,
+    ) -> None:
+        """A request started by a button: one at a time per section.
+
+        While it runs, its button is off and every other action of the section waits, so a quick
+        second click (on the same button or another one) cannot open a second preview.
+        """
+        if self._action_running:
+            return
+
+        def finished(value: Any) -> None:
+            self._action_running = False
+            done(value)
+
+        def failed(text: str) -> None:
+            self._action_running = False
+            self.notice.setText(text)
+
+        self._action_running = submit_from(self.worker, button, task, finished, failed, keep_off)
 
     def ask_to_confirm(
         self,
@@ -302,6 +332,7 @@ class ListDetailSection(Section):
         button = QPushButton("Mark as read")
         button.setEnabled(False)
         self.add_action(button)
+        self.mark_button = button
         return button
 
     def add_action(self, button: QPushButton) -> None:
@@ -381,12 +412,14 @@ class ListDetailSection(Section):
         """Only ever from a button, and it asks first: the school sees it."""
         if not widgets.ask(self, MARK_READ_QUESTION):
             return
-        self.worker.submit(
+        # Stays off after it worked: the reload that follows decides whether there is more to mark.
+        self.run_action(
+            self.mark_button,
             lambda client: operations.mark_read(client, kind, item_id),
             lambda result: self.reload_here(
                 "Marked as read." if result.get("marked_read") else "It was already read."
             ),
-            self.notice.setText,
+            keep_off=True,
         )
 
     def fetch_detail(self, task: Callable[[ParroClient], Any], done: Callable[[Any], None]) -> None:

@@ -9,7 +9,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+import shiboken6
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal, Slot
+from PySide6.QtWidgets import QAbstractButton
 
 from parro.api_client import ParroClient
 from parro.errors import CredentialsRejected, LoginHalted, NotLoggedIn, ParroError
@@ -107,3 +109,38 @@ class Worker(QObject):
             outcome.failed(outcome.error)
         else:
             outcome.done(outcome.value)
+
+
+def submit_from(
+    worker: Worker,
+    button: QAbstractButton,
+    task: Task,
+    done: Done,
+    failed: Failed,
+    keep_off: bool = False,
+) -> bool:
+    """Run a request a button started; the button stays off until the answer is in.
+
+    A second click meanwhile would start the same thing again: a second preview dialog, and with it
+    a second message. `keep_off`: leave it off after success too, for a button whose state the
+    reload that follows decides. Returns False when the button was already off.
+    """
+    if not button.isEnabled():
+        return False
+    button.setEnabled(False)
+
+    def back_on() -> None:
+        if shiboken6.isValid(button):  # rows are rebuilt after a reload
+            button.setEnabled(True)
+
+    def finished(value: Any) -> None:
+        if not keep_off:
+            back_on()
+        done(value)
+
+    def problem(text: str) -> None:
+        back_on()
+        failed(text)
+
+    worker.submit(task, finished, problem)
+    return True

@@ -106,10 +106,10 @@ class FamilySection(Section):
         child_id = self.child.currentData()
         if child_id is None or not widgets.ask(self, LINK_QUESTION):
             return
-        self.worker.submit(
+        self.run_action(
+            self.link_button,
             lambda client: operations.privacy_link(client, child_id),
             lambda result: show_secret(
                 self, "Privacy page link", result["warning"], result["privacy_link"]
             ),
-            self.notice.setText,
         )

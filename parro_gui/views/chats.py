@@ -121,10 +121,10 @@ class ChatsSection(ListDetailSection):
         if room is None:
             return
         room_id, text = room.get("id"), self.compose.toPlainText()
-        self.worker.submit(
+        self.run_action(
+            self.send_button,
             lambda client: operations.prepare_chat_message(client, room_id, text),
             self._confirm_send,
-            self.notice.setText,
         )
 
     def _confirm_send(self, prepared: dict[str, Any]) -> None:

@@ -22,7 +22,7 @@ from parro.rendering import format_size
 
 from .. import widgets
 from ..text import document, meta, paragraph
-from ..worker import Worker
+from ..worker import Worker, submit_from
 
 # A newsletter is long, but a window should not try to show a whole book.
 MAX_CHARS = 300_000
@@ -128,8 +128,8 @@ class AttachmentBar(QWidget):
         label.setText(name)
         read, save = QPushButton("Read"), QPushButton("Save…")
         attachment_id = attachment.get("attachment_id")
-        read.clicked.connect(lambda: self.read(event_id, attachment_id))
-        save.clicked.connect(lambda: self.save(event_id, attachment_id))
+        read.clicked.connect(lambda: self.read(event_id, attachment_id, read))
+        save.clicked.connect(lambda: self.save(event_id, attachment_id, save))
         layout.addWidget(label, 1)
         layout.addWidget(read)
         layout.addWidget(save)
@@ -137,9 +137,11 @@ class AttachmentBar(QWidget):
         self.read_buttons.append(read)
         self.save_buttons.append(save)
 
-    def read(self, event_id: Any, attachment_id: Any) -> None:
+    def read(self, event_id: Any, attachment_id: Any, button: QPushButton) -> None:
         options = ReadOptions(max_chars=MAX_CHARS, include_images=True)
-        self.worker.submit(
+        submit_from(
+            self.worker,
+            button,
             lambda client: operations.read_attachments(
                 client, event_id=event_id, attachment_id=attachment_id, options=options
             ),
@@ -151,12 +153,14 @@ class AttachmentBar(QWidget):
         self.dialog = ReadingDialog(report, self)
         self.dialog.open()
 
-    def save(self, event_id: Any, attachment_id: Any) -> None:
+    def save(self, event_id: Any, attachment_id: Any, button: QPushButton) -> None:
         folder = widgets.choose_folder(self)
         if not folder:
             return
         options = ReadOptions(max_chars=1, include_images=False, save_directory=Path(folder))
-        self.worker.submit(
+        submit_from(
+            self.worker,
+            button,
             lambda client: operations.read_attachments(
                 client, event_id=event_id, attachment_id=attachment_id, options=options
             ),
