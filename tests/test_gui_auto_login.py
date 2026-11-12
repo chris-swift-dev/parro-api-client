@@ -244,7 +244,11 @@ def test_the_password_is_never_written_or_logged(start, api, remembered, data_di
         window = start()
         wait_until(lambda: window.logged_in)
     stored = (data_dir / auto_login.FILE_NAME).read_text(encoding="utf-8")
-    assert fakes.CORRECT_PASSWORD not in stored and str(remembered) in stored
+    assert fakes.CORRECT_PASSWORD not in stored
+    # Read back as JSON: on Windows the path's backslashes are escaped in the file.
+    assert json.loads(stored) == {
+        "auto_login": {"username": fakes.USERNAME, "password_file": str(remembered)}
+    }
     assert fakes.CORRECT_PASSWORD not in caplog.text
     if os.name != "nt":
         assert stat.S_IMODE((data_dir / auto_login.FILE_NAME).stat().st_mode) == 0o600
