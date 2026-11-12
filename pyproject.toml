@@ -69,7 +69,7 @@ requires = ["PySide6-Essentials==6.12.0", "pypdf==6.21.4", "pillow==13.0.0"]
 icon = "packaging/icon"
 
 [tool.briefcase.app.parro-gui.macOS]
-min_os_version = "13.0"  # PySide6 6.10 and newer
+min_os_version = "14.0"  # PySide6 6.12's wheels are built for macOS 14 and newer
 universal_build = true
 requires = ["std-nslog~=2.0.0"]  # print() and logging reach macOS's Console
 

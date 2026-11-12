@@ -52,11 +52,11 @@ each system's format, and a few lines of configuration.
 | System | File | Processors |
 | --- | --- | --- |
 | Windows 10 and 11 | `Parro-0.12.0.msi` | x64 |
-| macOS 13 or newer | `Parro-0.12.0.dmg` | Apple silicon and Intel: one universal file if the Qt wheels allow it, else two |
+| macOS 14 or newer | `Parro-0.12.0.dmg` | Apple silicon and Intel: one universal file if the Qt wheels allow it, else two |
 | Linux | `Parro-0.12.0-x86_64.flatpak`, `…-aarch64.flatpak` | x86_64, aarch64 |
 
 - **The size** will be roughly 60–100 MB each. A whole Python and Qt are inside.
-- **macOS 13** because PySide6 6.10 and newer needs it.
+- **macOS 14** because the wheels of PySide6 6.12 are built for it (found in phase 4).
 - **The command-line client and the MCP server are not in these files.** They stay with `pipx`, as
   now. People who use a terminal or an AI assistant already have Python.
 - **The attachment libraries:** pypdf and Pillow are bundled, so PDFs and photos show text and size.
@@ -200,10 +200,11 @@ automatic updates; that is a separate step, not part of 0.12.0.
   (`parro_gui/desktop_font.py`). Measured: Noto Sans 10, 13 px, the same as outside the sandbox.
 - **Installing a newer bundle over an older one:** a plain `flatpak install` of a bundle that is
   already installed stops with "already installed", also with `--or-update`. `--reinstall` replaces it
-  and keeps the app's data (the login); it works for a first install too. The command in the
-  instructions is `flatpak install --user --reinstall Parro-Client-….flatpak`, and
-  tools/build_installer.py uses the same. The live check tries a double-click in the software centre
-  over an older version.
+  on Flatpak 1.18 (Fedora 44) but not on 1.14 (Ubuntu 24.04, found in phase 4). What always works:
+  `flatpak uninstall --user io.github.chrisswiftdev.parro-gui` (the login stays), then
+  `flatpak install --user Parro-Client-….flatpak`; tools/build_installer.py does that. The
+  instructions give it, and the live check tries a double-click in the software centre over an
+  older version.
 - **Size:** an 86 MB download, 370 MB installed (with KDE's runtime shared with other apps).
 - **The self-check passes** in the installed Flatpak.
 

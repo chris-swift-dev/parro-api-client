@@ -132,11 +132,12 @@ def self_check_macos(folder: Path) -> None:
 
 
 def self_check_flatpak(bundle: Path, folder: Path) -> None:
-    # --reinstall: installing a bundle that is already installed otherwise stops ("already
-    # installed"), also with --or-update. It keeps the app's data (the login), and works for a first
-    # install too; it is the command the install instructions give.
-    install = ["flatpak", "install", "--user", "--reinstall", "-y", "--noninteractive"]
-    run_or_stop([*install, str(bundle)], folder)
+    # `briefcase build` has installed the app already. Installing a bundle over an installed copy
+    # stops with "already installed" (with --or-update too, and with --reinstall on Flatpak 1.14), so
+    # the copy goes first; its data (the login) stays. Then the bundle, as people install it.
+    quiet = ["-y", "--noninteractive"]
+    run(["flatpak", "uninstall", "--user", *quiet, FLATPAK_ID], folder)
+    run_or_stop(["flatpak", "install", "--user", *quiet, str(bundle)], folder)
     result = run(["flatpak", "run", "--user", FLATPAK_ID, "--self-check"], folder)
     checked(result, bundle.name, need_text=True)
 
