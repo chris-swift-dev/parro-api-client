@@ -30,6 +30,8 @@ Windows console cannot print the markers otherwise), records the program's name 
 `Settings.from_environment()` (`parro/settings.py`). Command-line flags such as `--login-method`
 override them through `Settings.with_overrides()`. It creates a `ParroClient` and calls the handler
 for the command, here `operations.list_announcements(client, group_id=None, limit=5, ...)`.
+The one exception is `completion bash|zsh|fish`: it prints a tab completion script that
+`parro/completion.py` makes from the same parser, before any settings are read or a client exists.
 
 `parro/mcp_server.py` does the same per `tools/call` message. `McpServer.call_tool()` looks the tool up in
 `TOOL_FUNCTIONS` and calls the same `operations` function. That is why CLI output and MCP output are
@@ -170,7 +172,7 @@ It needs Python 3.12 (`app.py`): before that, PySide6 can crash the interpreter
 
 | …you want to | look at |
 | --- | --- |
-| add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro/cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` / `TOOL_HINTS` in `parro/mcp_server.py` |
+| add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro/cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` in `parro/mcp_server.py` (with the hints in the tool definition itself) |
 | change how something looks | `parro/rendering.py`, then `UPDATE_SNAPSHOTS=1 .venv/bin/pytest tests/test_rendering.py` and read the diff in `tests/snapshots/` |
 | call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`); GET only: a new write needs a decision first, see the four kinds of write in step 3 and `SECURITY.md` |
 | change output fields | `parro/summaries.py` (keep existing field names: clients depend on them) |

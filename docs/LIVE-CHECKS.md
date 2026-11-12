@@ -158,3 +158,17 @@ the owner in the app's login dialog. One real write, chosen by the owner. Person
 | Not checked live | Marking as read from the app (nothing was unread), signing up, withdrawing and answering an invitation from the app (the same core calls as the command line, checked live there) and a timeout |
 | macOS, on the owner's computer (2026-11-10) | OK: installed from the branch; the owner reports it looks and works the same as on Linux |
 | Windows, in a virtual machine (2026-11-10) | OK: the owner installed Python and the app from scratch, and reports it looks and works the same as on Linux and macOS |
+
+## Live check (2026-11-12, release 0.11.0: a better desktop app)
+
+The account owner ran the app from the branch on a real display (Linux, Python 3.14) and reported
+what they saw. The previous login had expired. **One password check**, made by the app on its own
+from a private password file that the owner had created. No writes. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| Logging in by itself at start | OK: with the e-mail address and the file's path remembered in `desktop-app.json` (mode 600; only those two fields, no password), the app logged in on its own with no dialog, and the status bar said so. The two failed token refreshes before it were logged without any token (`invalid_grant`); the new login lasts 8 hours, and the command line sees it |
+| The two items that broke the layout before | OK: *Mark as read* can be reached without scrolling, the attachments and the helper rows scroll, the line between the text and the lower part can be dragged, and nothing leaves the window |
+| Switching sections and filters | OK: going back within 5 minutes is instant, "Fetched at" shows the time, and **Refresh** loads again |
+| *Save all attachments…* | OK: every file saved into an empty folder, with the report; saving again into the same folder kept the first copies and added numbered ones |
+| Not checked live | Logging in by itself when the login expires while the app is open, the latch after a rejected password, the dialog's box for remembering (each would cost another password check; covered by tests against the fake login server), and the effect on M8ven's report (after the merge) |

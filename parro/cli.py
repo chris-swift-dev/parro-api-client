@@ -21,7 +21,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from parro import icalendar, naming, operations
+from parro import completion, icalendar, naming, operations
 from parro.api_client import ParroClient
 from parro.attachments import ReadOptions
 from parro.cache import write_private_file
@@ -128,6 +128,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     add_login_commands(command)
     add_reading_commands(command)
+    shells = command("completion", "print a tab completion script for your shell (see README)")
+    shells.add_argument("shell", choices=completion.SHELLS, help="bash, zsh or fish")
     return parser
 
 
@@ -655,7 +657,11 @@ def main(
     make_client: Callable[[Settings], ParroClient] = ParroClient,
 ) -> int:
     """Run one command and return its exit code. Tests pass `make_client` with a fake transport."""
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.command == "completion":  # no settings, no client: it only prints a script
+        print(completion.script(args.shell, naming.cli_name(), parser), end="")
+        return EXIT_OK
     configure_logging(args.verbose)
     try:
         settings = Settings.from_environment().with_overrides(

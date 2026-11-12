@@ -88,6 +88,14 @@ class ChatsSection(ListDetailSection):
         self.side_layout.addWidget(self.compose)
         self.side_layout.addLayout(right_aligned(self.send_button))
 
+    def memory_key(self) -> tuple[Any, ...]:
+        return (
+            self.unread.isChecked(),
+            self.archived.currentData(),
+            self.kind.currentData(),
+            self.year.value(),
+        )
+
     def make_task(self) -> Callable[[ParroClient], Any]:
         year = None if self.year.value() == NO_YEAR else self.year.value()
         chats = ChatFilter(
@@ -113,10 +121,10 @@ class ChatsSection(ListDetailSection):
         if room is None:
             return
         room_id, text = room.get("id"), self.compose.toPlainText()
-        self.worker.submit(
+        self.run_action(
+            self.send_button,
             lambda client: operations.prepare_chat_message(client, room_id, text),
             self._confirm_send,
-            self.notice.setText,
         )
 
     def _confirm_send(self, prepared: dict[str, Any]) -> None:

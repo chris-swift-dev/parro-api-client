@@ -23,8 +23,10 @@ from parro.errors import ParroError
 from parro.rendering import format_timestamp
 from parro.settings import Settings
 
+from . import auto_login
 from .icons import ICON_SIZE, section_icon
 from .login import LoginDialog
+from .memory import Memory
 from .theme import apply_theme, current_colours
 from .views.agenda import AgendaSection
 from .views.archive import ArchiveSection
@@ -42,6 +44,7 @@ CHECKING_LOGIN = "Checking the login…"
 LOGIN_HALTED = "Login stopped after a rejected password. Check it, then log in."
 LOGIN_EXPIRED = "Your login has expired. A login lasts up to 8 hours."
 LOGIN_CHECK_INTERVAL_MS = 60_000
+LOGGING_IN_BY_ITSELF = "Logging in by itself, with the password file…"
 
 
 def describe_login(status: dict[str, Any]) -> str:
@@ -71,7 +74,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} {__version__}")
         self.resize(1000, 680)
-        self.worker = Worker(make_client, self)
+        self.worker = Worker(make_client, self, settings=self.settings)
         self.logged_in = False
         self.sections = QListWidget()
         self.sections.setObjectName("sections")
@@ -91,8 +94,10 @@ class MainWindow(QMainWindow):
             "Family": FamilySection(self.worker),
             "Archive": ArchiveSection(self.worker),
         }
+        self.memory = Memory()  # one for all sections: a change in one makes all of it doubtful
         for name in SECTIONS:
             self.pages.addWidget(self.views[name])
+            self.views[name].memory = self.memory
         for name, view in self.views.items():
             view.set_title(name)
             view.reset(LOG_IN_FIRST)
@@ -107,6 +112,10 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         self.login_dialog: LoginDialog | None = None
         self._offered_login = False
+        # One automatic login per expiry: allowed again only after a login that worked, and not
+        # after logging out on purpose.
+        self._may_log_in_by_itself = True
+        self._logged_in_by_itself = ""
         self.account_button = QPushButton("Log in")
         self.account_button.clicked.connect(self._log_in_or_out)
         self.statusBar().addPermanentWidget(self.account_button)
@@ -135,15 +144,55 @@ class MainWindow(QMainWindow):
     def refresh_login(self) -> None:
         self.worker.submit(operations.auth_status, self._show_login, self.statusBar().showMessage)
 
+    @staticmethod
+    def settings() -> Settings:
+        return auto_login.app_settings()
+
     def _show_login(self, status: dict[str, Any]) -> None:
-        self.statusBar().showMessage(describe_login(status))
+        line = describe_login(status)
+        if self._logged_in_by_itself and is_logged_in(status):
+            line = f"{line} · {self._logged_in_by_itself}"
+        self.statusBar().showMessage(line)
         was_logged_in, self.logged_in = self.logged_in, is_logged_in(status)
+        if self.logged_in:
+            self._may_log_in_by_itself = True
+        elif self._can_log_in_by_itself(status):
+            self._log_in_by_itself()
+            return
         if self.logged_in != was_logged_in:
+            self.memory.forget()
             for view in self.views.values():
                 view.reset("" if self.logged_in else LOG_IN_FIRST)
             self._load_current()
         self.account_button.setText("Log out" if self.logged_in else "Log in")
         if not self.logged_in and not self._offered_login:
+            self._offered_login = True
+            self.show_login_dialog()
+
+    def _can_log_in_by_itself(self, status: dict[str, Any]) -> bool:
+        if not self._may_log_in_by_itself or status.get("automatic_login_halted"):
+            return False
+        try:
+            return self.settings().has_credentials()
+        except ParroError:
+            return False
+
+    def _log_in_by_itself(self) -> None:
+        """One attempt; the core refuses it while the latch is set, and never clears it."""
+        self._may_log_in_by_itself = False
+        self.statusBar().showMessage(LOGGING_IN_BY_ITSELF)
+        self.worker.submit(auto_login.log_in, self._logged_in_itself, self._not_logged_in_itself)
+
+    def _logged_in_itself(self, status: dict[str, Any]) -> None:
+        self._logged_in_by_itself = (
+            f"logged in by itself at {operations.current_time().astimezone():%H:%M}"
+        )
+        self._show_login(status)
+
+    def _not_logged_in_itself(self, text: str) -> None:
+        self._logged_in_by_itself = ""
+        self.statusBar().showMessage(text)
+        if not self._offered_login:
             self._offered_login = True
             self.show_login_dialog()
 
@@ -155,9 +204,20 @@ class MainWindow(QMainWindow):
 
     def show_login_dialog(self) -> None:
         if self.login_dialog is None:
-            self.login_dialog = LoginDialog(self.worker, self._configured_username(), self)
-            self.login_dialog.logged_in.connect(self._show_login)
+            try:
+                data_dir = Settings.from_environment().data_dir
+            except ParroError:
+                data_dir = None
+            remembered = auto_login.load_remembered(data_dir) if data_dir else None
+            self.login_dialog = LoginDialog(
+                self.worker, self._configured_username(), self, data_dir, remembered
+            )
+            self.login_dialog.logged_in.connect(self._logged_in_by_hand)
         self.login_dialog.open()
+
+    def _logged_in_by_hand(self, status: dict[str, Any]) -> None:
+        self._logged_in_by_itself = ""
+        self._show_login(status)
 
     def _log_in_or_out(self) -> None:
         if not self.logged_in:
@@ -167,6 +227,9 @@ class MainWindow(QMainWindow):
             self.worker.submit(operations.logout, self._logged_out, self._logout_failed)
 
     def _logged_out(self, _result: dict[str, Any]) -> None:
+        # Logged out on purpose: no logging in by itself until a login by hand.
+        self._may_log_in_by_itself = False
+        self._logged_in_by_itself = ""
         self.account_button.setEnabled(True)
         self.refresh_login()
 

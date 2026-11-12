@@ -13,7 +13,7 @@ from parro.rendering import format_date, format_timestamp, join_parts
 from ..text import document, heading, meta, paragraph
 from ..worker import Worker
 from .attachments import AttachmentBar
-from .base import ListDetailSection
+from .base import ListDetailSection, fetched_text
 from .previews import group_read_preview
 
 MAX_ITEMS = 50
@@ -27,13 +27,14 @@ def announcement_row(item: dict[str, Any]) -> str:
     return f"{title}\n{join_parts([format_date(item.get('date')), item.get('author')])}"
 
 
-def announcement_html(item: dict[str, Any]) -> str:
+def announcement_html(item: dict[str, Any], fetched: str = "") -> str:
     counts = item.get("readCount") or {}
     read = f"read by {counts['read']} of {counts['total']}" if counts.get("total") else ""
     return document(
         heading(item.get("title") or "(no title)"),
         meta(format_timestamp(item.get("date")), item.get("author"), read),
         paragraph(item.get("contents")),
+        meta(fetched),
     )
 
 
@@ -50,7 +51,8 @@ class NewsSection(ListDetailSection):
         self.source.activated.connect(self.load)
         self.unread_only.toggled.connect(self.load)
         self.attachments = AttachmentBar(worker, self.notice.setText)
-        self.side_layout.addWidget(self.attachments)
+        self.add_to_panel(self.attachments)
+        self.add_action(self.attachments.save_all_button)
         self.mark_button = self.add_mark_button()
         self.mark_button.clicked.connect(self._mark_current)
         self.group_button = QPushButton("Mark this group as read…")
@@ -59,6 +61,9 @@ class NewsSection(ListDetailSection):
         self.add_filter(self.group_button)
         self.source.currentIndexChanged.connect(self._source_changed)
         self._groups_added = False
+
+    def memory_key(self) -> tuple[Any, ...]:
+        return (self.source.currentData(), self.unread_only.isChecked())
 
     def make_task(self) -> Callable[[ParroClient], Any]:
         source, unread = self.source.currentData(), self.unread_only.isChecked()
@@ -103,10 +108,10 @@ class NewsSection(ListDetailSection):
     def mark_group(self) -> None:
         """Counts first; only Confirm in the dialog marks them."""
         group_id = self.source.currentData()
-        self.worker.submit(
+        self.run_action(
+            self.group_button,
             lambda client: operations.mark_group_announcements_read(client, group_id),
             lambda counted: self._confirm_group(group_id, counted),
-            self.notice.setText,
         )
 
     def _confirm_group(self, group_id: int, counted: dict[str, Any]) -> None:
@@ -138,14 +143,19 @@ class NewsSection(ListDetailSection):
             )
             return
         listed = item["announcement"]
+        key = ("announcement", listed.get("id"))
+        kept = self.memory.get(key)
+        if kept is not None:
+            self._show_full(kept.result, fetched_text(kept))
+            return
         self.detail.setHtml(announcement_html(listed))
         self.fetch_detail(
             lambda client: operations.show_announcement(client, listed.get("id")),
-            self._show_full,
+            lambda full: self._show_full(full, fetched_text(self.memory.put(key, full))),
         )
 
-    def _show_full(self, full: dict[str, Any]) -> None:
-        self.detail.setHtml(announcement_html(full))
+    def _show_full(self, full: dict[str, Any], fetched: str = "") -> None:
+        self.detail.setHtml(announcement_html(full, fetched))
         self.attachments.show_attachments(full.get("id"), full.get("attachments") or [])
 
     def clear(self) -> None:

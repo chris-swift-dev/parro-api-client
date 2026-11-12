@@ -194,17 +194,20 @@ def test_a_rejected_password_shows_that_login_stopped(window, api, token_file):
 
 
 def test_the_periodic_check_never_spends_a_password(application, make_client, api, monkeypatch):
+    """With a password configured, the app logs in by itself once (test_gui_auto_login.py). The
+    checks every minute after that spend nothing, also when that one attempt was rejected."""
     monkeypatch.setenv("PARRO_USERNAME", fakes.USERNAME)
-    monkeypatch.setenv("PARRO_PASSWORD", fakes.CORRECT_PASSWORD)
+    monkeypatch.setenv("PARRO_PASSWORD", WRONG_PASSWORD)
     window = MainWindow(make_client)
-    wait_until(lambda: status_of(window) == "Not logged in")
+    wait_until(lambda: len(api.idp.credential_posts()) == 1)
     for _ in range(3):
         window.refresh_login()
         QApplication.processEvents()
+    wait_until(lambda: status_of(window) == LOGIN_HALTED)
     time.sleep(0.05)
     for _ in range(30):
         QApplication.processEvents()
-    assert api.idp.credential_posts() == []
+    assert len(api.idp.credential_posts()) == 1
     dispose(window)
 
 

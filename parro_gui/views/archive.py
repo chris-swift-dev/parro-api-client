@@ -100,6 +100,10 @@ class ArchiveSection(Section):
         self.clear_button.clicked.connect(self.clear_cache)
         self.progress.connect(self.status.setText)
 
+    def memory_key(self) -> None:
+        """The archive and the cache are on this computer: always look again."""
+        return None
+
     def make_task(self) -> Callable[[ParroClient], Any]:
         def task(client: ParroClient) -> dict[str, Any]:
             return {
@@ -169,9 +173,7 @@ class ArchiveSection(Section):
 
     def clear_cache(self) -> None:
         if widgets.ask(self, CLEAR_QUESTION):
-            self.worker.submit(
-                operations.cache_clear, lambda _result: self.load(), self.notice.setText
-            )
+            self.run_action(self.clear_button, operations.cache_clear, lambda _result: self.load())
 
     def stop(self) -> None:
         self._stop.set()

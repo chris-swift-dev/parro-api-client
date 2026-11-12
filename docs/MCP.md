@@ -28,6 +28,12 @@ What `parro-client-mcp` offers to Claude and other MCP clients. How to add it to
 | `parro_helper_signup` / `parro_helper_withdraw` | Only with `PARRO_ALLOW_HELPER_SIGNUP=1`: a preview of signing up on a calendar item's helper slot (optional `count`) or withdrawing, or with `confirm: true` the change itself ([it is a promise in your name](CHANGING-THINGS.md#helping-out)). |
 | `parro_rsvp` | Only with `PARRO_ALLOW_RSVP=1`: a preview of answering a calendar item's invitation, or with `confirm: true` the answer itself ([the school sees it](CHANGING-THINGS.md#answering-an-invitation)). |
 
+Every tool has a `title` and the four hints MCP clients use to decide what to ask you first:
+`readOnlyHint` (the 16 tools that only read have it set), `destructiveHint`, `idempotentHint` and
+`openWorldHint`. They are written into each tool's definition in
+[`parro/mcp_server.py`](https://github.com/chris-swift-dev/parro-api-client/blob/main/parro/mcp_server.py), so services that grade a server by reading its code
+see them too; a test keeps them there and another checks that they are true.
+
 Every tool takes an optional `format`: `json` (default) or `markdown`, a readable view that keeps
 every id. The first 16 tools have the same names and arguments as the original server, so existing
 MCP configurations keep working.

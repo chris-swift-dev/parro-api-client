@@ -169,13 +169,25 @@ Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-f
 `helper signup <event-id> [--slot ID] [--count N] [--yes]`,
 `helper withdraw <event-id> [--slot ID] [--yes]`,
 `rsvp accept|decline|tentative <event-id> [--yes]`, `sync [--to DIR] [--previous] [--photos]`,
-`cache info|clear`, `get <path> [--param k=v ...] [--limit N] [--offset N]`.
+`cache info|clear`, `get <path> [--param k=v ...] [--limit N] [--offset N]`,
+`completion bash|zsh|fish`.
 Global options: `--format auto|json|markdown`, `--login-method`, `--raw`, `--compact`,
 `--no-cache`, `--verbose`. `--full` shows whole texts instead of a 3-line preview.
 
 Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in · `4` login halted.
 
 </details>
+
+**Tab completion** for commands, options and their fixed values (`--format`, `rsvp accept`, …), and
+file names where a file or folder is asked. Add one line to your shell's startup file:
+
+```bash
+eval "$(parro-client completion bash)"      # ~/.bashrc
+eval "$(parro-client completion zsh)"       # ~/.zshrc
+parro-client completion fish | source       # ~/.config/fish/config.fish
+```
+
+Completing never runs a request and needs no login. Windows PowerShell is not covered.
 
 ## Desktop app
 
@@ -189,11 +201,12 @@ parro-client-gui
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/desktop-app-dark.png">
-  <img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/desktop-app-light.png" width="800" alt="The desktop app showing the Calendar section: a sidebar with icons, a list of calendar items with labels, the details of a school trip, its attachment, and buttons to answer the invitation and to sign up as a helper. Invented example data.">
+  <img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/desktop-app-light.png" width="800" alt="The desktop app showing the Calendar section: a sidebar with icons, a list of calendar items with labels, the details of a school trip, the buttons to save all attachments and to mark as read, the buttons to answer the invitation and to sign up as a helper, and the attachment. Invented example data.">
 </picture>
 
 It follows your system's light or dark setting. There is no web server or open port, and text from
-others stays text. It shares its login, cache and archive with the command line. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
+others stays text. It shares its login, cache and archive with the command line, and it can log in by
+itself from a password file, with the same one-attempt rule. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
 
 ## Changing things in Parro
 

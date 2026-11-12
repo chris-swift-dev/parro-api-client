@@ -141,6 +141,8 @@ def test_the_hints_reach_clients_through_tools_list(server, monkeypatch):
     assert set(tools) == set(EXPECTED)
     assert tools["parro_send_chat_message"]["title"] == "Send a chat message"
     assert all(tuple(tools[n][h] for h in HINTS) == v for n, v in EXPECTED.items())
+    titles = {tool["name"]: tool.get("title") for tool in listed["result"]["tools"]}
+    assert all(titles[name] == tools[name]["title"] for name in EXPECTED), "a title for every tool"
 
 
 @pytest.mark.parametrize("name", sorted(READ_CALLS))

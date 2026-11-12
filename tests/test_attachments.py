@@ -307,3 +307,14 @@ def test_api_host_files_do_get_the_parro_headers(tmp_path):
 def test_filename_from_url():
     assert attachments.filename_from_url("https://x/a/b/1-%20x.pdf?q=1") == "1- x.pdf"
     assert attachments.filename_from_url(None) is None
+
+
+def test_saving_never_replaces_a_file(tmp_path):
+    folder = tmp_path / "saved"
+    folder.mkdir()
+    (folder / "a.txt").write_bytes(b"mine")
+    (folder / "a (2).txt").write_bytes(b"also mine")
+    target = attachments.save_file(folder, "a.txt", b"new")
+    assert target.name == "a (3).txt" and target.read_bytes() == b"new"
+    assert (folder / "a.txt").read_bytes() == b"mine"
+    assert (folder / "a (2).txt").read_bytes() == b"also mine"
