@@ -1,6 +1,6 @@
 # Plan 14: version 0.11.0, a better desktop app and hints a scanner can read
 
-*Status: accepted (2026-11-12), with the recommended choice for all four decisions in §7. Not started.*
+*Status: in progress (2026-11-12): phases 1–6 done on branch `desktop-0.11`; the live check (phase 7) and the release are next. Decisions in §7.*
 
 **Goal:** five changes. Four are in the desktop app: details that always fit, saving all attachments at
 once, less waiting when you switch sections, and logging in by itself when you set that up. The fifth
@@ -151,12 +151,12 @@ small task: find out what M8ven needs, for example an entry in the MCP registry 
 
 | # | Phase | Done when |
 | --- | --- | --- |
-| 1 | **MCP hints in the source** (§5) | the `ast` guard test and `test_tool_hints.py` pass; `tools/list` is unchanged apart from the new titles |
-| 2 | **Details that fit** (§1) | the tests in §1 pass |
-| 3 | **Save all attachments** (§2) | tests against the fake API: one folder question, every file saved, failures named, nothing overwritten |
-| 4 | **Short memory and "Fetched at"** (§3) | tests: a kept answer within 5 minutes, a new load after it, *Refresh* and every change drop what was kept, nothing written to disk |
-| 5 | **Logging in by itself** (§4) | the tests in §4 pass |
-| 6 | **Docs:** `docs/DESKTOP-APP.md` (screens, password file, the memory), `docs/MCP.md`, `SECURITY.md` (the remembered path), changelog **0.11.0** | links and pictures checked |
+| 1 | ✅ **MCP hints in the source** (§5) | the `ast` guard test and `test_tool_hints.py` pass; `tools/list` is unchanged apart from the new titles |
+| 2 | ✅ **Details that fit** (§1) | the tests in §1 pass |
+| 3 | ✅ **Save all attachments** (§2) | tests against the fake API: one folder question, every file saved, failures named, nothing overwritten |
+| 4 | ✅ **Short memory and "Fetched at"** (§3) | tests: a kept answer within 5 minutes, a new load after it, *Refresh* and every change drop what was kept, nothing written to disk |
+| 5 | ✅ **Logging in by itself** (§4) | the tests in §4 pass |
+| 6 | ✅ **Docs:** `docs/DESKTOP-APP.md` (screens, password file, the memory), `docs/MCP.md`, `SECURITY.md` (the remembered path), changelog **0.11.0** | links and pictures checked |
 | 7 | **Live check with you:** the two items that broke the layout, switching sections, save all, and logging in by itself **once** (one password check) | in `docs/LIVE-CHECKS.md`; M8ven's report after the push |
 | 8 | Release **0.11.0** | published |
 

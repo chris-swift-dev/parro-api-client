@@ -18,7 +18,9 @@ token's `exp` claim (for display only; the token is not verified, printed or log
 
 After 8 hours:
 * with `PARRO_USERNAME` and a password (file) set, the next call logs in again on its own, which is
-  one password check per 8 hours; a rejected password stops it (the latch below);
+  one password check per 8 hours; a rejected password stops it (the latch below). The desktop app
+  can do the same with a password file it remembers
+  ([DESKTOP-APP.md](DESKTOP-APP.md#logging-in-by-itself));
 * without them, `status` and every call say "not logged in" (exit code 3) and nothing is retried:
   run `login --prompt` again, or use the browser flow.
 

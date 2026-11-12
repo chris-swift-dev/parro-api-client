@@ -4,6 +4,37 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.11.0] - unreleased
+
+A better desktop app: details that always fit in the window, saving all attachments at once, less
+waiting when you switch sections, and logging in by itself from a password file. And the MCP tool
+hints can now be seen by services that read the code instead of running the server.
+
+### Added
+- **Save all attachments…** in Announcements and Calendar, next to *Mark as read*: one folder
+  question, then every file, with a report that names each file that failed.
+- **Logging in by itself** in the desktop app: tick the box in the login dialog and choose a private
+  file with your password. One password check when the login has expired, none after a rejected
+  password until you log in by hand. Only the e-mail address and the file's path are remembered.
+  `PARRO_USERNAME` and `PARRO_PASSWORD_FILE` work as in the command line.
+- **"Fetched at 14:32"** next to each section's title, and under an opened announcement.
+- Every MCP tool has a `title`.
+
+### Changed
+- An announcement or calendar item with long text, many attachments or many helper slots fits in the
+  window: *Mark as read* stays visible under the text, the attachments and the answer and helper rows
+  scroll, and a line you can drag shares the height between the two.
+- The desktop app keeps what it fetched for 5 minutes, in memory only, so switching sections or going
+  back to a filter choice is instant. **Refresh** and every change you make fetch again.
+- The MCP tool hints (`readOnlyHint` and the others) are written into each tool's definition in the
+  code, so services that read the code see them. What clients receive is unchanged.
+
+### Fixed
+- In the desktop app, *Mark as read* and the last answer or helper rows could fall off the bottom of
+  the window for an item with a lot in it, and could not be reached.
+- Saving an attachment claims the file name and writes it in one step, so a file that appears in the
+  meantime is not replaced either (also for `--save-to`).
+
 ## [0.10.0] - 2026-11-10
 
 A desktop app: `parro-client-gui` does what the command line does, in a window on Windows, macOS and
