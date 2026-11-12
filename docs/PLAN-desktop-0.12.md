@@ -198,8 +198,12 @@ automatic updates; that is a separate step, not part of 0.12.0.
   KDE: a system folder), and falls back to "Sans Serif 9", which looks smaller. In a Flatpak the app
   asks the desktop's settings portal for the font (KDE's, then GNOME's) and uses it
   (`parro_gui/desktop_font.py`). Measured: Noto Sans 10, 13 px, the same as outside the sandbox.
-- **Installing a newer bundle over an older one** must replace it. Checked here with `--reinstall`;
-  the live check tries it the way people do it (a double-click, or `flatpak install` without flags).
+- **Installing a newer bundle over an older one:** a plain `flatpak install` of a bundle that is
+  already installed stops with "already installed", also with `--or-update`. `--reinstall` replaces it
+  and keeps the app's data (the login); it works for a first install too. The command in the
+  instructions is `flatpak install --user --reinstall Parro-Client-….flatpak`, and
+  tools/build_installer.py uses the same. The live check tries a double-click in the software centre
+  over an older version.
 - **Size:** an 86 MB download, 370 MB installed (with KDE's runtime shared with other apps).
 - **The self-check passes** in the installed Flatpak.
 

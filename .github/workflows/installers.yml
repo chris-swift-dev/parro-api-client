@@ -1,0 +1,70 @@
+name: Desktop app installers
+
+# Builds the desktop app's installers for people without Python (docs/PLAN-desktop-0.12.md): an MSI
+# for Windows, a DMG for macOS, and a Flatpak for Linux on x86_64 and aarch64. Each job runs
+# tools/build_installer.py, which builds from the commit, runs the built app's --self-check and
+# keeps the file. Unsigned for now (plan §1.4).
+#
+# Runs on pushes to a branch other than main that change the app or how it is built, by hand, and
+# from release.yml, which attaches the files to the draft release.
+
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "parro/**"
+      - "parro_gui/**"
+      - "packaging/**"
+      - "pyproject.toml"
+      - "requirements-installers.txt"
+      - "tools/build_installer.py"
+      - ".github/workflows/installers.yml"
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    name: Installer, ${{ matrix.target }}, ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, target: windows }
+          - { os: macos-latest, target: macos }
+          - { os: ubuntu-24.04, target: flatpak }
+          - { os: ubuntu-24.04-arm, target: flatpak }
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements-installers.txt
+
+      - name: Flatpak tools
+        if: matrix.target == 'flatpak'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Install Briefcase
+        run: pip install -r requirements-installers.txt
+
+      - name: Build, check and keep the installer
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tools/build_installer.py ${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installer-${{ matrix.target }}-${{ matrix.os }}
+          path: dist/installers/*
+          if-no-files-found: error
+          retention-days: 14

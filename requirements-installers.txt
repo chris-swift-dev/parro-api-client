@@ -1,0 +1,2 @@
+# Release only: builds the desktop app's installers (tools/build_installer.py, installers.yml).
+briefcase==0.4.7
