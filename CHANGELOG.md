@@ -4,6 +4,14 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.12.0] - unreleased
+
+### Changed
+
+- **Desktop app: a chat opens at its newest message,** like other chat apps. It stays at the end
+  while the window or the splitter changes size, until you scroll up; after *Send…* it is at the end
+  again, with your message.
+
 ## [0.11.0] - 2026-11-12
 
 A better desktop app: details that always fit in the window, saving all attachments at once, less

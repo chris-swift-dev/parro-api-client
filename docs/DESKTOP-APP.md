@@ -31,7 +31,7 @@ keep working on Python 3.10 or newer.
 | Overview | what is new, or everything |
 | Announcements | filter by group or unread, read the news from Parro, read or save attachments (one or all at once), mark as read |
 | Calendar | coming up or earlier, filter by group, answer invitations, sign up or withdraw as a helper, save attachments (one or all at once), export an `.ics` file, show the subscription link |
-| Chats | the same filters as the command line, read a conversation, send a message, mark as read |
+| Chats | the same filters as the command line, read a conversation (it opens at the newest message), send a message, mark as read |
 | Family | the account, children, groups, the state of the privacy choices, the link to a child's privacy page |
 | Archive | keep a local copy with `sync`, stop it at any time, see and empty the cache |
 

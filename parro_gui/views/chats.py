@@ -152,7 +152,7 @@ class ChatsSection(ListDetailSection):
             )
 
         def show(found: tuple[Any, Any]) -> None:
-            self.detail.setHtml(conversation_html(room, *found))
+            self.detail.show_at_end(conversation_html(room, *found))
 
         self.detail.setHtml(heading(room.get("title") or "Chat"))
         self.fetch_detail(task, show)
