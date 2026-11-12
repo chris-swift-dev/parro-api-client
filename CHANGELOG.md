@@ -4,7 +4,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
-## [0.11.0] - unreleased
+## [0.11.0] - 2026-11-12
 
 A better desktop app: details that always fit in the window, saving all attachments at once, less
 waiting when you switch sections, and logging in by itself from a password file. Tab completion for
