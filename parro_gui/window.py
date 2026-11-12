@@ -30,6 +30,7 @@ from .icons import ICON_SIZE, app_icon, section_icon
 from .login import LoginDialog
 from .memory import Memory
 from .theme import apply_theme, current_colours
+from .updates import Updates, data_dir_of
 from .views.agenda import AgendaSection
 from .views.archive import ArchiveSection
 from .views.base import LOG_IN_FIRST, Section
@@ -118,6 +119,7 @@ class MainWindow(QMainWindow):
         # after logging out on purpose.
         self._may_log_in_by_itself = True
         self._logged_in_by_itself = ""
+        self.updates = Updates(self, data_dir_of(self.settings))
         self.account_button = QPushButton("Log in")
         self.account_button.clicked.connect(self._log_in_or_out)
         self.statusBar().addPermanentWidget(self.account_button)
@@ -258,6 +260,7 @@ def main(argv: list[str]) -> int:
     use_desktop_font(application)
     window = MainWindow()
     window.show()
+    QTimer.singleShot(0, window.updates.at_start)  # asks once; tests' windows never ask
     code = application.exec()
     # Everything Qt owns goes before Python starts its own cleanup.
     window.close()

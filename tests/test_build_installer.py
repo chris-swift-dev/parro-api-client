@@ -99,3 +99,42 @@ def test_the_workflow_builds_all_four_with_the_tool():
 def test_briefcase_is_pinned():
     lines = (ROOT / "requirements-installers.txt").read_text(encoding="utf-8").splitlines()
     assert [line for line in lines if line and not line.startswith("#")] == ["briefcase==0.4.7"]
+
+
+def load_release_tool() -> ModuleType:
+    spec = importlib.util.spec_from_file_location(
+        "build_release", ROOT / "tools" / "build_release.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_release_lists_what_the_installers_tool_makes():
+    release_tool = load_release_tool()
+    made = {
+        tool.installer_name("windows", "1.2.3", "x86_64"),
+        tool.installer_name("macos", "1.2.3", "aarch64"),
+        tool.installer_name("flatpak", "1.2.3", "x86_64"),
+        tool.installer_name("flatpak", "1.2.3", "aarch64"),
+    }
+    assert set(release_tool.installer_names("1.2.3")) == made
+
+
+def test_the_release_notes_say_which_file_to_pick_and_how_to_check_it():
+    release_tool = load_release_tool()
+    notes = release_tool.installer_notes("1.2.3")
+    assert all(name in notes for name in release_tool.installer_names("1.2.3"))
+    assert "blob/v1.2.3/docs/INSTALL-DESKTOP.md" in notes
+    assert "gh attestation verify FILE --repo chris-swift-dev/parro-api-client" in notes
+    assert "not signed" in notes
+
+
+def test_the_release_workflow_attaches_and_attests_the_installers():
+    text = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    assert "uses: ./.github/workflows/installers.yml" in text
+    assert "needs: [checks, installers]" in text
+    assert "--packages --installers" in text
+    assert "actions/attest-build-provenance@v4" in text and "dist/installers/*" in text
+    assert "id-token: write" in text and "attestations: write" in text

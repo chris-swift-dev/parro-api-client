@@ -151,7 +151,9 @@ are there, otherwise downloaded once (`store_attachment()`).
 
 `parro_gui/` is optional and sits on top of everything above; nothing in `parro/` imports it. Its
 views call `parro.operations`, like the CLI, and never talk to the network themselves
-(`tests/test_gui_boundaries.py` checks both).
+(`tests/test_gui_boundaries.py` checks both). The one request that is not for Parro, the update
+check, is in the core too: `parro/release_check.py` asks GitHub for the newest release, and
+`parro_gui/updates.py` decides when (after you agreed, at most once a day) and what to show.
 
 `worker.py` runs those calls on one background thread, one at a time, because `ParroClient` has no
 locks and two token refreshes at once could use up the refresh token. Results come back to the
@@ -167,6 +169,12 @@ icons are in `icon_files/`, and `icons.py` colours them for the theme.
 
 It needs Python 3.12 (`app.py`): before that, PySide6 can crash the interpreter
 (`docs/PLAN-desktop-app.md` §9).
+
+The installers are made by Briefcase from `[tool.briefcase]` in `pyproject.toml`, with
+`tools/build_installer.py`. `python -m parro_gui` (`__main__.py`) is how they start the app, and
+`self_check.py` checks a built one without logging in or sending anything. In a Flatpak,
+`desktop_font.py` asks the desktop for its font, which the sandbox cannot see by itself.
+`app_file.py` keeps `desktop-app.json`, which holds the remembered login and the update-check answer.
 
 ## Where to look when…
 

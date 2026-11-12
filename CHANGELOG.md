@@ -6,11 +6,25 @@ section of a version as its GitHub release notes, so write each section for user
 
 ## [0.12.0] - unreleased
 
+### Added
+
+- **The desktop app without Python:** each release has an installer for Windows (`.msi`), macOS 14 or
+  newer (`.dmg`, Apple silicon and Intel) and Linux (`.flatpak`, x86_64 and aarch64), with Python and
+  Qt inside. They are not signed yet; [docs/INSTALL-DESKTOP.md](docs/INSTALL-DESKTOP.md) explains the
+  first start on each system. Each file is in `SHA256SUMS` and has a GitHub build attestation
+  (`gh attestation verify`).
+- **Desktop app: telling you about a new version,** if you agree at the first start. It asks GitHub
+  at most once a day, sends nothing about you, and downloads nothing itself. A *Help* menu has the
+  switch, *Check for updates now* and *About*.
+- **The desktop app has its own icon,** in the window, the taskbar and the installers.
+
 ### Changed
 
 - **Desktop app: a chat opens at its newest message,** like other chat apps. It stays at the end
   while the window or the splitter changes size, until you scroll up; after *Send…* it is at the end
   again, with your message.
+- **Desktop app:** `parro-client-gui --version`, and `--self-check`, which starts the app without a
+  screen and without logging in, to check an installation.
 
 ## [0.11.0] - 2026-11-12
 

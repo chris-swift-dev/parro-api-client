@@ -4,13 +4,16 @@
     python3 tools/build_release.py                 # version from parro/__init__.py
     python3 tools/build_release.py --tag v0.1.0    # also check that the tag matches that version
     python3 tools/build_release.py --packages      # also list the wheel and sdist in SHA256SUMS
+    python3 tools/build_release.py --installers    # also the desktop app's installers in
+                                                   # dist/installers/ (tools/build_installer.py)
 
 Writes to dist/:
     parro-api-client-<version>.zip and .tar.gz   what a user needs to run the CLI or the MCP server
     SHA256SUMS                                     checksums of both archives (and, with
                                                    --packages, of the wheel and sdist that
                                                    `python -m build --outdir dist` wrote there)
-    release-notes.md                               the CHANGELOG.md section of this version
+    release-notes.md                               the CHANGELOG.md section of this version (with
+                                                   --installers, followed by which file to pick)
 
 Archive *contents* are reproducible: with SOURCE_DATE_EPOCH set (the release workflow uses the commit
 time), the same sources give the same files, dates and modes, and the same uncompressed tar. The
@@ -52,10 +55,54 @@ INCLUDED_FILES = [
     "docs/MCP.md",
     "docs/CONFIGURATION.md",
     "docs/DESKTOP-APP.md",
+    "docs/INSTALL-DESKTOP.md",
     "docs/API-NOTES.md",
     "openapi/parro.public.openapi.json",
 ]
 INCLUDED_PACKAGE = "parro"
+INSTALLERS = DIST / "installers"
+REPOSITORY = "chris-swift-dev/parro-api-client"
+
+
+def installer_names(version: str) -> list[str]:
+    """The four files tools/build_installer.py makes, in the order of the release notes."""
+    return [
+        f"Parro-Client-{version}-windows-x64.msi",
+        f"Parro-Client-{version}-macos.dmg",
+        f"Parro-Client-{version}-linux-x86_64.flatpak",
+        f"Parro-Client-{version}-linux-aarch64.flatpak",
+    ]
+
+
+def installers(version: str) -> list[Path]:
+    paths = [INSTALLERS / name for name in installer_names(version)]
+    missing = [path.name for path in paths if not path.exists()]
+    if missing:
+        sys.exit(f"error: {', '.join(missing)} not in dist/installers/: see installers.yml")
+    return paths
+
+
+def installer_notes(version: str) -> str:
+    """Appended to the release notes: which file to download, for people without Python."""
+    windows, macos, linux_x86, linux_arm = installer_names(version)
+    guide = f"https://github.com/{REPOSITORY}/blob/v{version}/docs/INSTALL-DESKTOP.md"
+    return f"""
+## Download the desktop app
+
+No Python needed. Pick the file for your computer; [the instructions]({guide}) explain the first
+start on each system.
+
+| Computer | File |
+| --- | --- |
+| Windows 10 or 11 | `{windows}` |
+| Mac with macOS 14 or newer (Apple silicon and Intel) | `{macos}` |
+| Linux on a usual PC | `{linux_x86}` |
+| Linux on ARM (Raspberry Pi 5, Apple silicon with Asahi) | `{linux_arm}` |
+
+The installers are not signed yet, so Windows and macOS warn at the first start; the instructions
+say what to do. Check a download with `SHA256SUMS`, or that GitHub built it from this release:
+`gh attestation verify FILE --repo {REPOSITORY}`.
+"""
 
 
 def read_version() -> str:
@@ -144,6 +191,11 @@ def main() -> None:
         action="store_true",
         help="include the wheel and sdist already in dist/ (built by `python -m build`)",
     )
+    parser.add_argument(
+        "--installers",
+        action="store_true",
+        help="include the desktop app's installers already in dist/installers/",
+    )
     args = parser.parse_args()
 
     version = read_version()
@@ -161,11 +213,14 @@ def main() -> None:
 
     if args.packages:
         archives += python_packages(version)
+    if args.installers:
+        archives += installers(version)
     checksums = "".join(
         f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n" for path in archives
     )
     (DIST / "SHA256SUMS").write_text(checksums, encoding="utf-8")
-    (DIST / "release-notes.md").write_text(release_notes(version), encoding="utf-8")
+    notes = release_notes(version) + (installer_notes(version) if args.installers else "")
+    (DIST / "release-notes.md").write_text(notes, encoding="utf-8")
     print(f"built {prefix}: {len(files)} files")
     print(checksums, end="")
 

@@ -117,6 +117,9 @@ def test_only_the_client_core_builds_api_requests():
             assert methods <= {"GET", "POST"} and "api_root" not in text
         elif path.name == "attachments.py":  # downloads from the CDN
             assert methods == {"GET"}
+        elif path.name == "release_check.py":  # the desktop app's update check: GitHub only
+            assert methods == {"GET"} and "api_root" not in text
+            assert "https://api.github.com/repos/" in text and "Authorization" not in text
         elif path.name == "api_client.py":
             assert methods == set(), "_send passes the method on; it is GET, PUT or POST"
             assert 'Literal["GET", "PUT", "POST", "DELETE"]' in text

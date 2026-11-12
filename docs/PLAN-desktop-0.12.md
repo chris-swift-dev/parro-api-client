@@ -117,8 +117,8 @@ Settings.
 5. **The release:** `release.yml` calls it after the checks, attaches the files to the draft release,
    adds them to `SHA256SUMS` and writes the attestations. `tools/build_release.py` and its tests learn
    the new file names.
-6. **The update check (§1.7):** `parro_gui/updates.py`, the question at the first start, the
-   notice, and *Check now* in the *About* box.
+6. **The update check (§1.7):** `parro/release_check.py` and `parro_gui/updates.py`, the question
+   at the first start, the notice, and the *Help* menu.
 7. **The instructions:** a page `docs/INSTALL-DESKTOP.md` for people without Python: which file to
    pick, the first start on each system, how to update, how to remove the app and its data. The
    README's install section first points to it. DESKTOP-APP.md, SECURITY.md and the CHANGELOG are
@@ -138,12 +138,12 @@ The installers themselves are checked by the workflow's `--self-check`, and by y
 The releases are on GitHub, so the app asks GitHub which release is the newest:
 
 - **One GET, nothing else:** `https://api.github.com/repos/chris-swift-dev/parro-api-client/releases/latest`,
-  without a token or cookie, with a short time-out, and with the standard library (`urllib`) in
-  `parro_gui/`. It sends no Parro data, no e-mail address, and not the login. GitHub sees the
+  without a token or cookie, with a short time-out, through the core's own HTTP layer
+  (`parro/release_check.py`; the app itself still never opens a connection). It sends no Parro data, no e-mail address, and not the login. GitHub sees the
   computer's IP address and the app's version in the User-Agent, nothing more.
 - **Only when you agree.** The first start asks once: "Check for new versions at start?". The answer
-  is kept in `desktop-app.json`, next to the remembered login, and can be changed in the app's
-  *About* box, which also has *Check now*. Until you say yes, the app talks to no one but Parro.
+  is kept in `desktop-app.json`, next to the remembered login, and can be changed in a *Help* menu,
+  which also has *Check for updates now* and *About* (built in phase 5 instead of an About box). Until you say yes, the app talks to no one but Parro.
 - **At most once a day,** at start and in the background, through its own thread, so a slow GitHub
   never delays Parro.
 - **What it shows:** a small notice, "Version 0.13.0 is available", with a button that opens the

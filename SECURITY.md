@@ -17,7 +17,7 @@ links, or names and messages from a real Parro account. Use invented data, like 
 ## What is in scope
 
 - This repository: `parro/`, `parro_gui/`, `parro_cli.py`, `parro_mcp.py`, the release archives, the packages on
-  PyPI (`parro-api-client`), the GitHub
+  PyPI (`parro-api-client`), the desktop app's installers on the release page, the GitHub
   Actions workflows and the published OpenAPI spec.
 - For example: a token, password or download link that ends up in a log, a file or an error
   message; files written with permissions that are too open; anything that makes the client write
@@ -38,7 +38,10 @@ For the desktop app, also: a change made without a click on Confirm (or the ques
 read), a script or remote resource from Parro's content that gets loaded, a link that opens without
 showing its address first, and for logging in by itself: a password that ends up in the app's own
 `desktop-app.json` (it holds only the e-mail address and the path of your password file), a password
-file used while others can read it, or more than one password check per expired login.
+file used while others can read it, or more than one password check per expired login. For the
+update check: a request to GitHub before you agreed, more than one a day by itself, anything about
+you or Parro in it, or a link opened that was not built from the version number. For the Linux
+Flatpak: a sandbox permission it does not need.
 
 The risk that text in Parro steers an assistant while `PARRO_ALLOW_SEND_CHAT=1`,
 `PARRO_ALLOW_HELPER_SIGNUP=1` or `PARRO_ALLOW_RSVP=1` is on is known and described in the README

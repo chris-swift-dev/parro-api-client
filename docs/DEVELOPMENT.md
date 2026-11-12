@@ -21,14 +21,17 @@ comparison with the original server in `legacy/`) skip without them, as in CI.
 | --- | --- |
 | `tests/` | pytest suite; `tests/fakes.py` has the fake IdP and API |
 | `tools/build_spec.py`, `tools/validate_spec.py`, `tools/build_site.sh` | spec generator, validator, Swagger UI site |
-| `tools/build_release.py` | builds the release archives, checksums and notes (`--packages`: with the wheel and sdist) |
+| `tools/build_release.py` | builds the release archives, checksums and notes (`--packages`: with the wheel and sdist; `--installers`: with the desktop app's installers) |
+| `tools/build_installer.py` | builds the desktop app's installer for this computer (`windows`, `macos`, `flatpak`) from the last commit with Briefcase, and runs its `--self-check` |
+| `tools/make_app_icon.py` | draws the installers' icon files in `packaging/` from the app's icon |
 | `tools/smoke_test_install.py` | builds the wheel, installs it into a fresh venv with an empty home, runs both commands |
 | `tools/make_readme_images.py`, `tools/swagger_screenshots.py` | the README pictures |
 | `tools/make_desktop_picture.py` | the pictures of the desktop app, light and dark, from the invented test data |
 | `parro_gui/` | the desktop app (optional: the `gui` extra); its tests need `requirements-gui.txt` and Python 3.12+ |
 | `.github/workflows/ci.yml` | lint and types; tests and the install smoke test on Windows, macOS and Linux, Python 3.10 and 3.14 |
 | `.github/workflows/pages.yml` | validates the spec and deploys Swagger UI to GitHub Pages |
-| `.github/workflows/release.yml` | on a `v*` tag: checks, archives, wheel and sdist, draft GitHub release |
+| `.github/workflows/installers.yml` | the four installers (Windows, macOS, Linux x86_64 and aarch64), each started once with `--self-check`; on branches that change the app, and from `release.yml` |
+| `.github/workflows/release.yml` | on a `v*` tag: checks, archives, wheel and sdist, installers, build attestations, draft GitHub release |
 | `.github/workflows/publish.yml` | on publishing a release: its wheel and sdist to PyPI; run by hand: a fresh build to TestPyPI |
 
 ## Where documentation goes

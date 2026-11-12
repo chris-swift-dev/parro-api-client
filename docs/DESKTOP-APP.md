@@ -6,7 +6,12 @@ is built on the same `parro` package, so login, safety rules and data are shared
 
 ## Installing
 
-The app needs **Python 3.12 or newer**, and Qt, which comes with the `gui` extra:
+**Without Python:** each release has an installer for Windows (`.msi`), macOS 14 or newer (`.dmg`)
+and Linux (`.flatpak`), with Python and Qt inside. [INSTALL-DESKTOP.md](INSTALL-DESKTOP.md) says
+which file to take and what to do at the first start.
+
+**With Python**, together with the command line: the app needs **Python 3.12 or newer**, and Qt,
+which comes with the `gui` extra:
 
 ```bash
 pipx install "parro-api-client[gui]"
@@ -120,6 +125,16 @@ The app can change the same four things as the command line:
 
 The app follows your system's light or dark setting, also when you change it while the app is open.
 It looks the same on Windows, macOS and Linux, and text uses your system's font size.
+
+## New versions
+
+The first start asks whether the app may check for new versions. With yes, it asks GitHub for the
+newest release when it starts, at most once a day, on a thread of its own so Parro never waits for
+it. The request carries no token, no cookie and nothing about you; GitHub sees your IP address and
+the app's version. A newer version shows a button at the bottom of the window, which opens the
+release page in your browser after asking; the app downloads and installs nothing itself. The answer
+to the question is kept in `desktop-app.json`. *Help → Check for new versions at start* changes it,
+and *Help → Check for updates now* checks at once and says what it found.
 
 ## Good to know
 

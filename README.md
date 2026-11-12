@@ -191,8 +191,15 @@ Completing never runs a request and needs no login. Windows PowerShell is not co
 
 ## Desktop app
 
-Prefer a window? `parro-client-gui` does what the command line does, on Windows, macOS and Linux. It
-needs **Python 3.12 or newer**, and Qt, which adds about 300 MB:
+Prefer a window? The desktop app does what the command line does, on Windows, macOS and Linux.
+
+**Without Python:** download the installer for your computer from the
+[latest release](https://github.com/chris-swift-dev/parro-api-client/releases/latest): an `.msi` for
+Windows, a `.dmg` for macOS 14 or newer, a `.flatpak` for Linux. They are not signed yet, so Windows
+and macOS warn at the first start; **[docs/INSTALL-DESKTOP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/INSTALL-DESKTOP.md)**
+says what to do.
+
+**With Python 3.12 or newer**, together with the command line (Qt adds about 300 MB):
 
 ```bash
 pipx install "parro-api-client[gui]"
@@ -206,7 +213,8 @@ parro-client-gui
 
 It follows your system's light or dark setting. There is no web server or open port, and text from
 others stays text. It shares its login, cache and archive with the command line, and it can log in by
-itself from a password file, with the same one-attempt rule. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
+itself from a password file, with the same one-attempt rule. If you agree, it tells you about a
+new version, asking GitHub at most once a day and downloading nothing itself. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
 
 ## Changing things in Parro
 
