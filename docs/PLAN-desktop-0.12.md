@@ -51,11 +51,12 @@ each system's format, and a few lines of configuration.
 
 | System | File | Processors |
 | --- | --- | --- |
-| Windows 10 and 11 | `Parro-0.12.0.msi` | x64 |
-| macOS 14 or newer | `Parro-0.12.0.dmg` | Apple silicon and Intel: one universal file if the Qt wheels allow it, else two |
-| Linux | `Parro-0.12.0-x86_64.flatpak`, `…-aarch64.flatpak` | x86_64, aarch64 |
+| Windows 10 and 11 | `Parro-Client-0.12.0-windows-x64.msi` | x64 |
+| macOS 14 or newer | `Parro-Client-0.12.0-macos.dmg` | Apple silicon and Intel, one universal file |
+| Linux | `Parro-Client-0.12.0-linux-x86_64.flatpak`, `…-linux-aarch64.flatpak` | x86_64, aarch64 |
 
-- **The size** will be roughly 60–100 MB each. A whole Python and Qt are inside.
+- **The size**, measured in CI (phase 4): Windows 77 MB, macOS 138 MB (one universal file for Apple
+  silicon and Intel), Linux 88 MB (x86_64) and 82 MB (aarch64). A whole Python and Qt are inside.
 - **macOS 14** because the wheels of PySide6 6.12 are built for it (found in phase 4).
 - **The command-line client and the MCP server are not in these files.** They stay with `pipx`, as
   now. People who use a terminal or an AI assistant already have Python.
