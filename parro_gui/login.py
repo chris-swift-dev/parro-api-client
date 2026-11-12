@@ -5,12 +5,15 @@ Nothing retries, and the password is never stored: it goes straight to `operatio
 """
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QFormLayout,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -21,7 +24,11 @@ from PySide6.QtWidgets import (
 
 from parro import operations
 from parro.api_client import ParroClient
+from parro.errors import ParroError
+from parro.settings import Settings
 
+from . import widgets
+from .auto_login import Remembered, password_file_problem, save_remembered
 from .widgets import open_url
 from .worker import Worker
 
@@ -30,6 +37,12 @@ LOCKOUT_WARNING = (
     "and nothing is retried on its own."
 )
 PASSWORD_NOT_STORED = "Your password is not stored. A login lasts up to 8 hours."
+REMEMBER = "Log in by itself next time, with the password in this file:"
+REMEMBER_NOTE = (
+    "Only the e-mail address and where the file is are remembered, not the password. The app "
+    "then logs in by itself when the login has expired: one attempt, and none after a rejected "
+    "password until you log in here again. The file must be private."
+)
 BROWSER_STEPS = (
     "1. Open the login page and log in there.\n"
     "2. You end up on talk.parro.com. Copy the whole address from the address bar right away: "
@@ -38,11 +51,35 @@ BROWSER_STEPS = (
 )
 
 
+def same_password(password_file: Path, typed: str) -> bool:
+    """Read the file the way the core will, compare, and keep nothing."""
+    try:
+        return Settings(password_file=password_file).read_password() == typed
+    except ParroError:
+        return False
+
+
 class LoginDialog(QDialog):
     logged_in = Signal(object)
 
-    def __init__(self, worker: Worker, username: str | None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        worker: Worker,
+        username: str | None,
+        parent: QWidget | None = None,
+        data_dir: Path | None = None,
+        remembered: Remembered | None = None,
+    ) -> None:
         super().__init__(parent)
+        self.data_dir = data_dir
+        self.remember = QCheckBox(REMEMBER)
+        self.remember.setChecked(remembered is not None)
+        self.password_file = QLineEdit(str(remembered.password_file) if remembered else "")
+        self.password_file.setPlaceholderText("A file with only your password in it")
+        self.choose_button = QPushButton("Choose…")
+        self.choose_button.clicked.connect(self.choose_password_file)
+        if remembered is not None and not username:
+            username = remembered.username
         self.setWindowTitle("Log in to Parro")
         self.setMinimumWidth(440)
         self.worker = worker
@@ -79,8 +116,23 @@ class LoginDialog(QDialog):
             note = QLabel(text)
             note.setWordWrap(True)
             form.addRow(note)
+        if self.data_dir is not None:
+            form.addRow(self.remember)
+            row = QHBoxLayout()
+            row.addWidget(self.password_file, 1)
+            row.addWidget(self.choose_button)
+            form.addRow(row)
+            note = QLabel(REMEMBER_NOTE)
+            note.setWordWrap(True)
+            form.addRow(note)
         form.addRow(self.log_in_button)
         return tab
+
+    def choose_password_file(self) -> None:
+        chosen = widgets.choose_file(self, "Your password file")
+        if chosen:
+            self.password_file.setText(chosen)
+            self.remember.setChecked(True)
 
     def _browser_tab(self) -> QWidget:
         tab = QWidget()
@@ -122,6 +174,21 @@ class LoginDialog(QDialog):
         if not username or not password:
             self.message.setText("Fill in your e-mail address and your password.")
             return
+        remembering = self.data_dir is not None and self.remember.isChecked()
+        password_file = Path(self.password_file.text().strip()).expanduser()
+        if remembering:
+            # Checked before the login: a refused file spends no password check.
+            problem = (
+                password_file_problem(password_file)
+                if self.password_file.text().strip()
+                else "Choose the file with your password, or untick the box."
+            )
+            if not problem and not same_password(password_file, password):
+                # Caught now, not at the next automatic login, where it would stop all of them.
+                problem = "The password in that file is not the one you typed. Nothing was sent."
+            if problem:
+                self.message.setText(problem)
+                return
         self.password.clear()  # also after a failure: the next attempt is a deliberate one
 
         def task(client: ParroClient) -> dict[str, Any]:
@@ -130,7 +197,14 @@ class LoginDialog(QDialog):
                 client, method="login-form", username=username, password=password
             )
 
-        self._run(task, self._finish)
+        chosen = Remembered(username, password_file) if remembering else None
+        self._run(task, lambda status: self._logged_in_with_password(status, chosen))
+
+    def _logged_in_with_password(self, status: dict[str, Any], chosen: Remembered | None) -> None:
+        """Remember (or forget) only after a login that worked: the address is right then."""
+        if self.data_dir is not None:
+            save_remembered(self.data_dir, chosen)
+        self._finish(status)
 
     def open_login_page(self) -> None:
         self._run(operations.login_url, self._show_login_page)

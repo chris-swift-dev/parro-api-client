@@ -65,9 +65,11 @@ class Worker(QObject):
         self,
         make_client: Callable[[Settings], ParroClient] = ParroClient,
         parent: QObject | None = None,
+        settings: Callable[[], Settings] = Settings.from_environment,
     ) -> None:
         super().__init__(parent)
         self.make_client = make_client
+        self.settings = settings
         self._client: ParroClient | None = None
         self._closed = False
         self._pool = QThreadPool(self)
@@ -75,9 +77,14 @@ class Worker(QObject):
         self.finished.connect(self._deliver, Qt.ConnectionType.QueuedConnection)
 
     def client(self) -> ParroClient:
-        """The shared client, created on first use. Runs on the background thread."""
-        if self._client is None:
-            self._client = self.make_client(Settings.from_environment())
+        """The shared client, created on first use. Runs on the background thread.
+
+        Made again when the settings change, for example after the login dialog remembered a
+        password file.
+        """
+        settings = self.settings()
+        if self._client is None or self._client.settings != settings:
+            self._client = self.make_client(settings)
         # Pick up logins done meanwhile by the CLI or the MCP server.
         self._client.token_store.reload()
         return self._client

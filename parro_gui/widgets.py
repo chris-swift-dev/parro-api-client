@@ -35,6 +35,11 @@ def choose_save_file(parent: QWidget | None, suggested: str, kinds: str) -> str:
     return QFileDialog.getSaveFileName(parent, "Save as", suggested, kinds)[0]
 
 
+def choose_file(parent: QWidget | None, title: str) -> str:
+    """An existing file picked by the user, or '' if they cancelled."""
+    return QFileDialog.getOpenFileName(parent, title)[0]
+
+
 def choose_folder(parent: QWidget | None) -> str:
     """A folder picked by the user, or '' if they cancelled."""
     return QFileDialog.getExistingDirectory(parent, "Save in which folder?")
