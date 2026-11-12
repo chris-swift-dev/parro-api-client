@@ -25,6 +25,7 @@ from parro.settings import Settings
 
 from .icons import ICON_SIZE, section_icon
 from .login import LoginDialog
+from .memory import Memory
 from .theme import apply_theme, current_colours
 from .views.agenda import AgendaSection
 from .views.archive import ArchiveSection
@@ -91,8 +92,10 @@ class MainWindow(QMainWindow):
             "Family": FamilySection(self.worker),
             "Archive": ArchiveSection(self.worker),
         }
+        self.memory = Memory()  # one for all sections: a change in one makes all of it doubtful
         for name in SECTIONS:
             self.pages.addWidget(self.views[name])
+            self.views[name].memory = self.memory
         for name, view in self.views.items():
             view.set_title(name)
             view.reset(LOG_IN_FIRST)
@@ -139,6 +142,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(describe_login(status))
         was_logged_in, self.logged_in = self.logged_in, is_logged_in(status)
         if self.logged_in != was_logged_in:
+            self.memory.forget()
             for view in self.views.values():
                 view.reset("" if self.logged_in else LOG_IN_FIRST)
             self._load_current()

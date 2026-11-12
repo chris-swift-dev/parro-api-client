@@ -1,6 +1,6 @@
 """What every section has in common: loading in the background, and showing what went wrong."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from typing import Any
 
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer
@@ -19,6 +19,7 @@ from parro import operations
 from parro.api_client import ParroClient
 
 from .. import widgets
+from ..memory import Kept, Memory
 from ..text import placeholder, safe_html
 from ..widgets import SafeTextBrowser
 from ..worker import Worker
@@ -35,6 +36,10 @@ DETAIL_MIN_HEIGHT = 90  # the text keeps a few lines, however much is below it
 MARK_READ_QUESTION = "Mark this as read? The school can see that you did."
 
 
+def fetched_text(kept: Kept) -> str:
+    return f"Fetched at {kept.fetched_at:%H:%M}"
+
+
 class Section(QWidget):
     """Subclasses say what to fetch (`make_task`) and how to show it (`show_result`)."""
 
@@ -43,6 +48,9 @@ class Section(QWidget):
         self.worker = worker
         self.loaded = False
         self._generation = 0
+        self.memory = Memory()  # the window gives every section the same one
+        self.shown: Kept | None = None  # the answer on screen, kept or fresh
+        self._shown_key: tuple[Hashable, ...] | None = None
         self.next_notice = ""  # shown when the next load has finished
         self.confirmation: ConfirmDialog | None = None
         self.notice = QLabel()
@@ -51,10 +59,16 @@ class Section(QWidget):
         self.title = QLabel()
         self.title.setObjectName("sectionTitle")
         self.title.setTextFormat(Qt.TextFormat.PlainText)
+        self.fetched = QLabel()
+        self.fetched.setObjectName("fetchedAt")
+        self.fetched.setTextFormat(Qt.TextFormat.PlainText)
         self.refresh_button = QPushButton("Refresh")
-        self.refresh_button.clicked.connect(self.load)
+        self.refresh_button.setToolTip("Fetch again, also what the app still has from a moment ago")
+        self.refresh_button.clicked.connect(self.refresh)
         header = QHBoxLayout()
         header.addWidget(self.title)
+        header.addSpacing(10)
+        header.addWidget(self.fetched)
         header.addStretch(1)
         header.addWidget(self.refresh_button)
         self.filters = QHBoxLayout()
@@ -79,6 +93,10 @@ class Section(QWidget):
     def show_result(self, result: Any) -> None:
         raise NotImplementedError
 
+    def memory_key(self) -> tuple[Hashable, ...] | None:
+        """What the answer depends on, such as the filters; None: never keep it."""
+        return ()
+
     def clear(self) -> None:
         """Forget what is shown."""
 
@@ -86,32 +104,66 @@ class Section(QWidget):
         """The window is closing: end long-running work."""
 
     def load(self) -> None:
+        """Show this choice: what the app still has from the last few minutes, or fetch it."""
+        self._load(fresh=False)
+
+    def refresh(self) -> None:
+        """Fetch, whatever the app still has."""
+        self._load(fresh=True)
+
+    def _load(self, fresh: bool) -> None:
         self.loaded = True
         self._generation += 1
         generation = self._generation
+        key = self._full_key()
+        kept = None if fresh or key is None else self.memory.get(key)
+        if kept is not None:
+            self._show(kept, key)
+            return
         self.notice.setText(LOADING)
         self.worker.submit(
             self.make_task(),
-            lambda result: self._arrived(generation, result),
+            lambda result: self._arrived(generation, key, result),
             lambda text: self._failed(generation, text),
         )
 
+    def _full_key(self) -> tuple[Hashable, ...] | None:
+        key = self.memory_key()
+        return None if key is None else (type(self).__name__, *key)
+
     def ensure_loaded(self) -> None:
-        if not self.loaded:
+        """Coming back to the section: load if nothing is shown, or the app no longer keeps it.
+
+        That is after 5 minutes, and after a change anywhere in the app.
+        """
+        gone = self._shown_key is not None and self.memory.get(self._shown_key) is None
+        if not self.loaded or gone:
             self.load()
 
     def reset(self, message: str = "") -> None:
         """After logging in or out: what is shown belongs to the previous state."""
         self.loaded = False
         self._generation += 1  # an answer still on its way is out of date
+        self.shown, self._shown_key = None, None
+        self.fetched.clear()
         self.clear()
         self.notice.setText(message)
 
-    def _arrived(self, generation: int, result: Any) -> None:
+    def _arrived(self, generation: int, key: tuple[Hashable, ...] | None, result: Any) -> None:
+        kept = (
+            self.memory.put(key, result)
+            if key is not None
+            else Kept(result, self.memory.wall_clock(), self.memory.clock())
+        )
         if generation == self._generation:
-            self.notice.setText(self.next_notice)
-            self.next_notice = ""
-            self.show_result(result)
+            self._show(kept, key)
+
+    def _show(self, kept: Kept, key: tuple[Hashable, ...] | None) -> None:
+        self.notice.setText(self.next_notice)
+        self.next_notice = ""
+        self.shown, self._shown_key = kept, key
+        self.fetched.setText(fetched_text(kept) if key is not None else "")
+        self.show_result(kept.result)
 
     def _failed(self, generation: int, text: str) -> None:
         if generation == self._generation:
@@ -236,10 +288,15 @@ class ListDetailSection(Section):
             self.show_item(self.items[row])
 
     def reload_here(self, message: str) -> None:
-        """Load again after a change, staying on the same row, and say what happened."""
+        """Load again after a change, staying on the same row, and say what happened.
+
+        A change makes everything the app kept doubtful, in every section: an unread count, the
+        list, the details. So all of it goes, and this section fetches.
+        """
         self._wanted_row = max(self.list.currentRow(), 0)
         self.next_notice = message
-        self.load()
+        self.memory.forget()
+        self.refresh()
 
     def add_mark_button(self) -> QPushButton:
         button = QPushButton("Mark as read")

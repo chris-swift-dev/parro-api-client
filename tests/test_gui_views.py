@@ -294,8 +294,8 @@ def test_an_old_answer_is_dropped(window):
     view = open_section(window, "Family")
     shown: list[Any] = []
     view.show_result = shown.append
-    view.load()
-    view.load()
+    view.refresh()
+    view.refresh()
     wait_until(lambda: len(shown) >= 1)
     settle()
     assert len(shown) == 1, "only the newest request counts"

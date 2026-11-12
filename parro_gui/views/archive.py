@@ -100,6 +100,10 @@ class ArchiveSection(Section):
         self.clear_button.clicked.connect(self.clear_cache)
         self.progress.connect(self.status.setText)
 
+    def memory_key(self) -> None:
+        """The archive and the cache are on this computer: always look again."""
+        return None
+
     def make_task(self) -> Callable[[ParroClient], Any]:
         def task(client: ParroClient) -> dict[str, Any]:
             return {

@@ -40,6 +40,9 @@ class OverviewSection(ListDetailSection):
         self.counts = QLabel()
         self.main.insertWidget(2, self.counts)
 
+    def memory_key(self) -> tuple[Any, ...]:
+        return (self.everything.isChecked(),)
+
     def make_task(self) -> Callable[[ParroClient], Any]:
         unread_only = not self.everything.isChecked()
         return lambda client: operations.show_overview(client, unread_only=unread_only)

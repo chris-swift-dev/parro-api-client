@@ -175,6 +175,9 @@ class AgendaSection(ListDetailSection):
         self.mark_button = self.add_mark_button()
         self.mark_button.clicked.connect(self._mark_current)
 
+    def memory_key(self) -> tuple[Any, ...]:
+        return (self.group.currentData(), self.past.isChecked())
+
     def make_task(self) -> Callable[[ParroClient], Any]:
         past, group = self.past.isChecked(), self.group.currentData()
         with_groups = not self._groups_added

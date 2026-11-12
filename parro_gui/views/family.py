@@ -73,6 +73,9 @@ class FamilySection(Section):
         self.page = SafeTextBrowser()
         self.main.addWidget(self.page, 1)
 
+    def memory_key(self) -> tuple[Any, ...]:
+        return (self.previous.isChecked(),)
+
     def make_task(self) -> Callable[[ParroClient], Any]:
         scope = "previous" if self.previous.isChecked() else "current"
 
