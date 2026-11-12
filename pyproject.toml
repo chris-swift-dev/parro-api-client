@@ -54,7 +54,7 @@ gui = ['PySide6-Essentials>=6.11; python_version >= "3.12"']
 dev = ["pytest", "ruff", "mypy", "openapi-schema-validator"]
 
 # The installers for people without Python (docs/PLAN-desktop-0.12.md): `briefcase build` and
-# `briefcase package` make an MSI, a DMG and an AppImage with Python, Qt and the app inside. Name,
+# `briefcase package` make an MSI, a DMG and a Flatpak with Python, Qt and the app inside. Name,
 # version, description and licence come from [project]. Only the desktop app is in them; the CLI
 # and the MCP server stay with pipx. PyMuPDF is left out: its licence (AGPL) would cover the bundle.
 [tool.briefcase]
@@ -69,8 +69,35 @@ requires = ["PySide6-Essentials==6.12.0", "pypdf==6.21.4", "pillow==13.0.0"]
 icon = "packaging/icon"
 
 [tool.briefcase.app.parro-gui.macOS]
-min_os_version = "12.0"  # PySide6 6.8 and newer
+min_os_version = "13.0"  # PySide6 6.10 and newer
 universal_build = true
+requires = ["std-nslog~=2.0.0"]  # print() and logging reach macOS's Console
+
+# One Flatpak per processor, with its own Python and Qt (docs/PLAN-desktop-0.12.md §1.8). Briefcase's
+# PySide6 template uses KDE's runtime: it holds the system libraries Qt needs.
+[tool.briefcase.app.parro-gui.linux.flatpak]
+# A Flatpak id allows "-" only in its last part, and Briefcase allows no "_": the account name
+# without its dashes. (Flathub would expect io.github.chris_swift_dev; a matter for later.)
+bundle = "io.github.chrisswiftdev"
+flatpak_runtime = "org.kde.Platform"
+flatpak_runtime_version = "6.11"  # the newest on Flathub (2026-11); 6.9 is end-of-life
+flatpak_sdk = "org.kde.Sdk"
+
+# The sandbox: only what the app needs. Briefcase's defaults also open ~/.cache, ~/.config,
+# ~/.local/share and ~/Documents, and sound. ~/.parro (the login and the data folder) is kept inside
+# the sandbox, in ~/.var/app/<id>/.parro. Files chosen in a dialog come in through the desktop's
+# file portal, so no folder needs opening.
+[tool.briefcase.app.parro-gui.linux.flatpak.finish_arg]
+"socket=x11" = false
+"nosocket=wayland" = false
+"socket=wayland" = true
+"socket=fallback-x11" = true
+"socket=pulseaudio" = false
+"filesystem=xdg-cache" = false
+"filesystem=xdg-config" = false
+"filesystem=xdg-data" = false
+"filesystem=xdg-documents" = false
+"persist=.parro" = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

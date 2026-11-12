@@ -1,6 +1,7 @@
 """The main window: a list of sections on the left, the chosen section on the right."""
 
 import logging
+import os
 import sys
 from collections.abc import Callable
 from typing import Any
@@ -24,6 +25,7 @@ from parro.rendering import format_timestamp
 from parro.settings import Settings
 
 from . import auto_login
+from .desktop_font import use_desktop_font
 from .icons import ICON_SIZE, app_icon, section_icon
 from .login import LoginDialog
 from .memory import Memory
@@ -249,7 +251,11 @@ def main(argv: list[str]) -> int:
     application = QApplication(argv)
     application.setApplicationName(APP_NAME)
     application.setWindowIcon(app_icon())
+    flatpak_id = os.environ.get("FLATPAK_ID")
+    if flatpak_id:  # on Wayland, the dock finds the menu entry and the icon by this name
+        application.setDesktopFileName(flatpak_id)
     apply_theme(application)
+    use_desktop_font(application)
     window = MainWindow()
     window.show()
     code = application.exec()

@@ -1,7 +1,8 @@
 # Plan 15: version 0.12.0, the desktop app without Python, and chats that open at the newest message
 
 *Status: approved (2026-11-12). Decisions in §5: as recommended, except 5 (an update check against
-GitHub, §1.7); the message order is checked again on the live check (§2).*
+GitHub, §1.7) and 3 (Linux gets a Flatpak, not an AppImage: §1.8); the message order is checked again
+on the live check (§2).*
 
 **Goal:** two changes to the desktop app.
 
@@ -16,7 +17,7 @@ GitHub, §1.7); the message order is checked again on the live check (§2).*
 
 - **One download, one double-click.** No terminal, no Python, no `pipx`.
 - **The usual form for each system:** an installer on Windows, a disk image to drag to Applications
-  on macOS, one file on Linux.
+  on macOS, one file on Linux (a Flatpak, §1.8).
 - **A start menu, Launchpad or app-menu entry with an icon,** so the app is found like any other.
 - **A first start that does not look dangerous.** This is the hard part; see §1.4.
 
@@ -51,11 +52,11 @@ each system's format, and a few lines of configuration.
 | System | File | Processors |
 | --- | --- | --- |
 | Windows 10 and 11 | `Parro-0.12.0.msi` | x64 |
-| macOS 12 or newer | `Parro-0.12.0.dmg` | Apple silicon and Intel: one universal file if the Qt wheels allow it, else two |
-| Linux | `Parro-0.12.0-x86_64.AppImage`, `…-aarch64.AppImage` | x86_64, aarch64 |
+| macOS 13 or newer | `Parro-0.12.0.dmg` | Apple silicon and Intel: one universal file if the Qt wheels allow it, else two |
+| Linux | `Parro-0.12.0-x86_64.flatpak`, `…-aarch64.flatpak` | x86_64, aarch64 |
 
 - **The size** will be roughly 60–100 MB each. A whole Python and Qt are inside.
-- **macOS 12** because PySide6 6.8 and newer needs it.
+- **macOS 13** because PySide6 6.10 and newer needs it.
 - **The command-line client and the MCP server are not in these files.** They stay with `pipx`, as
   now. People who use a terminal or an AI assistant already have Python.
 - **The attachment libraries:** pypdf and Pillow are bundled, so PDFs and photos show text and size.
@@ -72,9 +73,10 @@ Both Windows and macOS warn about programs from unknown publishers:
   macOS 15 the old right-click → *Open* no longer works. People must go to *System Settings →
   Privacy & Security → Open Anyway*. Most average users will give up there. Notarization needs an
   Apple Developer account ($99 a year), and the build then signs and notarizes by itself.
-- **Linux:** no warning, but an AppImage has to be marked executable first (in the file manager:
-  *Properties → Allow executing*). Some newer distributions also need `libfuse2`. Both go in the
-  instructions.
+- **Linux:** no warning. A double-click on the `.flatpak` opens the software centre on Fedora, Mint
+  and most others; on the command line it is `flatpak install --user Parro-….flatpak`. Ubuntu has no
+  Flatpak out of the box: it needs a one-time `sudo apt install flatpak` (and, for the double-click,
+  `gnome-software-plugin-flatpak`). The instructions say so.
 
 **My recommendation:** build unsigned for 0.12.0, with clear first-start steps (and pictures) in
 the instructions. Make the workflow ready to sign: the secrets for Apple and Windows are read when
@@ -107,7 +109,7 @@ Settings.
    the window without logging in or touching the network, prints the version and stops. CI runs it on
    every built app. A missing Qt plugin or library then fails the build instead of the user's first
    start.
-3. **A local build on Linux** (this machine, aarch64), to find the surprises before CI.
+3. **A local Flatpak build on Linux** (this machine, aarch64), to find the surprises before CI.
 4. **A workflow `installers.yml`:** three systems, plus Linux aarch64 (`ubuntu-24.04-arm`). It can be
    started by hand, so we can try it before tagging. Each job builds, runs `--self-check` and keeps
    the file as a build artifact.
@@ -158,6 +160,49 @@ The releases are on GitHub, so the app asks GitHub which release is the newest:
 agreed; at most once a day; a draft or a broken answer shows nothing; the notice's text for an
 installer and for pipx; no Parro data and no token in the request.
 
+### 1.8 Linux: why a Flatpak (found in phase 3)
+
+The plan said AppImage. Building it showed two things:
+
+- **Briefcase advises against AppImage.** Its documentation says AppImage cannot use ready-made binary
+  packages (wheels) such as Qt's, has known trouble with Qt, and should not be used for distribution.
+  The first local build also failed inside Briefcase.
+- **Its `.deb` and `.rpm` packages use the distribution's own Python.** Each file then works on one
+  version of one distribution (Ubuntu 24.04, Debian 13, Fedora 44, …), and versions with a Python
+  older than 3.12 (Ubuntu 22.04, Debian 12) cannot be served at all. Average users would have to pick
+  the right file out of many.
+
+**A Flatpak** brings its own Python and Qt and works on any distribution with Flatpak: one file per
+processor. Briefcase recommends it. It must be built outside Docker, which suits GitHub's runners
+(virtual machines). Later, publishing on Flathub would add an entry in the software centre and
+automatic updates; that is a separate step, not part of 0.12.0.
+
+**What the local build (phase 3, Fedora aarch64) showed, and what the workflow must do:**
+
+- **The app id** is `io.github.chrisswiftdev.parro-gui` for the Flatpak: Flatpak allows `-` only in
+  the last part, and Briefcase allows no `_`. macOS and Windows keep `io.github.chris-swift-dev`.
+  (Flathub would expect `io.github.chris_swift_dev`; a matter for later.)
+- **The runtime** is KDE 6.11; Briefcase's template still names 6.9, which is end-of-life.
+- **The sandbox** has only network, Wayland (X11 as a fallback), the GPU, and its own `~/.parro`, kept
+  in `~/.var/app/io.github.chrisswiftdev.parro-gui/`. Briefcase's defaults also opened `~/.cache`,
+  `~/.config`, `~/.local/share`, `~/Documents` and sound. Files chosen in a dialog come in through the
+  desktop's file portal. So the Flatpak has its own login: logging in once is a password check.
+- **The branch** is `stable`, not the version. Briefcase writes the version as the Flatpak branch, so
+  every release would install next to the previous one (370 MB each). The workflow sets
+  `default-branch: stable` in the generated manifest after `briefcase create`, and runs
+  `flatpak build-bundle … stable` itself, because `briefcase package` looks for the version's branch.
+  The login survives an update: it is in the app's own folder, shared by all branches.
+- **On Wayland** the window says which menu entry it belongs to (`FLATPAK_ID`), so the dock shows the
+  app's icon.
+- **The font:** in the sandbox Qt cannot see where some desktops keep their default font (Fedora's
+  KDE: a system folder), and falls back to "Sans Serif 9", which looks smaller. In a Flatpak the app
+  asks the desktop's settings portal for the font (KDE's, then GNOME's) and uses it
+  (`parro_gui/desktop_font.py`). Measured: Noto Sans 10, 13 px, the same as outside the sandbox.
+- **Installing a newer bundle over an older one** must replace it. Checked here with `--reinstall`;
+  the live check tries it the way people do it (a double-click, or `flatpak install` without flags).
+- **Size:** an 86 MB download, 370 MB installed (with KDE's runtime shared with other apps).
+- **The self-check passes** in the installed Flatpak.
+
 ## 2. A chat opens at the newest message (your item 2)
 
 **What happens now.** A chat is shown as one text in the detail pane. It holds the title, the members,
@@ -196,7 +241,7 @@ the app keeps sending no `sort`. The live check confirms this on a chat with mor
 | --- | --- | --- |
 | 1 | §2, the chat: the order check, the change and its tests | pytest, ruff, mypy |
 | 2 | §1.6 steps 1–2: `__main__.py`, icon, Briefcase configuration, `--self-check` | pytest, ruff, mypy |
-| 3 | §1.6 step 3: a local Linux AppImage, started here | the AppImage opens and logs in by itself |
+| 3 | §1.6 step 3: a local Linux Flatpak, installed here | the self-check passes in it, and it opens and logs in by itself |
 | 4 | §1.6 step 4: `installers.yml`, started by hand on a branch | four installers built and checked in CI |
 | 5 | §1.6 steps 5–7: the release, the update check and the instructions | pytest, ruff, mypy; docs |
 | 6 | Live check, with you | §4 |
@@ -209,7 +254,7 @@ Phase 1 is small and does not depend on the rest, so it comes first.
 - **Chats, here:** a chat with more than 100 messages opens at the newest one, the same one the web
   app shows last (the order, §2). A long chat opens at the newest message, it stays there when resized, and a sent
   message shows at the end. Sending is only on your choice of chat and your approval, as always.
-- **The installers:** I can run the Linux aarch64 AppImage here. For Windows and macOS I need you, or
+- **The installers:** I can run the Linux aarch64 Flatpak here. For Windows and macOS I need you, or
   someone, on those machines. Check the first start with the warnings described in the instructions,
   the menu entry and icon, logging in, and installing the next version over it. One password check at
   most per run, typed by you.
@@ -219,9 +264,7 @@ Phase 1 is small and does not depend on the rest, so it comes first.
 1. **The tool:** Briefcase *(recommended)*, PyInstaller, or pyside6-deploy. See §1.2.
 2. **Signing:** unsigned for now, with the workflow ready for it *(recommended)*. Or buy an Apple
    Developer account now, for notarized macOS builds. Or also a Windows certificate. See §1.4.
-3. **Linux:** AppImage only, x86_64 and aarch64 *(recommended)*. Or also Flatpak, which is more
-   reliable across distributions but needs Flatpak installed and is best published on Flathub, a
-   separate project.
+3. **Linux:** ~~AppImage~~, then ~~deb + rpm~~. **Chosen: Flatpak**, x86_64 and aarch64 (§1.8).
 4. **PDF and photo libraries in the installers:** pypdf and Pillow, not PyMuPDF *(recommended,
    licence)*.
 5. **Updates:** ~~no update check~~. **Chosen: a check against GitHub's latest release** (§1.7), asked
