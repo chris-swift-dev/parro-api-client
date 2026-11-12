@@ -84,6 +84,7 @@ class AttachmentBar(QWidget):
             row = self.rows.takeAt(0)
             widget = row.widget() if row is not None else None
             if widget is not None:
+                widget.hide()  # gone now, not only once the event loop deletes it
                 widget.deleteLater()
         self.read_buttons, self.save_buttons = [], []
         self.setVisible(False)

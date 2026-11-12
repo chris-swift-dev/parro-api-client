@@ -89,6 +89,7 @@ class ActionBar(QWidget):
             row = self.rows.takeAt(0)
             widget = row.widget() if row is not None else None
             if widget is not None:
+                widget.hide()  # gone now, not only once the event loop deletes it
                 widget.deleteLater()
         self.rsvp_buttons, self.slot_rows = {}, []
         self.setVisible(False)
@@ -166,10 +167,10 @@ class AgendaSection(ListDetailSection):
         self.export_button.clicked.connect(self.export)
         self.link_button.clicked.connect(self.show_link)
         self._groups_added = False
-        self.attachments = AttachmentBar(worker, self.notice.setText)
-        self.side_layout.addWidget(self.attachments)
         self.action_bar = ActionBar(self)
-        self.side_layout.addWidget(self.action_bar)
+        self.add_to_panel(self.action_bar)
+        self.attachments = AttachmentBar(worker, self.notice.setText)
+        self.add_to_panel(self.attachments)
         self.mark_button = self.add_mark_button()
         self.mark_button.clicked.connect(self._mark_current)
 
