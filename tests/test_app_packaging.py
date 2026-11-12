@@ -163,3 +163,13 @@ def test_the_flatpak_sandbox_opens_no_folder_and_no_sound():
     allowed = {arg for arg, on in flatpak["finish_arg"].items() if on}
     assert not any(arg.startswith("filesystem=") for arg in allowed)
     assert "socket=pulseaudio" not in allowed
+
+
+def test_the_system_checks_https_everywhere_the_app_is_installed():
+    """Without truststore, the installers' Python had no roots on macOS (live check of 0.12.0)."""
+    pinned = "truststore==0.10.5"
+    assert pinned in briefcase_app()["requires"]  # type: ignore[operator]
+    assert pinned in (ROOT / "requirements-gui.txt").read_text(encoding="utf-8").splitlines()
+    assert "'truststore>=0.10; python_version >= \"3.12\"'" in (ROOT / "pyproject.toml").read_text(
+        encoding="utf-8"
+    )

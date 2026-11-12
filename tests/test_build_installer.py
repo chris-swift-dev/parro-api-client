@@ -138,3 +138,7 @@ def test_the_release_workflow_attaches_and_attests_the_installers():
     assert "--packages --installers" in text
     assert "actions/attest-build-provenance@v4" in text and "dist/installers/*" in text
     assert "id-token: write" in text and "attestations: write" in text
+
+
+def test_every_built_app_also_makes_one_real_https_request():
+    assert [option for option, _text in tool.CHECKS] == ["--self-check", "--check-connection"]

@@ -17,6 +17,11 @@ section of a version as its GitHub release notes, so write each section for user
   at most once a day, sends nothing about you, and downloads nothing itself. A *Help* menu has the
   switch, *Check for updates now* and *About*.
 - **The desktop app has its own icon,** in the window, the taskbar and the installers.
+- **Desktop app: HTTPS certificates are checked by the operating system,** as a browser does it,
+  through the small `truststore` library (now part of the `gui` extra and the installers). Without
+  it, the installers' own Python could not verify Parro, GitHub or the attachment server on macOS and
+  some Windows computers. Certificates a company installs on the computer work too. The command line
+  and the MCP server are unchanged.
 
 ### Changed
 

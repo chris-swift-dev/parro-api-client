@@ -210,6 +210,12 @@ automatic updates; that is a separate step, not part of 0.12.0.
   and without it the login was lost at every close.
 - **The update question waits for a quiet moment** (found on the live check): asked while the
   login dialog was open, it was blocked by it.
+- **HTTPS certificates are checked by the operating system** (found on the live check on Windows
+  and macOS): the installers' own Python had no trusted roots on macOS and only the ones Windows had
+  fetched so far, so connections failed with CERTIFICATE_VERIFY_FAILED. `truststore` (MIT, pure
+  Python, also used by pip) hands the check to the system; it is in the installers and the `gui`
+  extra, and `parro/` stays standard library only. Every built installer now also runs
+  `--check-connection`: one real HTTPS request to GitHub's latest release.
 - **Size:** an 86 MB download, 370 MB installed (with KDE's runtime shared with other apps).
 - **The self-check passes** in the installed Flatpak.
 

@@ -29,15 +29,27 @@ def run_self_check() -> int:
         problems, requests = _check_the_window()
     if requests:
         problems.append(f"{requests} request(s) were attempted; the self-check sends none")
+    from .certificates import SYSTEM, use_system_certificates
+
+    certificates = use_system_certificates()
+    if certificates != SYSTEM and _in_an_installer():
+        problems.append("HTTPS certificates are not checked by the system: truststore is missing")
     libraries = [label for module, label in OPTIONAL_LIBRARIES.items() if find_spec(module)]
     print(f"parro-client-gui {__version__}")
     print(
         f"Python {sys.version.split()[0]}, attachment libraries: {', '.join(libraries) or 'none'}"
     )
+    print(f"HTTPS certificates: {certificates}")
     for problem in problems:
         print(f"problem: {problem}", file=sys.stderr)
     print("self-check: " + ("failed" if problems else "ok"))
     return 1 if problems else 0
+
+
+def _in_an_installer() -> bool:
+    from .updates import installed_with_an_installer
+
+    return installed_with_an_installer()
 
 
 def _check_the_window() -> tuple[list[str], int]:

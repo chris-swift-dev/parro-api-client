@@ -193,3 +193,12 @@ app's login dialog. No writes. Personal data is left out.
 | A double-click on the `.flatpak` with the app installed | OK: the software centre offered *Install*, which replaced the installed copy without an error; one copy, the data kept. (`flatpak install` on the command line refuses an installed copy; the guide says to remove it first) |
 | A chat with more than 100 messages | OK: it opens at the end, with the same newest message as the Parro web app, and stays where the owner scrolled when the window is resized |
 | Not checked live yet | Logging in by itself after a restart with the fixed sandbox (the next run's password check); the installers for Windows and macOS on real machines, with their first-start warnings |
+
+## Live check (2026-11-12, release 0.12.0: the installers, part 2: Windows and macOS)
+
+The account owner installed the MSI on Windows and the DMG on macOS, built in CI from the branch
+(07bc001), and reported what they saw. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| Connections | **Found:** "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate". On Windows, logging in and reading from the Parro API worked, but the update check (GitHub) and attachments (the CloudFront server) failed; on macOS every connection failed, the login too. The installers' own Python checks certificates with its own list of roots, which is missing on macOS and holds only what Windows has fetched so far. **Fixed:** the app hands the check to the operating system with `truststore`; every built installer now runs `--check-connection` in CI. To be checked again on both systems |

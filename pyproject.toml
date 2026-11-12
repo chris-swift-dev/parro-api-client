@@ -50,7 +50,8 @@ parro_gui = ["icon_files/*"]  # the sidebar's icons and their licence
 [project.optional-dependencies]
 attachments = ["pymupdf", "pypdf", "pillow"]
 # Python 3.12 and newer only: see parro_gui/app.py for why.
-gui = ['PySide6-Essentials>=6.11; python_version >= "3.12"']
+# truststore: HTTPS certificates checked by the operating system (parro_gui/certificates.py).
+gui = ['PySide6-Essentials>=6.11; python_version >= "3.12"', 'truststore>=0.10; python_version >= "3.12"']
 dev = ["pytest", "ruff", "mypy", "openapi-schema-validator"]
 
 # The installers for people without Python (docs/PLAN-desktop-0.12.md): `briefcase build` and
@@ -65,7 +66,12 @@ formal_name = "Parro Client"
 description = "An unofficial desktop app for Parro: school news, calendar and chats"
 sources = ["parro", "parro_gui"]
 # The same Qt as requirements-gui.txt (a test checks it).
-requires = ["PySide6-Essentials==6.12.0", "pypdf==6.21.4", "pillow==13.0.0"]
+requires = [
+    "PySide6-Essentials==6.12.0",
+    "truststore==0.10.5",  # HTTPS checked by the system: without it, macOS has no roots at all
+    "pypdf==6.21.4",
+    "pillow==13.0.0",
+]
 icon = "packaging/icon"
 
 [tool.briefcase.app.parro-gui.macOS]
@@ -126,7 +132,7 @@ warn_unreachable = true
 
 [[tool.mypy.overrides]]
 # Optional libraries without type information.
-module = ["fitz", "pypdf", "PIL", "PIL.*", "openapi_schema_validator", "openapi_schema_validator.*"]
+module = ["fitz", "pypdf", "PIL", "PIL.*", "openapi_schema_validator", "openapi_schema_validator.*", "truststore"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

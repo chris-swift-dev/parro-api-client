@@ -31,6 +31,9 @@ FLATPAK_ID = "io.github.chrisswiftdev.parro-gui"
 FLATPAK_BRANCH = "stable"  # not the version: a newer bundle then replaces the older one
 FLATHUB = "https://flathub.org/repo/flathub.flatpakrepo"
 SELF_CHECK_OK = "self-check: ok"
+# Each built app runs both: the offline self-check, and one HTTPS request to GitHub (the update
+# check's), which an installer without the system's certificate check fails (live check of 0.12.0).
+CHECKS = (("--self-check", SELF_CHECK_OK), ("--check-connection", "connection: ok"))
 TARGETS = ("windows", "macos", "flatpak")
 
 
@@ -104,31 +107,30 @@ def clean_copy() -> Path:
     return folder
 
 
-def checked(result: subprocess.CompletedProcess[str], what: str, need_text: bool) -> None:
+def checked(result: subprocess.CompletedProcess[str], what: str, expected: str | None) -> None:
+    """Exit code 0, and the expected line when the program prints to the terminal."""
     output = (result.stdout or "") + (result.stderr or "")
     print(output.strip())
     if result.returncode != 0:
-        raise SystemExit(f"The self-check failed in {what} (exit {result.returncode}).")
-    if need_text and SELF_CHECK_OK not in output:
-        raise SystemExit(f"The self-check in {what} did not say {SELF_CHECK_OK!r}.")
-    print(f"Self-check passed: {what}")
+        raise SystemExit(f"The check failed in {what} (exit {result.returncode}).")
+    if expected and expected not in output:
+        raise SystemExit(f"The check in {what} did not say {expected!r}.")
+    print(f"Check passed: {what}")
 
 
 def self_check_windows(folder: Path) -> None:
     source = folder / "build" / APP / "windows" / "app" / "src"
     stub = next(p for p in source.glob("*.exe") if not p.name.lower().startswith("python"))
-    # The app's own program has no console, so only its exit code tells; the bundled Python
-    # with the same files shows what it found.
-    checked(run([str(stub), "--self-check"], source), stub.name, need_text=False)
-    python = source / "python.exe"
-    if python.exists():
-        checked(run([str(python), "-m", "parro_gui", "--self-check"], source), "python.exe", True)
+    for option, expected in CHECKS:
+        checked(run([str(stub), option], source), f"{stub.name} {option}", expected)
 
 
 def self_check_macos(folder: Path) -> None:
     bundle = next((folder / "build" / APP / "macos" / "app").glob("*.app"))
     program = next(p for p in (bundle / "Contents" / "MacOS").iterdir() if p.is_file())
-    checked(run([str(program), "--self-check"], folder), bundle.name, need_text=False)
+    # macOS sends the app's output to its own log, not the terminal: the exit code tells.
+    for option, _expected in CHECKS:
+        checked(run([str(program), option], folder), f"{bundle.name} {option}", None)
 
 
 def self_check_flatpak(bundle: Path, folder: Path) -> None:
@@ -138,8 +140,9 @@ def self_check_flatpak(bundle: Path, folder: Path) -> None:
     quiet = ["-y", "--noninteractive"]
     run(["flatpak", "uninstall", "--user", *quiet, FLATPAK_ID], folder)
     run_or_stop(["flatpak", "install", "--user", *quiet, str(bundle)], folder)
-    result = run(["flatpak", "run", "--user", FLATPAK_ID, "--self-check"], folder)
-    checked(result, bundle.name, need_text=True)
+    for option, expected in CHECKS:
+        result = run(["flatpak", "run", "--user", FLATPAK_ID, option], folder)
+        checked(result, f"{bundle.name} {option}", expected)
 
 
 def build(target: str) -> Path:

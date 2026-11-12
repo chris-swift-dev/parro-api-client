@@ -27,6 +27,11 @@ def run() -> None:
         found = ".".join(str(part) for part in sys.version_info[:2])
         print(PYTHON_TOO_OLD.format(found=found), file=sys.stderr)
         sys.exit(2)
+    from .certificates import check_connection, use_system_certificates
+
+    if sys.argv[1:] == ["--check-connection"]:
+        sys.exit(check_connection())
+    use_system_certificates()  # before anything connects: HTTPS checked as the system does
     self_check = sys.argv[1:] == ["--self-check"]
     try:
         if self_check:
