@@ -509,8 +509,13 @@ def save_file(directory: Path, filename: str | None, data: bytes) -> Path:
     safe_name = Path(filename or "attachment").name.replace("\\", "_") or "attachment"
     target = directory / safe_name
     counter = 2
-    while target.exists():
-        target = directory / f"{Path(safe_name).stem} ({counter}){Path(safe_name).suffix}"
-        counter += 1
-    target.write_bytes(data)
-    return target
+    while True:
+        try:
+            # "x": the name is claimed and written in one step, so a file that appears between
+            # looking and writing is not overwritten either.
+            with target.open("xb") as new_file:
+                new_file.write(data)
+            return target
+        except FileExistsError:
+            target = directory / f"{Path(safe_name).stem} ({counter}){Path(safe_name).suffix}"
+            counter += 1

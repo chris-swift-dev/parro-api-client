@@ -51,6 +51,7 @@ class NewsSection(ListDetailSection):
         self.unread_only.toggled.connect(self.load)
         self.attachments = AttachmentBar(worker, self.notice.setText)
         self.add_to_panel(self.attachments)
+        self.add_action(self.attachments.save_all_button)
         self.mark_button = self.add_mark_button()
         self.mark_button.clicked.connect(self._mark_current)
         self.group_button = QPushButton("Mark this group as read…")

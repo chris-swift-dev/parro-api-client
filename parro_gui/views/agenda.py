@@ -171,6 +171,7 @@ class AgendaSection(ListDetailSection):
         self.add_to_panel(self.action_bar)
         self.attachments = AttachmentBar(worker, self.notice.setText)
         self.add_to_panel(self.attachments)
+        self.add_action(self.attachments.save_all_button)
         self.mark_button = self.add_mark_button()
         self.mark_button.clicked.connect(self._mark_current)
 
