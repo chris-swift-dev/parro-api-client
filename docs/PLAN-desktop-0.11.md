@@ -166,6 +166,11 @@ could start it twice. Found by checking every such button after the owner asked;
 until its answer is in, a section runs one action at a time, and `tests/test_gui_double_clicks.py`
 clicks twice on each kind.
 
+**Also added during the release (2026-11-12), on request:** tab completion for the command line.
+`completion bash|zsh|fish` prints a script made from the argparse parser itself, so it cannot drift
+from the commands; standard library only, nothing runs while you type. `tests/test_completion.py`
+runs the bash script the way bash calls it. PowerShell is left out.
+
 Phase 1 comes first: it is small, it does not touch the app, and M8ven's report can update while we
 work on the rest.
 

@@ -7,8 +7,9 @@ section of a version as its GitHub release notes, so write each section for user
 ## [0.11.0] - unreleased
 
 A better desktop app: details that always fit in the window, saving all attachments at once, less
-waiting when you switch sections, and logging in by itself from a password file. And the MCP tool
-hints can now be seen by services that read the code instead of running the server.
+waiting when you switch sections, and logging in by itself from a password file. Tab completion for
+the command line. And the MCP tool hints can now be seen by services that read the code instead of
+running the server.
 
 ### Added
 - **Save all attachments…** in Announcements and Calendar, next to *Mark as read*: one folder
@@ -19,6 +20,9 @@ hints can now be seen by services that read the code instead of running the serv
   `PARRO_USERNAME` and `PARRO_PASSWORD_FILE` work as in the command line.
 - **"Fetched at 14:32"** next to each section's title, and under an opened announcement.
 - Every MCP tool has a `title`.
+- **Tab completion for the command line** in bash, zsh and fish: `parro-client completion bash`
+  (or `zsh`, `fish`) prints a script for your shell's startup file. It completes commands, options,
+  their fixed values and file names, and never contacts Parro.
 
 ### Changed
 - An announcement or calendar item with long text, many attachments or many helper slots fits in the

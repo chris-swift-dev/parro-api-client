@@ -169,13 +169,25 @@ Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-f
 `helper signup <event-id> [--slot ID] [--count N] [--yes]`,
 `helper withdraw <event-id> [--slot ID] [--yes]`,
 `rsvp accept|decline|tentative <event-id> [--yes]`, `sync [--to DIR] [--previous] [--photos]`,
-`cache info|clear`, `get <path> [--param k=v ...] [--limit N] [--offset N]`.
+`cache info|clear`, `get <path> [--param k=v ...] [--limit N] [--offset N]`,
+`completion bash|zsh|fish`.
 Global options: `--format auto|json|markdown`, `--login-method`, `--raw`, `--compact`,
 `--no-cache`, `--verbose`. `--full` shows whole texts instead of a 3-line preview.
 
 Exit codes: `0` ok · `1` API/network error · `2` usage · `3` not logged in · `4` login halted.
 
 </details>
+
+**Tab completion** for commands, options and their fixed values (`--format`, `rsvp accept`, …), and
+file names where a file or folder is asked. Add one line to your shell's startup file:
+
+```bash
+eval "$(parro-client completion bash)"      # ~/.bashrc
+eval "$(parro-client completion zsh)"       # ~/.zshrc
+parro-client completion fish | source       # ~/.config/fish/config.fish
+```
+
+Completing never runs a request and needs no login. Windows PowerShell is not covered.
 
 ## Desktop app
 

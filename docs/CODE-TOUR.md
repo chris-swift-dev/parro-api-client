@@ -30,6 +30,8 @@ Windows console cannot print the markers otherwise), records the program's name 
 `Settings.from_environment()` (`parro/settings.py`). Command-line flags such as `--login-method`
 override them through `Settings.with_overrides()`. It creates a `ParroClient` and calls the handler
 for the command, here `operations.list_announcements(client, group_id=None, limit=5, ...)`.
+The one exception is `completion bash|zsh|fish`: it prints a tab completion script that
+`parro/completion.py` makes from the same parser, before any settings are read or a client exists.
 
 `parro/mcp_server.py` does the same per `tools/call` message. `McpServer.call_tool()` looks the tool up in
 `TOOL_FUNCTIONS` and calls the same `operations` function. That is why CLI output and MCP output are
