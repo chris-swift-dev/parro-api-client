@@ -64,7 +64,9 @@ flatpak install --user Parro-Client-0.12.0-linux-x86_64.flatpak
 
 Then start **Parro Client** from your app menu.
 
-**Updating:** remove the old version first (your login stays), then install the new file:
+**Updating:** double-click the new file; the software centre installs it over the old version, and
+your login stays. On the command line, `flatpak install` refuses while the old version is there, so
+remove that first (your login stays):
 
 ```bash
 flatpak uninstall --user io.github.chrisswiftdev.parro-gui
@@ -79,7 +81,8 @@ flatpak uninstall --user --delete-data io.github.chrisswiftdev.parro-gui
 
 **The sandbox.** The app can reach the network, show its window and use the graphics card. It keeps
 its login and data in its own folder, `~/.var/app/io.github.chrisswiftdev.parro-gui/`, apart from a
-`parro-client` installed with pipx, so it asks you to log in once. Files you save or choose (an
+`parro-client` installed with pipx, so it asks you to log in once. Your login (`.parro-mcp`) and the
+data folder (`.parro`) are the only folders it keeps there. Files you save or choose (an
 attachment, a password file) go through your desktop's file dialog; the app sees no other files.
 
 ## Logging in

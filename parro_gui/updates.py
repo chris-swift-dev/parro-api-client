@@ -16,9 +16,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QMainWindow, QMessageBox, QPushButton
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton
 
 from parro import __version__
 from parro.errors import ParroError
@@ -38,6 +38,11 @@ UP_TO_DATE = "You have the newest version, {version}."
 COULD_NOT_CHECK = "Could not check for a new version: {reason}"
 AVAILABLE = "Version {version} is available"
 PIPX_UPDATE = "pipx upgrade parro-api-client"
+WAIT_MS = 500  # how often the question at the first start looks for a quiet moment
+
+
+def no_dialog_open() -> bool:
+    return QApplication.activeModalWidget() is None
 
 
 @dataclass(frozen=True)
@@ -116,9 +121,11 @@ class Updates(QObject):
         data_dir: Path | None,
         clock: Callable[[], float] = time.time,
         fetch: Callable[[], LatestRelease | None] = latest_release,
+        ready: Callable[[], bool] = no_dialog_open,
     ) -> None:
         super().__init__(window)
         self.window, self.data_dir, self.clock, self.fetch = window, data_dir, clock, fetch
+        self.ready = ready
         self.installer = installed_with_an_installer()
         self.release: LatestRelease | None = None
         self.notice = QPushButton()
@@ -152,9 +159,16 @@ class Updates(QObject):
         self._store(Preference(enabled, self.preference().last_checked))
 
     def at_start(self) -> None:
-        """From main(): ask once, then check when a day has passed."""
+        """From main(): ask once, then check when a day has passed.
+
+        The question waits for a quiet moment: asked while the login dialog is open, it would sit
+        behind it, blocked by it, and neither could be answered.
+        """
         preference = self.preference()
         if preference.enabled is None and self.data_dir:
+            if not self.ready():
+                QTimer.singleShot(WAIT_MS, self.at_start)
+                return
             enabled = ask(self.window, QUESTION)
             preference = Preference(enabled)
             self._store(preference)

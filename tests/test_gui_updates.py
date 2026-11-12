@@ -255,3 +255,44 @@ def test_a_window_has_the_help_menu_and_checks_nothing_by_itself(
         assert window.updates._check is None and window.updates.data_dir == tmp_path / "data"
     finally:
         dispose(window)
+
+
+def test_the_question_waits_for_a_quiet_moment(application, tmp_path, said):
+    """Asked while another dialog is open, it would be blocked by it, and neither could be used."""
+    quiet = {"now": False}
+    window = QMainWindow()
+    found = Updates(window, tmp_path, Clock(), GitHub(), ready=lambda: quiet["now"])
+    try:
+        found.at_start()
+        QtWidgets.QApplication.processEvents()
+        assert said["asked"] == []
+        quiet["now"] = True
+        wait_until(lambda: len(said["asked"]) == 1)
+    finally:
+        dispose(window)
+
+
+def test_the_window_asks_only_after_the_login_dialog_closed(
+    application, tmp_path, said, monkeypatch
+):
+    """The real case: not logged in, so the login dialog opens at start and is modal."""
+    from parro_gui.window import MainWindow
+
+    for name in list(os.environ):
+        if name.startswith("PARRO_"):
+            monkeypatch.delenv(name)
+    monkeypatch.setenv("PARRO_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("PARRO_TOKEN_FILE", str(tmp_path / "tokens.json"))
+    window = MainWindow()
+    try:
+        window.show()
+        window.updates.at_start()
+        wait_until(lambda: window.login_dialog is not None and window.login_dialog.isVisible())
+        assert QtWidgets.QApplication.activeModalWidget() is window.login_dialog
+        for _ in range(3):
+            QtWidgets.QApplication.processEvents()
+        assert said["asked"] == [], "not while the login dialog is open"
+        window.login_dialog.reject()
+        wait_until(lambda: len(said["asked"]) == 1)
+    finally:
+        dispose(window)

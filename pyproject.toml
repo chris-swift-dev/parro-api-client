@@ -84,9 +84,10 @@ flatpak_runtime_version = "6.11"  # the newest on Flathub (2026-11); 6.9 is end-
 flatpak_sdk = "org.kde.Sdk"
 
 # The sandbox: only what the app needs. Briefcase's defaults also open ~/.cache, ~/.config,
-# ~/.local/share and ~/Documents, and sound. ~/.parro (the login and the data folder) is kept inside
-# the sandbox, in ~/.var/app/<id>/.parro. Files chosen in a dialog come in through the desktop's
-# file portal, so no folder needs opening.
+# ~/.local/share and ~/Documents, and sound. ~/.parro-mcp (the login's tokens) and ~/.parro (the
+# data folder) are kept inside the sandbox, in ~/.var/app/<id>/; anything else in the sandbox's home
+# is gone when the app closes. Files chosen in a dialog come in through the desktop's file portal, so
+# no folder needs opening.
 [tool.briefcase.app.parro-gui.linux.flatpak.finish_arg]
 "socket=x11" = false
 "nosocket=wayland" = false
@@ -98,6 +99,7 @@ flatpak_sdk = "org.kde.Sdk"
 "filesystem=xdg-data" = false
 "filesystem=xdg-documents" = false
 "persist=.parro" = true
+"persist=.parro-mcp" = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -172,3 +172,24 @@ from a private password file that the owner had created. No writes. Personal dat
 | Switching sections and filters | OK: going back within 5 minutes is instant, "Fetched at" shows the time, and **Refresh** loads again |
 | *Save all attachments…* | OK: every file saved into an empty folder, with the report; saving again into the same folder kept the first copies and added numbered ones |
 | Not checked live | Logging in by itself when the login expires while the app is open, the latch after a rejected password, the dialog's box for remembering (each would cost another password check; covered by tests against the fake login server), and the effect on M8ven's report (after the merge) |
+
+## Live check (2026-11-12, release 0.12.0: the installers, part 1: Linux)
+
+The account owner used the Flatpak on a real display (Fedora Asahi Remix 44, KDE Plasma on Wayland,
+aarch64), built from the branch and installed from its single file, and reported what they saw.
+The sandbox started with an empty data folder. **One password check**, typed by the owner in the
+app's login dialog. No writes. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| Self-check of the installed Flatpak | OK: Qt 6.12.0, Python 3.14.10, pypdf and Pillow; nothing sent |
+| Starting from the app menu | OK: the entry "Parro Client" with the app's icon, also in the dock on Wayland |
+| Text size | Smaller than in the pipx version at first: inside the sandbox Qt cannot see Fedora KDE's default font and fell back to "Sans Serif 9". **Fixed:** the app asks the desktop's settings portal; now Noto Sans 10, the same as outside, as reported by the owner |
+| The update question at the first start | **Found:** asked while the login dialog was open, it was blocked by that dialog, and neither could be used (the app had to be stopped; nothing was sent or saved). **Fixed:** the question waits until the first login check is done and no other dialog is open. After the fix: the login dialog first, then the question |
+| Logging in, with a password file chosen through the file portal | OK: one attempt; no complaint about the file. In a new sandbox process the remembered portal path still passes the permission check and can be read |
+| *Help → Check for updates now* | OK: "You have the newest version, 0.11.0." (0.11.0 is the latest release); *Check for new versions at start* ticked |
+| What the app stored | `desktop-app.json` (mode 600): the e-mail address, the password file's portal path, and the update answer with the time of the check; no password |
+| Where the login went | **Found:** the tokens were written to `~/.parro-mcp`, which the sandbox did not keep, so the login would be lost at every close and, with logging in by itself, cost a password check at every start. **Fixed:** the sandbox keeps `~/.parro-mcp` as well as `~/.parro`; a test checks that every folder the app writes to is kept |
+| A double-click on the `.flatpak` with the app installed | OK: the software centre offered *Install*, which replaced the installed copy without an error; one copy, the data kept. (`flatpak install` on the command line refuses an installed copy; the guide says to remove it first) |
+| A chat with more than 100 messages | OK: it opens at the end, with the same newest message as the Parro web app, and stays where the owner scrolled when the window is resized |
+| Not checked live yet | Logging in by itself after a restart with the fixed sandbox (the next run's password check); the installers for Windows and macOS on real machines, with their first-start warnings |

@@ -137,3 +137,29 @@ def test_the_app_icon_is_drawn(application):
     assert image.pixelColor(32, 6).name() == "#2f6feb"
     assert image.pixelColor(32, 32).alpha() == 255
     assert len(app_icon().availableSizes()) == len(APP_ICON_SIZES)
+
+
+def test_the_flatpak_keeps_every_folder_the_app_writes_to(monkeypatch, tmp_path):
+    """The sandbox's home is temporary: what is not kept is gone when the app closes. Losing the
+    tokens would cost a password check at every start (found on the live check of 0.12.0)."""
+    from parro import settings
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    written = {
+        settings.default_token_file().relative_to(tmp_path).parts[0],
+        settings.default_data_dir().relative_to(tmp_path).parts[0],
+    }
+    flatpak = briefcase_app()["linux"]["flatpak"]  # type: ignore[index]
+    kept = {
+        arg.split("=", 1)[1]
+        for arg, on in flatpak["finish_arg"].items()
+        if on and arg.startswith("persist=")
+    }
+    assert written == {".parro-mcp", ".parro"} and written <= kept
+
+
+def test_the_flatpak_sandbox_opens_no_folder_and_no_sound():
+    flatpak = briefcase_app()["linux"]["flatpak"]  # type: ignore[index]
+    allowed = {arg for arg, on in flatpak["finish_arg"].items() if on}
+    assert not any(arg.startswith("filesystem=") for arg in allowed)
+    assert "socket=pulseaudio" not in allowed

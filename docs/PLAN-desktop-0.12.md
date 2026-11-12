@@ -184,8 +184,8 @@ automatic updates; that is a separate step, not part of 0.12.0.
   the last part, and Briefcase allows no `_`. macOS and Windows keep `io.github.chris-swift-dev`.
   (Flathub would expect `io.github.chris_swift_dev`; a matter for later.)
 - **The runtime** is KDE 6.11; Briefcase's template still names 6.9, which is end-of-life.
-- **The sandbox** has only network, Wayland (X11 as a fallback), the GPU, and its own `~/.parro`, kept
-  in `~/.var/app/io.github.chrisswiftdev.parro-gui/`. Briefcase's defaults also opened `~/.cache`,
+- **The sandbox** has only network, Wayland (X11 as a fallback), the GPU, and its own `~/.parro` and
+  `~/.parro-mcp`, kept in `~/.var/app/io.github.chrisswiftdev.parro-gui/`. Briefcase's defaults also opened `~/.cache`,
   `~/.config`, `~/.local/share`, `~/Documents` and sound. Files chosen in a dialog come in through the
   desktop's file portal. So the Flatpak has its own login: logging in once is a password check.
 - **The branch** is `stable`, not the version. Briefcase writes the version as the Flatpak branch, so
@@ -203,9 +203,13 @@ automatic updates; that is a separate step, not part of 0.12.0.
   already installed stops with "already installed", also with `--or-update`. `--reinstall` replaces it
   on Flatpak 1.18 (Fedora 44) but not on 1.14 (Ubuntu 24.04, found in phase 4). What always works:
   `flatpak uninstall --user io.github.chrisswiftdev.parro-gui` (the login stays), then
-  `flatpak install --user Parro-Client-….flatpak`; tools/build_installer.py does that. The
-  instructions give it, and the live check tries a double-click in the software centre over an
-  older version.
+  `flatpak install --user Parro-Client-….flatpak`; tools/build_installer.py does that. A
+  double-click in the software centre (KDE Discover, live check) installs over the old version
+  without that. The instructions give both.
+- **The sandbox keeps `~/.parro-mcp` too** (found on the live check): the login's tokens are there,
+  and without it the login was lost at every close.
+- **The update question waits for a quiet moment** (found on the live check): asked while the
+  login dialog was open, it was blocked by it.
 - **Size:** an 86 MB download, 370 MB installed (with KDE's runtime shared with other apps).
 - **The self-check passes** in the installed Flatpak.
 

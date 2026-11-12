@@ -119,7 +119,8 @@ class MainWindow(QMainWindow):
         # after logging out on purpose.
         self._may_log_in_by_itself = True
         self._logged_in_by_itself = ""
-        self.updates = Updates(self, data_dir_of(self.settings))
+        self.first_login_check_done = False
+        self.updates = Updates(self, data_dir_of(self.settings), ready=self._quiet_moment)
         self.account_button = QPushButton("Log in")
         self.account_button.clicked.connect(self._log_in_or_out)
         self.statusBar().addPermanentWidget(self.account_button)
@@ -146,13 +147,22 @@ class MainWindow(QMainWindow):
             view.ensure_loaded()
 
     def refresh_login(self) -> None:
-        self.worker.submit(operations.auth_status, self._show_login, self.statusBar().showMessage)
+        self.worker.submit(operations.auth_status, self._show_login, self._login_check_failed)
+
+    def _login_check_failed(self, text: str) -> None:
+        self.first_login_check_done = True
+        self.statusBar().showMessage(text)
+
+    def _quiet_moment(self) -> bool:
+        """For a question at start: the login is known, and no other dialog is open."""
+        return self.first_login_check_done and QApplication.activeModalWidget() is None
 
     @staticmethod
     def settings() -> Settings:
         return auto_login.app_settings()
 
     def _show_login(self, status: dict[str, Any]) -> None:
+        self.first_login_check_done = True
         line = describe_login(status)
         if self._logged_in_by_itself and is_logged_in(status):
             line = f"{line} · {self._logged_in_by_itself}"
