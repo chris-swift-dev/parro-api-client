@@ -24,8 +24,17 @@ def test_the_core_never_imports_qt_or_the_app():
 
 
 def test_the_app_never_talks_to_the_network_itself():
-    """Every request goes through parro.operations and ParroClient."""
+    """Every request goes through parro.operations and ParroClient.
+
+    One exception: the self-check gives the client a transport that refuses every request.
+    """
     for path in sorted((ROOT / "parro_gui").rglob("*.py")):
+        if path.name == "self_check.py":
+            text = path.read_text(encoding="utf-8")
+            imports = r"^\s*(from|import)\s+(urllib|http\.client|requests|socket)\b"
+            assert not re.search(imports, text, re.MULTILINE)
+            assert 'raise NetworkError("The self-check sends no requests.")' in text
+            continue
         assert not NETWORK.search(path.read_text(encoding="utf-8")), path.name
 
 

@@ -53,6 +53,25 @@ attachments = ["pymupdf", "pypdf", "pillow"]
 gui = ['PySide6-Essentials>=6.11; python_version >= "3.12"']
 dev = ["pytest", "ruff", "mypy", "openapi-schema-validator"]
 
+# The installers for people without Python (docs/PLAN-desktop-0.12.md): `briefcase build` and
+# `briefcase package` make an MSI, a DMG and an AppImage with Python, Qt and the app inside. Name,
+# version, description and licence come from [project]. Only the desktop app is in them; the CLI
+# and the MCP server stay with pipx. PyMuPDF is left out: its licence (AGPL) would cover the bundle.
+[tool.briefcase]
+bundle = "io.github.chris-swift-dev"
+
+[tool.briefcase.app.parro-gui]
+formal_name = "Parro Client"
+description = "An unofficial desktop app for Parro: school news, calendar and chats"
+sources = ["parro", "parro_gui"]
+# The same Qt as requirements-gui.txt (a test checks it).
+requires = ["PySide6-Essentials==6.12.0", "pypdf==6.21.4", "pillow==13.0.0"]
+icon = "packaging/icon"
+
+[tool.briefcase.app.parro-gui.macOS]
+min_os_version = "12.0"  # PySide6 6.8 and newer
+universal_build = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"

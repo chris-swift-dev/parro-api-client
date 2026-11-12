@@ -24,7 +24,7 @@ from parro.rendering import format_timestamp
 from parro.settings import Settings
 
 from . import auto_login
-from .icons import ICON_SIZE, section_icon
+from .icons import ICON_SIZE, app_icon, section_icon
 from .login import LoginDialog
 from .memory import Memory
 from .theme import apply_theme, current_colours
@@ -248,6 +248,7 @@ def main(argv: list[str]) -> int:
     logging.basicConfig(level=logging.WARNING, format="[parro-gui] %(message)s", stream=sys.stderr)
     application = QApplication(argv)
     application.setApplicationName(APP_NAME)
+    application.setWindowIcon(app_icon())
     apply_theme(application)
     window = MainWindow()
     window.show()
