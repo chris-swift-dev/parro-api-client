@@ -85,6 +85,8 @@ def test_check_connection_counts_a_refusal_from_github_as_a_connection(
 
 
 def test_the_app_option_needs_no_qt(monkeypatch):
+    # What follows the version gate, also on Python 3.10 (CI of 0.12.0).
+    monkeypatch.setattr(app, "MINIMUM_PYTHON", (3, 0))
     monkeypatch.setattr(sys, "argv", ["parro-client-gui", "--check-connection"])
     monkeypatch.setattr(certificates, "check_connection", lambda: 7)
     monkeypatch.setitem(sys.modules, "PySide6", None)
@@ -95,6 +97,8 @@ def test_the_app_option_needs_no_qt(monkeypatch):
 
 def test_the_app_uses_the_system_check_before_anything_connects(truststore, monkeypatch):
     """run() hands HTTPS to the system before the window module is even imported."""
+    # What follows the version gate, also on Python 3.10 (CI of 0.12.0).
+    monkeypatch.setattr(app, "MINIMUM_PYTHON", (3, 0))
     monkeypatch.setattr(sys, "argv", ["parro-client-gui"])
     order: list[str] = []
     real = certificates.use_system_certificates
