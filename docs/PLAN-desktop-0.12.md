@@ -4,8 +4,9 @@
 GitHub, §1.7) and 3 (Linux gets a Flatpak, not an AppImage: §1.8); the message order is checked again
 on the live check (§2).*
 
-*Phase 7 (the release) waits for [Plan 16](PLAN-0.12-additions.md): five additions to the same
-release (2026-11-13).*
+*Done (2026-11-13): phases 1–6 on branch `desktop-0.12`, then the five additions of
+[Plan 16](PLAN-0.12-additions.md), then the release as 0.12.0 (phase 7). Live checks in
+`docs/LIVE-CHECKS.md`.*
 
 **Goal:** two changes to the desktop app.
 
@@ -258,13 +259,13 @@ the app keeps sending no `sort`. The live check confirms this on a chat with mor
 
 | Phase | What | Ends with |
 | --- | --- | --- |
-| 1 | §2, the chat: the order check, the change and its tests | pytest, ruff, mypy |
-| 2 | §1.6 steps 1–2: `__main__.py`, icon, Briefcase configuration, `--self-check` | pytest, ruff, mypy |
-| 3 | §1.6 step 3: a local Linux Flatpak, installed here | the self-check passes in it, and it opens and logs in by itself |
-| 4 | §1.6 step 4: `installers.yml`, started by hand on a branch | four installers built and checked in CI |
-| 5 | §1.6 steps 5–7: the release, the update check and the instructions | pytest, ruff, mypy; docs |
-| 6 | Live check, with you | §4 |
-| 7 | Release 0.12.0 | the draft release with the installers, for you to publish |
+| 1 | ✅ §2, the chat: the order check, the change and its tests | pytest, ruff, mypy |
+| 2 | ✅ §1.6 steps 1–2: `__main__.py`, icon, Briefcase configuration, `--self-check` | pytest, ruff, mypy |
+| 3 | ✅ §1.6 step 3: a local Linux Flatpak, installed here | the self-check passes in it, and it opens and logs in by itself |
+| 4 | ✅ §1.6 step 4: `installers.yml`, started by hand on a branch | four installers built and checked in CI |
+| 5 | ✅ §1.6 steps 5–7: the release, the update check and the instructions | pytest, ruff, mypy; docs |
+| 6 | ✅ Live check, with you | §4 |
+| 7 | ✅ Release 0.12.0 | the draft release with the installers, for you to publish |
 
 Phase 1 is small and does not depend on the rest, so it comes first.
 

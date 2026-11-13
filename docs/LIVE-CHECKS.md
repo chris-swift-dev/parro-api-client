@@ -218,4 +218,5 @@ Parro. Personal data is left out.
 | Long attachment names | OK: shortened with "…", the full name in a tooltip; *Read* and *Save…* stay in view |
 | The minimum window size | OK: the window stops at its minimum, and every section's buttons fit |
 | The login dialog | OK: only the password form; *Other ways to log in…* shows the browser login, *Log in with a password instead* goes back; cancelled without logging in |
-| Not checked live yet | The publisher on Windows (*Installed apps*) and macOS (*Get Info*), by the owner; the landing page on GitHub Pages, which goes live with the merge of 0.12.0 |
+| The publisher on Windows | OK, checked by the owner with the MSI built in CI (2f4e068): *Installed apps* names **chris-swift-dev** as publisher. The warning before installing still says "Unknown publisher", as expected for an MSI that is not signed |
+| Not checked live yet | The copyright line in macOS's *Get Info* (CI checks it in the built app's `Info.plist`); the landing page on GitHub Pages, which goes live with the merge of 0.12.0 |

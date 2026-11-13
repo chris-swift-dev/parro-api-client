@@ -1,8 +1,8 @@
 # Plan 16: five additions to 0.12.0, before the release
 
-*Status: approved (2026-11-13), all decisions as recommended; the publisher and author is the
-GitHub name `chris-swift-dev`, as in the licence. Phase 7 of [Plan 15](PLAN-desktop-0.12.md) (the
-release) waits until these are done.*
+*Status: done (2026-11-13), all decisions as recommended; the publisher and author is the GitHub
+name `chris-swift-dev`, as in the licence. Phases 8–12 done on branch `desktop-0.12`, live check in
+`docs/LIVE-CHECKS.md`; released with 0.12.0 (phase 7 of [Plan 15](PLAN-desktop-0.12.md)).*
 
 **Goal:** five changes, added to the same release:
 
@@ -252,12 +252,12 @@ latest release's version and file names filled in**:
 
 | Phase | What | Ends with |
 | --- | --- | --- |
-| 8 | §2: the error area, *Details…*, the save-all report, minimum sizes | pytest, ruff, mypy |
-| 9 | §3: the login dialog | pytest, ruff, mypy |
-| 10 | §1 Part A and §4: the publisher name, the MSI check in CI, the macOS terminal hint | CI: the MSI's *Manufacturer* is the chosen name |
-| 11 | §5: the landing page and the move of Swagger UI | the site built here and shown to you; then pushed |
-| 12 | Live check: the error area with many failures, the login dialog, the publisher in *Installed apps* (Windows), the landing page on Pages | `LIVE-CHECKS.md` |
-| 7 | The release 0.12.0 (Plan 15), now last | the draft release, for you to publish |
+| 8 | ✅ §2: the error area, *Details…*, the save-all report, minimum sizes | pytest, ruff, mypy |
+| 9 | ✅ §3: the login dialog | pytest, ruff, mypy |
+| 10 | ✅ §1 Part A and §4: the publisher name, the MSI check in CI, the macOS terminal hint | CI: the MSI's *Manufacturer* is the chosen name |
+| 11 | ✅ §5: the landing page and the move of Swagger UI | the site built here and shown to you; then pushed |
+| 12 | ✅ Live check: the error area with many failures, the login dialog, the publisher in *Installed apps* (Windows), the landing page on Pages | `LIVE-CHECKS.md` |
+| 7 | ✅ The release 0.12.0 (Plan 15), now last | the draft release, for you to publish |
 
 Phases 8 to 10 are small and independent. Phase 11 is the largest.
 

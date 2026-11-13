@@ -4,7 +4,12 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
-## [0.12.0] - unreleased
+## [0.12.0] - 2026-11-13
+
+The desktop app without Python: an installer for Windows, macOS and Linux, which names its
+publisher and can tell you about a new version. A project page with the downloads, and Swagger UI
+next to it. In the app, chats open at the newest message, messages above a section stay short, and
+the login dialog shows only what most people need.
 
 ### Added
 
