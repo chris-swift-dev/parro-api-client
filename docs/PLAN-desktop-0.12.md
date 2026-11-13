@@ -4,6 +4,9 @@
 GitHub, §1.7) and 3 (Linux gets a Flatpak, not an AppImage: §1.8); the message order is checked again
 on the live check (§2).*
 
+*Phase 7 (the release) waits for [Plan 16](PLAN-0.12-additions.md): five additions to the same
+release (2026-11-13).*
+
 **Goal:** two changes to the desktop app.
 
 1. Installers for people who do not know what Python is: Windows, macOS and Linux.
