@@ -4,6 +4,7 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 
@@ -197,3 +198,35 @@ def test_no_e_mail_address_is_published():
     tomllib = pytest.importorskip("tomllib", reason="Python 3.11 and newer read TOML")
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     assert all("email" not in author for author in project["authors"])
+
+
+def test_the_mac_app_names_the_author_in_its_copyright():
+    # Briefcase's macOS template has no author line: pyproject.toml's info table gives it one.
+    tomllib = pytest.importorskip("tomllib", reason="Python 3.11 and newer read TOML")
+    data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    info = data["tool"]["briefcase"]["app"]["parro-gui"]["macOS"]["info"]
+    assert data["project"]["authors"][0]["name"] in info["NSHumanReadableCopyright"]
+
+
+def test_the_msi_query_gets_its_file_and_name_as_arguments(tmp_path, monkeypatch):
+    # With -Command, PowerShell glued them onto the script and the query read nothing (CI).
+    seen: dict[str, Any] = {}
+
+    def fake_run(command, folder):
+        seen["command"], seen["script"] = command, Path(command[command.index("-File") + 1])
+        seen["text"] = seen["script"].read_text(encoding="utf-8")
+        return tool.subprocess.CompletedProcess(command, 0, "chris-swift-dev\n", "")
+
+    monkeypatch.setattr(tool, "run", fake_run)
+    msi = tmp_path / "Parro-Client.msi"
+    assert tool.msi_property(msi, "Manufacturer") == "chris-swift-dev"
+    command = seen["command"]
+    assert "-Command" not in command and command[-2:] == [str(msi.resolve()), "Manufacturer"]
+    assert "$args[0]" in seen["text"] and not seen["script"].exists()
+
+
+def test_a_failed_msi_query_stops_the_build(tmp_path, monkeypatch):
+    failed = tool.subprocess.CompletedProcess([], 1, "", "no such file")
+    monkeypatch.setattr(tool, "run", lambda command, folder: failed)
+    with pytest.raises(SystemExit):
+        tool.msi_property(tmp_path / "Parro-Client.msi", "Manufacturer")

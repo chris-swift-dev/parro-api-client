@@ -160,8 +160,16 @@ def run(command: list[str], folder: Path) -> subprocess.CompletedProcess[str]:
 
 
 def msi_property(msi: Path, name: str) -> str:
-    script = ["powershell", "-NoProfile", "-Command", MSI_PROPERTY, str(msi), name]
-    return run(script, msi.parent).stdout.strip()
+    # A script file, because -Command glues the words after it onto the script instead of
+    # passing them as $args: the query then had no file and no name (CI of 6641c0a).
+    script = msi.parent / "msi-property.ps1"
+    script.write_text(MSI_PROPERTY, encoding="utf-8")
+    command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)]
+    result = run([*command, str(msi.resolve()), name], msi.parent)
+    script.unlink()
+    if result.returncode != 0:
+        raise SystemExit(f"Could not read {name} from {msi.name}: {result.stderr.strip()}")
+    return result.stdout.strip()
 
 
 def check_publisher(target: str, folder: Path, installer: Path) -> None:

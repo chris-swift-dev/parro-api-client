@@ -84,6 +84,10 @@ min_os_version = "14.0"  # PySide6 6.12's wheels are built for macOS 14 and newe
 universal_build = true
 requires = ["std-nslog~=2.0.0"]  # print() and logging reach macOS's Console
 
+# Briefcase's macOS template names no author: Finder's Get Info and the About box show this line.
+[tool.briefcase.app.parro-gui.macOS.info]
+NSHumanReadableCopyright = "Copyright © 2026 chris-swift-dev"
+
 # One Flatpak per processor, with its own Python and Qt (docs/PLAN-desktop-0.12.md §1.8). Briefcase's
 # PySide6 template uses KDE's runtime: it holds the system libraries Qt needs.
 [tool.briefcase.app.parro-gui.linux.flatpak]
