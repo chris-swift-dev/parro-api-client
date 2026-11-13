@@ -1,10 +1,13 @@
-name: Spec checks and Swagger UI on GitHub Pages
+name: Spec checks, and the site on GitHub Pages (landing page, Swagger UI in api/)
 
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # A published release changes the landing page's download buttons (tools/build_landing.py).
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -14,7 +17,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The release event runs on the tag, which the github-pages environment does not deploy from:
+  # start this workflow again on main. GITHUB_TOKEN may start a workflow_dispatch run.
+  follow-release:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - run: gh workflow run pages.yml --ref main --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   build:
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -56,6 +72,8 @@ jobs:
 
       - name: Assemble site
         run: bash tools/build_site.sh _site
+        env:
+          GITHUB_TOKEN: ${{ github.token }}  # asks for the latest release; more requests allowed
 
       - uses: actions/configure-pages@v6
         if: github.ref == 'refs/heads/main'

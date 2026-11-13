@@ -235,6 +235,19 @@ latest release's version and file names filled in**:
 - **Before it goes live:** I build the site and show it to you in the browser pane, on a wide screen
   and a phone width.
 
+### 5.5 What phase 11 found
+
+- **A release event cannot deploy Pages.** It runs on the tag, and the `github-pages` environment
+  deploys only from `main`. So `pages.yml` answers a published release with one small job that starts
+  the workflow again on `main` (`gh workflow run`, which `GITHUB_TOKEN` is allowed to do).
+- **The spec keeps its old address too.** `parro.openapi.json` is copied to the root as well as to
+  `api/`, because tools may fetch it directly; only Swagger UI's page moved.
+- **Forwarding old links** happens on load and also when the `#` part changes on the page itself.
+- **The page's Content-Security-Policy** (`default-src 'none'`, images, styles and the script from
+  the site itself only) makes "nothing from another site" something the browser enforces.
+- The latest release, 0.11.0, has no installers, so until 0.12.0 is published the buttons go to the
+  releases page.
+
 ## 6. Order of work
 
 | Phase | What | Ends with |

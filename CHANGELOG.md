@@ -21,6 +21,10 @@ section of a version as its GitHub release notes, so write each section for user
   apps* on Windows, in *Get Info* on macOS, and in Linux software centres, which now also show the
   app's summary, licence, homepage and the "unofficial" line. The warning at the first start on
   Windows and macOS stays until the installers are signed. The package on PyPI names its author too.
+- **A project page,** [chris-swift-dev.github.io/parro-api-client](https://chris-swift-dev.github.io/parro-api-client/):
+  what it is, a download button per system (the one for your computer first), the three ways to use
+  it and the safety rules, on a phone too. It loads nothing from other sites and is rebuilt when a
+  release is published, so its buttons always name the newest installers.
 - **macOS: a Terminal shortcut past the first-start check,** for people who prefer it, in
   [docs/INSTALL-DESKTOP.md](docs/INSTALL-DESKTOP.md).
 - **Desktop app: HTTPS certificates are checked by the operating system,** as a browser does it,
@@ -31,6 +35,9 @@ section of a version as its GitHub release notes, so write each section for user
 
 ### Changed
 
+- **Swagger UI moved to [`…/parro-api-client/api/`](https://chris-swift-dev.github.io/parro-api-client/api/),**
+  the spec to `api/parro.openapi.json` (the old address works too). Old links to an operation
+  (`…/#/Chat/…`) are sent on.
 - **Desktop app: a chat opens at its newest message,** like other chat apps. It stays at the end
   while the window or the splitter changes size, until you scroll up; after *Send…* it is at the end
   again, with your message.

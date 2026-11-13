@@ -1,6 +1,6 @@
 # API facts the client relies on
 
-The full description is the OpenAPI spec ([Swagger UI](https://chris-swift-dev.github.io/parro-api-client/),
+The full description is the OpenAPI spec ([Swagger UI](https://chris-swift-dev.github.io/parro-api-client/api/),
 [`openapi/parro.public.openapi.json`](../openapi/parro.public.openapi.json)). These are the facts
 the client depends on most. Back to the [README](../README.md).
 

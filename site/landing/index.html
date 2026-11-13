@@ -1,0 +1,140 @@
+<!doctype html>
+<!-- The landing page of the GitHub Pages site. tools/build_landing.py fills in the version and the download buttons. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Nothing from another site: no fonts, no analytics, no scripts (Plan 16 §5.2). -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="Unofficial desktop app, command line and MCP server for Parro, with a description of its REST API.">
+  <title>Parro Client (unofficial)</title>
+  <link rel="icon" type="image/png" href="images/icon-32.png">
+  <link rel="stylesheet" href="style.css">
+  <!-- First, before anything is drawn: an old Swagger UI link (…/#/Chats/…) goes on to api/. -->
+  <script src="landing.js"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="./"><img src="images/icon-128.png" alt="" width="28" height="28">Parro Client</a>
+      <nav aria-label="On this page">
+        <a href="#download">Download</a>
+        <a href="#ways">Ways to use it</a>
+        <a href="api/">API</a>
+        <a href="https://github.com/chris-swift-dev/parro-api-client">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero wrap">
+      <div class="hero-text">
+        <p class="unofficial">Unofficial · not affiliated with Topicus, ParnasSys or Parro</p>
+        <h1>Your child's school news from Parro, on your own computer</h1>
+        <p class="lead">Read announcements, newsletters (also the text inside PDFs), the calendar and
+          chats, and see what you have not read yet. In a desktop app, in the terminal, or by asking
+          Claude. It changes something in Parro only when you ask.</p>
+        <p class="hero-actions">
+          <a class="button primary" href="#download">Download the desktop app</a>
+          <a class="button" href="#ways">Other ways to use it</a>
+        </p>
+      </div>
+      <picture class="shot hero-shot">
+        <source media="(prefers-color-scheme: dark)" srcset="images/desktop-app-dark.png">
+        <img src="images/desktop-app-light.png" width="1100" height="700"
+             alt="The desktop app: the list of announcements on the left, the chosen announcement with its attachments on the right. Invented example data.">
+      </picture>
+    </section>
+
+    <section id="download" class="band">
+      <div class="wrap">
+        <h2>Download the desktop app</h2>
+        <p class="version">{{version_line}}</p>
+        <div class="downloads" id="downloads">
+          {{downloads}}
+        </div>
+        <p class="small">Python and Qt are inside: nothing else to install. The installers are not
+          signed yet, so Windows and macOS ask once whether you trust them.
+          <a href="https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/INSTALL-DESKTOP.md">The
+          install guide</a> says what to click, and how to check a download.</p>
+      </div>
+    </section>
+
+    <section id="ways" class="wrap">
+      <h2>Three ways to use it</h2>
+      <div class="cards">
+        <article class="card">
+          <h3>Desktop app</h3>
+          <p>A window for Windows, macOS and Linux: announcements, calendar, chats, family and an
+            offline archive. Light and dark, like your system.</p>
+          <p><a href="#download">Download</a> ·
+            <a href="https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md">What it does</a></p>
+        </article>
+        <article class="card">
+          <h3>Command line</h3>
+          <picture class="shot">
+            <source media="(prefers-color-scheme: dark)" srcset="images/terminal-overview-dark.svg">
+            <img src="images/terminal-overview-light.svg" width="917" height="423"
+                 alt="parro-client overview in a terminal: unread counts, new announcements, calendar items and chats. Invented example data.">
+          </picture>
+          <p>With Python 3.10 or newer:</p>
+          <div class="copy-row"><code id="pipx">pipx install parro-api-client</code><button type="button" class="copy" data-copy="pipx">Copy</button></div>
+          <p><a href="https://github.com/chris-swift-dev/parro-api-client#quick-start">Quick start</a></p>
+        </article>
+        <article class="card">
+          <h3>Ask Claude (MCP server)</h3>
+          <p>Ask “Do I need to do anything for school in the coming weeks?” and Claude reads Parro
+            for you. With the package installed, in Claude Code:</p>
+          <div class="copy-row"><code id="mcp">claude mcp add parro -s user -- parro-client-mcp</code><button type="button" class="copy" data-copy="mcp">Copy</button></div>
+          <p>Tools that change something are off unless you switch them on.</p>
+          <p><a href="https://github.com/chris-swift-dev/parro-api-client#mcp-server">Claude Desktop and other clients</a> ·
+            <a href="https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/MCP.md">All tools</a></p>
+        </article>
+      </div>
+    </section>
+
+    <section id="api" class="band">
+      <div class="wrap split">
+        <div>
+          <h2>The API, described</h2>
+          <p>An OpenAPI description of the Parro REST API as the web app uses it: login, account,
+            groups, announcements, the calendar and chats, with what was observed about each call.
+            Browse it in Swagger UI, or take the JSON for your own client.</p>
+          <p class="hero-actions">
+            <a class="button primary" href="api/">Open Swagger UI</a>
+            <a class="button" href="api/parro.openapi.json">The spec (JSON)</a>
+          </p>
+        </div>
+        <img class="shot crop" src="images/swagger-operations.png" width="1200" height="2230"
+             alt="Swagger UI with the operations of the Account, Groups, Events and Chat sections.">
+      </div>
+    </section>
+
+    <section id="safety" class="wrap">
+      <h2>Safe by design</h2>
+      <ul class="facts">
+        <li><strong>On your computer.</strong> It talks to Parro directly. There is no server in
+          between, and no account other than your Parro login.</li>
+        <li><strong>Changes only when you ask.</strong> It can mark as read, send a chat message,
+          sign you up as a helper and answer an invitation, each only after you confirm.</li>
+        <li><strong>No telemetry.</strong> Nothing about you or your school is sent anywhere else.
+          The desktop app's check for new versions is optional and asks GitHub only.</li>
+        <li><strong>Your password stays yours.</strong> It is not stored; a login lasts up to 8 hours.</li>
+      </ul>
+      <p><a href="https://github.com/chris-swift-dev/parro-api-client/blob/main/SECURITY.md">Security</a> ·
+        <a href="https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/LOGIN.md">How the login works</a></p>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <p>Not affiliated with or endorsed by Topicus, ParnasSys or Parro. Behaviour was observed, not
+      documented by the vendor, and may change at any time. Pictures show invented example data.</p>
+    <p>Code: <a href="https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE-CODE">MIT</a> ·
+      Spec and docs: <a href="https://github.com/chris-swift-dev/parro-api-client/blob/main/LICENSE">CC BY 4.0</a> ·
+      <a href="https://github.com/chris-swift-dev/parro-api-client">Source on GitHub</a> ·
+      <a href="https://github.com/chris-swift-dev/parro-api-client/issues">Report a problem</a></p>
+  </footer>
+</body>
+</html>

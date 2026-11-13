@@ -36,7 +36,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = ROOT / "openapi" / "parro.public.openapi.json"
 LOCAL_DIST = ROOT / "node_modules" / "swagger-ui-dist"
-PAGES_SITE = "https://chris-swift-dev.github.io/parro-api-client/"
+PAGES_SITE = "https://chris-swift-dev.github.io/parro-api-client/api/"  # Swagger UI
 ASSETS = ["swagger-ui.css", "index.css", "swagger-ui-bundle.js"]
 SETTLE_SECONDS = 4
 WIDTH = 1200

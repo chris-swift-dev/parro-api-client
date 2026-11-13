@@ -54,7 +54,8 @@ and run `python3 parro_cli.py` wherever this README says `parro-client`.
 
 A window instead of a terminal: see [Desktop app](#desktop-app). For Claude and other MCP clients, see
 [MCP server](#mcp-server). **API explorers:** the spec is
-browsable in **[Swagger UI](https://chris-swift-dev.github.io/parro-api-client/)**.
+browsable in **[Swagger UI](https://chris-swift-dev.github.io/parro-api-client/api/)**; the
+[project page](https://chris-swift-dev.github.io/parro-api-client/) has the downloads.
 
 ## What it does
 
@@ -318,7 +319,7 @@ All three are explained in **[docs/CALENDAR-AND-ARCHIVE.md](https://github.com/c
 
 ## The OpenAPI specification
 
-<a href="https://chris-swift-dev.github.io/parro-api-client/"><img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
+<a href="https://chris-swift-dev.github.io/parro-api-client/api/"><img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
 
 [`openapi/parro.public.openapi.json`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/parro.public.openapi.json) describes the API as
 observed from the web client: 34 operations of the Parro API and the login server's OAuth2 endpoints,
