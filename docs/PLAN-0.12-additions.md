@@ -62,6 +62,21 @@ warning until the signed file has built up a reputation (enough downloads, over 
 if a free signature is worth the publisher reading "SignPath Foundation". The macOS side (an Apple
 Developer account, $99 a year) stays as Plan 15 §1.4 left it.
 
+### 1.4 What phase 10 found
+
+- **Briefcase writes no AppStream metainfo for the Flatpak,** and puts the author nowhere in it. So
+  `packaging/io.github.chrisswiftdev.parro-gui.metainfo.xml` (checked with `appstreamcli validate`)
+  is installed by tools/build_installer.py through the manifest, next to the desktop file. It gives
+  software centres the developer, summary, licence, links and the "unofficial" line.
+- **The desktop file had no category,** so AppStream's compose step refused it and menus filed the
+  app under "Other": the build adds `Categories=Education;Network;`.
+- **With metainfo, flatpak-builder runs AppStream's compose step,** which failed to write the icons
+  through `rofiles-fuse` ("icon-write-error"); a plain copy and a build without that layer work. The
+  build script now runs flatpak-builder itself (what `briefcase build` ran) with
+  `--disable-rofiles-fuse` and `--install-deps-from=flathub`.
+- **The checks:** Windows reads the MSI's *Manufacturer* and support link; macOS the copyright in
+  `Info.plist`; Linux the metainfo inside the installed Flatpak.
+
 ## 2. The error area, and a minimum window size (your item 2)
 
 ### 2.1 What happens now

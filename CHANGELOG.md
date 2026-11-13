@@ -17,6 +17,12 @@ section of a version as its GitHub release notes, so write each section for user
   at most once a day, sends nothing about you, and downloads nothing itself. A *Help* menu has the
   switch, *Check for updates now* and *About*.
 - **The desktop app has its own icon,** in the window, the taskbar and the installers.
+- **The installers name their publisher,** `chris-swift-dev` (as in the licence): under *Installed
+  apps* on Windows, in *Get Info* on macOS, and in Linux software centres, which now also show the
+  app's summary, licence, homepage and the "unofficial" line. The warning at the first start on
+  Windows and macOS stays until the installers are signed. The package on PyPI names its author too.
+- **macOS: a Terminal shortcut past the first-start check,** for people who prefer it, in
+  [docs/INSTALL-DESKTOP.md](docs/INSTALL-DESKTOP.md).
 - **Desktop app: HTTPS certificates are checked by the operating system,** as a browser does it,
   through the small `truststore` library (now part of the `gui` extra and the installers). Without
   it, the installers' own Python could not verify Parro, GitHub or the attachment server on macOS and

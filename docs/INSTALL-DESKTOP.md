@@ -40,6 +40,22 @@ user folder; delete that folder too to remove everything.
 
 You do this once. After that the app opens like any other.
 
+**If you use the Terminal,** you can skip steps 2 and 3. Before opening the downloaded file, remove
+the mark macOS puts on downloads:
+
+```bash
+xattr -d com.apple.quarantine ~/Downloads/Parro-Client-0.12.0-macos.dmg
+```
+
+The app you copy out of it then opens straight away. If it is already in Applications:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Parro Client.app"
+```
+
+This skips macOS's own check for this one file, so [check the download](#checking-a-download)
+first. No `sudo` is needed for files that are yours.
+
 **Updating:** drag the new version to Applications and replace the old one. **Removing:** drag
 Parro Client from Applications to the Trash. Your login and the data folder stay in `~/.parro`;
 delete that folder too to remove everything.

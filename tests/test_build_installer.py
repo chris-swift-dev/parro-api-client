@@ -65,7 +65,7 @@ def test_briefcase_never_asks_and_signs_nothing_for_real():
 def test_the_flatpak_is_bundled_by_the_tool_not_by_briefcase():
     """`briefcase package` looks for the version's branch, which set_flatpak_branch replaced."""
     steps = [command[3] for command in tool.briefcase_commands("flatpak")]
-    assert steps == ["create", "build"]
+    assert steps == ["create"], "the tool runs flatpak-builder itself (FLATPAK_BUILDER)"
     assert [command[3] for command in tool.briefcase_commands("windows")][-1] == "package"
 
 
@@ -142,3 +142,58 @@ def test_the_release_workflow_attaches_and_attests_the_installers():
 
 def test_every_built_app_also_makes_one_real_https_request():
     assert [option for option, _text in tool.CHECKS] == ["--self-check", "--check-connection"]
+
+
+MANIFEST_RESOURCES = f"""  - name: resources
+    buildsystem: simple
+    build-commands:
+{tool.DESKTOP_INSTALL}      - cp --archive icons /app/share/icons
+    sources:
+{tool.DESKTOP_SOURCE}      - type: dir
+        path: icons/
+"""
+
+
+def test_the_metainfo_is_installed_with_the_desktop_file():
+    changed = tool.add_metainfo(MANIFEST_RESOURCES)
+    assert f"install -D {tool.METAINFO} /app/share/metainfo/{tool.METAINFO}" in changed
+    assert f"path: {tool.METAINFO}" in changed
+    assert changed.index(tool.DESKTOP_INSTALL) < changed.index(tool.METAINFO)
+
+
+def test_a_manifest_that_changed_stops_the_build():
+    with pytest.raises(SystemExit):
+        tool.add_metainfo("modules: []\n")
+
+
+def test_the_desktop_file_gets_categories_once():
+    entry = "[Desktop Entry]\nType=Application\nName=Parro Client\n"
+    once = tool.add_categories(entry)
+    assert once.endswith(tool.CATEGORIES) and tool.add_categories(once) == once
+
+
+def test_flatpak_builder_runs_without_rofiles_and_installs_its_runtime():
+    assert "--disable-rofiles-fuse" in tool.FLATPAK_BUILDER
+    assert "--install-deps-from=flathub" in tool.FLATPAK_BUILDER
+    assert tool.FLATPAK_BUILDER[-2:] == ["build", "manifest.yml"]
+
+
+def test_the_metainfo_names_the_publisher_from_pyproject():
+    import xml.etree.ElementTree as ElementTree
+
+    tomllib = pytest.importorskip("tomllib", reason="Python 3.11 and newer read TOML")
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    root = ElementTree.parse(ROOT / "packaging" / tool.METAINFO).getroot()
+    assert root.findtext("id") == tool.FLATPAK_ID
+    assert root.findtext("developer/name") == project["authors"][0]["name"] == "chris-swift-dev"
+    assert root.findtext("url[@type='homepage']") == project["urls"]["Homepage"]
+    assert root.findtext("launchable") == f"{tool.FLATPAK_ID}.desktop"
+    assert root.findtext("project_license") == project["license"]
+    assert {c.text for c in root.iter("category")} >= {"Education"}
+    assert "not affiliated" in "".join(root.find("description").itertext())  # type: ignore[union-attr]
+
+
+def test_no_e_mail_address_is_published():
+    tomllib = pytest.importorskip("tomllib", reason="Python 3.11 and newer read TOML")
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    assert all("email" not in author for author in project["authors"])

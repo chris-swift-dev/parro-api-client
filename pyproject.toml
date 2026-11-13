@@ -17,6 +17,9 @@ readme = "README.md"
 license = "MIT AND CC-BY-4.0 AND ISC"
 license-files = ["LICENSE-CODE", "LICENSE", "parro_gui/icon_files/LICENSE"]
 requires-python = ">=3.10"
+# The name in the licence. The installers show it as publisher (Windows: "Installed apps") and
+# author (macOS, Linux). No e-mail address: the MSI would show it to anyone (Plan 16 §1).
+authors = [{ name = "chris-swift-dev" }]
 dependencies = []
 keywords = ["parro", "parnassys", "school", "cli", "mcp", "openapi"]
 classifiers = [
@@ -37,6 +40,8 @@ parro-client-mcp = "parro.mcp_server:run"
 parro-client-gui = "parro_gui.app:run"
 
 [project.urls]
+# Homepage, with this capital H, is what Briefcase reads: Windows shows it as the app's support link.
+Homepage = "https://chris-swift-dev.github.io/parro-api-client/"
 Repository = "https://github.com/chris-swift-dev/parro-api-client"
 Documentation = "https://chris-swift-dev.github.io/parro-api-client/"
 
