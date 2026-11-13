@@ -33,6 +33,10 @@ section of a version as its GitHub release notes, so write each section for user
   copied, and the message can be closed. *Save all* counts the reasons instead of listing every file.
   Long attachment names are shortened with "…", so their buttons stay in view, and the window has a
   minimum size (760 × 520) at which every section's buttons fit.
+- **Desktop app: the login dialog shows only the password form.** Logging in in the browser, which
+  few people need, is under *Other ways to log in…*; a browser login that was started and not
+  finished opens there directly, also after a restart. The command line and the MCP server are
+  unchanged.
 - **Desktop app:** `parro-client-gui --version`, and `--self-check`, which starts the app without a
   screen and without logging in, to check an installation.
 

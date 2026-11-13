@@ -62,8 +62,10 @@ which the time next to them shows.
 ## Logging in
 
 The app uses the same login as the command line and the MCP server: log in with one, and the others
-are logged in too. You can type your password, or log in in your browser and paste back the address
-you end up on. Your password is not stored.
+are logged in too. The login dialog asks for your e-mail address and password. Only if that does not
+work for you, *Other ways to log in…* switches it to logging in in your browser: you log in on
+Parro's own page and paste back the address you end up on. A browser login you started but did not
+finish is still there the next time the dialog opens. Your password is not stored.
 
 The login server locks an account after a few failed attempts, so one click is one attempt and
 nothing is retried. After a rejected password the app says that login has stopped.

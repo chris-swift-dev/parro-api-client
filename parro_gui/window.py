@@ -27,7 +27,7 @@ from parro.settings import Settings
 from . import auto_login
 from .desktop_font import use_desktop_font
 from .icons import ICON_SIZE, app_icon, section_icon
-from .login import LoginDialog
+from .login import LoginDialog, browser_login_pending
 from .memory import Memory
 from .theme import apply_theme, current_colours
 from .updates import Updates, data_dir_of
@@ -226,11 +226,17 @@ class MainWindow(QMainWindow):
         if self.login_dialog is None:
             try:
                 data_dir = Settings.from_environment().data_dir
+                pending = browser_login_pending(self.settings())
             except ParroError:
-                data_dir = None
+                data_dir, pending = None, False
             remembered = auto_login.load_remembered(data_dir) if data_dir else None
             self.login_dialog = LoginDialog(
-                self.worker, self._configured_username(), self, data_dir, remembered
+                self.worker,
+                self._configured_username(),
+                self,
+                data_dir,
+                remembered,
+                browser_pending=pending,
             )
             self.login_dialog.logged_in.connect(self._logged_in_by_hand)
         self.login_dialog.open()

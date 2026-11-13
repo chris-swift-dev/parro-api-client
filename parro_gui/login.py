@@ -1,4 +1,8 @@
-"""Logging in: with a password typed here, or in the browser.
+"""Logging in: with a password typed here, or (under "Other ways to log in…") in the browser.
+
+Most people log in with their password; the browser login is for when that does not work. It is
+one click away, not a tab of its own, and the dialog opens on it only while a browser login that was
+started has not been finished yet.
 
 The login server locks an account after a few failed attempts, so one click is one password check.
 Nothing retries, and the password is never stored: it goes straight to `operations.login`.
@@ -17,7 +21,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -26,6 +29,7 @@ from parro import operations
 from parro.api_client import ParroClient
 from parro.errors import ParroError
 from parro.settings import Settings
+from parro.token_store import TokenStore
 
 from . import widgets
 from .auto_login import Remembered, password_file_problem, save_remembered
@@ -43,12 +47,26 @@ REMEMBER_NOTE = (
     "then logs in by itself when the login has expired: one attempt, and none after a rejected "
     "password until you log in here again. The file must be private."
 )
+OTHER_WAYS = "Other ways to log in…"
+BACK_TO_PASSWORD = "Log in with a password instead"
+BROWSER_WHEN = (
+    "Only if logging in with your password here does not work for you: you log in on Parro's own "
+    "login page in your browser, and bring the result back here."
+)
 BROWSER_STEPS = (
     "1. Open the login page and log in there.\n"
     "2. You end up on talk.parro.com. Copy the whole address from the address bar right away: "
     "a code works only once.\n"
     "3. Paste it here."
 )
+
+
+def browser_login_pending(settings: Settings) -> bool:
+    """A browser login was started (its code verifier is stored) and not finished yet."""
+    try:
+        return TokenStore(settings.token_file).get_pending_browser_login() is not None
+    except (OSError, ValueError, ParroError):
+        return False
 
 
 def same_password(password_file: Path, typed: str) -> bool:
@@ -69,6 +87,7 @@ class LoginDialog(QDialog):
         parent: QWidget | None = None,
         data_dir: Path | None = None,
         remembered: Remembered | None = None,
+        browser_pending: bool = False,
     ) -> None:
         super().__init__(parent)
         self.data_dir = data_dir
@@ -83,7 +102,7 @@ class LoginDialog(QDialog):
         self.setWindowTitle("Log in to Parro")
         self.setMinimumWidth(440)
         self.worker = worker
-        self._browser_login_started = False
+        self._browser_login_started = browser_pending  # Finish works for a login begun earlier
         self.username = QLineEdit(username or "")
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.EchoMode.Password)
@@ -100,12 +119,29 @@ class LoginDialog(QDialog):
         self.log_in_button.clicked.connect(self.log_in_with_password)
         self.open_button.clicked.connect(self.open_login_page)
         self.finish_button.clicked.connect(self.finish_browser_login)
-        tabs = QTabWidget()
-        tabs.addTab(self._password_tab(), "With a password")
-        tabs.addTab(self._browser_tab(), "In the browser")
+        self.password_part = self._password_tab()
+        self.browser_part = self._browser_tab()
+        self.other_ways_button = QPushButton(OTHER_WAYS)
+        self.other_ways_button.setFlat(True)  # looks like a link: most people never need it
+        self.other_ways_button.clicked.connect(self.toggle_browser_login)
         layout = QVBoxLayout(self)
-        layout.addWidget(tabs)
+        layout.addWidget(self.password_part)
+        layout.addWidget(self.browser_part)
         layout.addWidget(self.message)
+        layout.addWidget(self.other_ways_button, 0, Qt.AlignmentFlag.AlignLeft)
+        self.show_browser_login(browser_pending)
+        self._set_busy(False)
+
+    def show_browser_login(self, shown: bool) -> None:
+        """The browser login in place of the password form, or back."""
+        self.password_part.setVisible(not shown)
+        self.browser_part.setVisible(shown)
+        self.other_ways_button.setText(BACK_TO_PASSWORD if shown else OTHER_WAYS)
+        self.message.clear()
+        self.adjustSize()
+
+    def toggle_browser_login(self) -> None:
+        self.show_browser_login(self.password_part.isVisible())
 
     def _password_tab(self) -> QWidget:
         tab = QWidget()
@@ -137,6 +173,9 @@ class LoginDialog(QDialog):
     def _browser_tab(self) -> QWidget:
         tab = QWidget()
         layout = QVBoxLayout(tab)
+        when = QLabel(BROWSER_WHEN)
+        when.setWordWrap(True)
+        layout.addWidget(when)
         steps = QLabel(BROWSER_STEPS)
         steps.setWordWrap(True)
         layout.addWidget(steps)
