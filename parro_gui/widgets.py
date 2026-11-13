@@ -3,8 +3,16 @@
 from typing import Any
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QMessageBox, QTextBrowser, QWidget
+from PySide6.QtGui import QDesktopServices, QResizeEvent
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QSizePolicy,
+    QTextBrowser,
+    QWidget,
+)
 
 from .theme import document_css
 
@@ -58,6 +66,36 @@ def make_card(widget: QWidget) -> None:
     """Give a widget the panel look of the theme (`#card`)."""
     widget.setObjectName("card")
     widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+
+
+class ElidedLabel(QLabel):
+    """One line of plain text that shortens itself with "…" to the room it has.
+
+    A plain label asks for the width of its whole text, so a long file name could push the buttons
+    next to it out of the window. The full text is in the tooltip.
+    """
+
+    def __init__(self, text: str = "", parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setTextFormat(Qt.TextFormat.PlainText)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.setMinimumWidth(60)
+        self.full_text = ""
+        self.set_full_text(text)
+
+    def set_full_text(self, text: str) -> None:
+        self.full_text = text
+        self.setToolTip(text)
+        self._elide()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802 (Qt's name)
+        super().resizeEvent(event)
+        self._elide()
+
+    def _elide(self) -> None:
+        metrics = self.fontMetrics()
+        width = max(self.width(), self.minimumWidth())
+        self.setText(metrics.elidedText(self.full_text, Qt.TextElideMode.ElideMiddle, width))
 
 
 class SafeTextBrowser(QTextBrowser):

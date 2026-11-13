@@ -134,7 +134,10 @@ def test_a_failed_file_is_named(window, api, questions, tmp_path):
     del api.attachment_bodies[SECOND_URL]  # the CDN fails for this one
     view = newsletter(window)
     reported = save_all(view)
-    assert reported.startswith(f"Saved 1 file in {tmp_path / 'out'}. Not saved: ")
+    assert reported.startswith(f"Saved 1 of 2 files in {tmp_path / 'out'}. 1 not saved: ")
+    assert view.notice.details_button.isVisibleTo(view), "the file names are in the details"
+    details = view.notice.details()
+    assert details.startswith(reported) and "Not saved:\n- " in details
     assert len(list((tmp_path / "out").iterdir())) == 1
 
 

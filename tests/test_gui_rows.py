@@ -174,8 +174,14 @@ def test_a_tooltip_cannot_carry_markup(window):
 
 def test_a_message_from_parro_is_shown_as_plain_text(window):
     from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QPlainTextEdit
 
-    assert window.views["Calendar"].notice.textFormat() == Qt.TextFormat.PlainText
+    notice = window.views["Calendar"].notice
+    assert notice.label.textFormat() == Qt.TextFormat.PlainText
+    notice.setText("<b>x</b>", "<img src=https://evil.example/a>")
+    notice.show_details()
+    assert isinstance(notice.dialog.text, QPlainTextEdit), "the details too: plain text only"
+    notice.dialog.reject()
 
 
 # ------------------------------------------------------------------------------- the layout

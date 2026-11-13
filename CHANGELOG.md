@@ -28,6 +28,11 @@ section of a version as its GitHub release notes, so write each section for user
 - **Desktop app: a chat opens at its newest message,** like other chat apps. It stays at the end
   while the window or the splitter changes size, until you scroll up; after *Send…* it is at the end
   again, with your message.
+- **Desktop app: a message above a section takes at most two lines.** The rest, such as every file
+  that *Save all attachments…* could not save, is behind *Details…*, where it scrolls and can be
+  copied, and the message can be closed. *Save all* counts the reasons instead of listing every file.
+  Long attachment names are shortened with "…", so their buttons stay in view, and the window has a
+  minimum size (760 × 520) at which every section's buttons fit.
 - **Desktop app:** `parro-client-gui --version`, and `--self-check`, which starts the app without a
   screen and without logging in, to check an installation.
 

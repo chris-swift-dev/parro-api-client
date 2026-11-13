@@ -138,6 +138,9 @@ and *Help → Check for updates now* checks at once and says what it found.
 
 ## Good to know
 
+- A message above a section (loading, done, or an error) takes at most two lines. *Details…* shows
+  all of it, for example every file that could not be saved, and the close button removes it.
+
 - Requests run one at a time, so other sections wait while a sync is running. Stopping the sync frees
   them straight away.
 - The Calendar section shows up to 30 items, because each one costs a request for its details.

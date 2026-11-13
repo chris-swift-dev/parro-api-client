@@ -72,11 +72,17 @@ def is_logged_in(status: dict[str, Any]) -> bool:
     return describe_login(status).startswith("Logged in")
 
 
+MINIMUM_SIZE = (760, 520)
+
+
 class MainWindow(QMainWindow):
     def __init__(self, make_client: Callable[[Settings], ParroClient] = ParroClient) -> None:
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} {__version__}")
         self.resize(1000, 680)
+        # Measured (0.12.0): every section's buttons and filters fit from Qt's own 710 x 415, but
+        # the list and the text are cramped there. Below this the window does not go.
+        self.setMinimumSize(*MINIMUM_SIZE)
         self.worker = Worker(make_client, self, settings=self.settings)
         self.logged_in = False
         self.sections = QListWidget()
