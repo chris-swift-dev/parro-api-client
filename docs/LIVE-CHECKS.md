@@ -202,3 +202,19 @@ The account owner installed the MSI on Windows and the DMG on macOS, built in CI
 | Check | Result |
 | --- | --- |
 | Connections | **Found:** "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate". On Windows, logging in and reading from the Parro API worked, but the update check (GitHub) and attachments (the CloudFront server) failed; on macOS every connection failed, the login too. The installers' own Python checks certificates with its own list of roots, which is missing on macOS and holds only what Windows has fetched so far. **Fixed:** the app hands the check to the operating system with `truststore`; every built installer now runs `--check-connection` in CI. To be checked again on both systems |
+
+## Live check (2026-11-13, release 0.12.0: the additions of Plan 16, Linux)
+
+The account owner used the Flatpak built from the branch after phases 8 and 9 (the app has not
+changed since) on Fedora Asahi Remix 44, KDE Plasma on Wayland, aarch64, and reported what they saw.
+**One password check**, made by the app itself with the remembered password file. No writes to
+Parro. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| Logging in by itself after a restart (left open in part 1) | OK: the login had expired, and the app logged in by itself at start, without the dialog; the sandbox now keeps the tokens |
+| *Save all attachments…* into a folder the app cannot write to | **Found:** a single line, "Something went wrong (PermissionError)", which the close button removed. The message stayed small, as it should, but the save stopped at the first file: an error from the operating system was not turned into a per-file failure, also not for *Save…* and the command line's `--save-to`. **Fixed:** each file says it could not be written and why, the other files are still read, and *Save all* counts the reason; tests with a folder that cannot be created, on every system |
+| Long attachment names | OK: shortened with "…", the full name in a tooltip; *Read* and *Save…* stay in view |
+| The minimum window size | OK: the window stops at its minimum, and every section's buttons fit |
+| The login dialog | OK: only the password form; *Other ways to log in…* shows the browser login, *Log in with a password instead* goes back; cancelled without logging in |
+| Not checked live yet | The publisher on Windows (*Installed apps*) and macOS (*Get Info*), by the owner; the landing page on GitHub Pages, which goes live with the merge of 0.12.0 |

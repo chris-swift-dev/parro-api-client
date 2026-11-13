@@ -34,6 +34,11 @@ def files(count: int) -> str:
     return f"{count} {'file' if count == 1 else 'files'}"
 
 
+def reason(file: dict[str, Any]) -> str:
+    """Why a file was not saved: it could not be fetched, or not be written."""
+    return str(file.get("error") or file.get("save_error") or "not saved")
+
+
 def describe_saved(report: Any, folder: str) -> tuple[str, str]:
     """What Save all did, short, and the files that were not saved, one per line.
 
@@ -46,12 +51,12 @@ def describe_saved(report: Any, folder: str) -> tuple[str, str]:
     failed = [f for f in found if not f.get("saved_to")]
     if not failed:
         return f"Saved {files(len(saved))} in {folder}.", ""
-    reasons = Counter(str(f.get("error") or "not saved") for f in failed)
+    reasons = Counter(str(reason(f)) for f in failed)
     counted = "; ".join(f"{reason} ({count})" for reason, count in reasons.most_common())
     text = f"Saved {len(saved)} of {files(len(found))} in {folder}."
     text += f" {len(failed)} not saved: {counted}."
     details = "Not saved:\n" + "\n".join(
-        f"- {f.get('filename') or 'attachment'}: {f.get('error') or 'not saved'}" for f in failed
+        f"- {f.get('filename') or 'attachment'}: {reason(f)}" for f in failed
     )
     return text, details
 

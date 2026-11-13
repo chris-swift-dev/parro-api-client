@@ -53,6 +53,13 @@ section of a version as its GitHub release notes, so write each section for user
 - **Desktop app:** `parro-client-gui --version`, and `--self-check`, which starts the app without a
   screen and without logging in, to check an installation.
 
+### Fixed
+
+- **Saving attachments into a folder that cannot be written to** no longer stops at the first file
+  with "Something went wrong (PermissionError)" in the desktop app, or an error in the command line.
+  Each file now says it "could not be written" and why, and the other files are still read. *Save
+  all* counts it like any other reason.
+
 ## [0.11.0] - 2026-11-12
 
 A better desktop app: details that always fit in the window, saving all attachments at once, less

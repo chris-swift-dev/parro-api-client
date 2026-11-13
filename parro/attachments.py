@@ -420,7 +420,14 @@ def read_attachment_file(
         "bytes": size_hint or len(downloaded.data),
     }
     if options.save_directory is not None:
-        summary["saved_to"] = str(save_file(options.save_directory, name, downloaded.data))
+        try:
+            summary["saved_to"] = str(save_file(options.save_directory, name, downloaded.data))
+        except OSError as problem:
+            # A folder that cannot be written to fails each file, not the whole run: the other
+            # files are still read, and each says why (live check of 0.12.0).
+            summary["save_error"] = (
+                f"could not be written: {problem.strerror or type(problem).__name__}"
+            )
     if detect_format(downloaded.content_type, name) == "image":
         return _read_image(client, downloaded, summary, options)
     extracted = extract_or_reuse(client, downloaded, name, cache_key)

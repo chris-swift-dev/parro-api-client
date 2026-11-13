@@ -164,3 +164,20 @@ def test_one_click_saves_once(window, questions, tmp_path):
     button.click()
     wait_until(button.isEnabled)
     assert questions == ["folder"] and len(list((tmp_path / "out").iterdir())) == 2
+
+
+def test_a_folder_that_cannot_be_written_fails_each_file_not_the_run(
+    window, api, monkeypatch, tmp_path
+):
+    # Live check of 0.12.0: a read-only folder stopped everything with "PermissionError".
+    # A folder below a plain file cannot be made on any system, so writing fails everywhere.
+    (tmp_path / "a-file").write_text("not a folder")
+    folder = tmp_path / "a-file" / "out"
+    monkeypatch.setattr(gui_widgets, "choose_folder", lambda _parent: str(folder))
+    view = newsletter(window)
+    reported = save_all(view)
+    assert reported.startswith(
+        f"Saved 0 of 2 files in {folder}. 2 not saved: could not be written: "
+    )
+    assert "(2)" in reported and "Something went wrong" not in reported
+    assert view.notice.details().count("- ") == 2, "both files named in the details"

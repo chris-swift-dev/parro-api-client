@@ -11,7 +11,7 @@ import zipfile
 
 import pytest
 
-from parro import attachments, operations
+from parro import attachments, operations, rendering
 from parro.api_client import ParroClient
 from parro.attachments import ReadOptions
 from parro.errors import AttachmentError, ConfigurationError
@@ -318,3 +318,19 @@ def test_saving_never_replaces_a_file(tmp_path):
     assert target.name == "a (3).txt" and target.read_bytes() == b"new"
     assert (folder / "a.txt").read_bytes() == b"mine"
     assert (folder / "a (2).txt").read_bytes() == b"also mine"
+
+
+def test_a_file_that_cannot_be_written_says_so_and_is_still_read(tmp_path):
+    # Live check of 0.12.0: the write error used to end the whole command.
+    api = fakes.FakeParroApi(load_sample, calendar_event_ids={fakes.MUSEUM_TRIP_ID})
+    api.attachment_bodies[image_url_of_calendar_sample()] = ("image/jpeg", b"\xff\xd8")
+    client = make_client(tmp_path, api)
+    (tmp_path / "a-file").write_text("not a folder")
+    options = ReadOptions(save_directory=tmp_path / "a-file" / "saved")
+    report = operations.read_attachments(client, event_id=fakes.MUSEUM_TRIP_ID, options=options)
+    assert report.summary["save_error"].startswith("could not be written: ")
+    assert "saved_to" not in report.summary
+    assert report.summary["returned_as"] == "image", "read as if nothing had been asked to save"
+    assert "could not be written: " in rendering.render_attachment(
+        report.summary, rendering.RenderOptions()
+    )
