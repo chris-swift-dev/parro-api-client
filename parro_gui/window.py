@@ -1,6 +1,7 @@
 """The main window: a list of sections on the left, the chosen section on the right."""
 
 import logging
+import os
 import sys
 from collections.abc import Callable
 from typing import Any
@@ -24,10 +25,12 @@ from parro.rendering import format_timestamp
 from parro.settings import Settings
 
 from . import auto_login
-from .icons import ICON_SIZE, section_icon
-from .login import LoginDialog
+from .desktop_font import use_desktop_font
+from .icons import ICON_SIZE, app_icon, section_icon
+from .login import LoginDialog, browser_login_pending
 from .memory import Memory
 from .theme import apply_theme, current_colours
+from .updates import Updates, data_dir_of
 from .views.agenda import AgendaSection
 from .views.archive import ArchiveSection
 from .views.base import LOG_IN_FIRST, Section
@@ -69,11 +72,18 @@ def is_logged_in(status: dict[str, Any]) -> bool:
     return describe_login(status).startswith("Logged in")
 
 
+MINIMUM_SIZE = (760, 520)
+
+
 class MainWindow(QMainWindow):
     def __init__(self, make_client: Callable[[Settings], ParroClient] = ParroClient) -> None:
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} {__version__}")
         self.resize(1000, 680)
+        # Measured (0.12.0): every section's buttons and filters fit from Qt's own 710 x 415, but
+        # the list and the text are cramped there. Below this the window does not go, and below
+        # what its text needs neither (fit_minimum_size).
+        self.setMinimumSize(*MINIMUM_SIZE)
         self.worker = Worker(make_client, self, settings=self.settings)
         self.logged_in = False
         self.sections = QListWidget()
@@ -116,6 +126,8 @@ class MainWindow(QMainWindow):
         # after logging out on purpose.
         self._may_log_in_by_itself = True
         self._logged_in_by_itself = ""
+        self.first_login_check_done = False
+        self.updates = Updates(self, data_dir_of(self.settings), ready=self._quiet_moment)
         self.account_button = QPushButton("Log in")
         self.account_button.clicked.connect(self._log_in_or_out)
         self.statusBar().addPermanentWidget(self.account_button)
@@ -125,6 +137,15 @@ class MainWindow(QMainWindow):
         self.login_timer.timeout.connect(self.refresh_login)
         self.login_timer.start()
         self.refresh_login()
+        self.fit_minimum_size()
+
+    def fit_minimum_size(self) -> None:
+        """MINIMUM_SIZE, or more when the text needs it: Qt takes an explicit minimum over what the
+        layout needs, and on Windows the wider text squeezed buttons at 760 (CI of 0.12.0)."""
+        needed = self.minimumSizeHint()
+        self.setMinimumSize(
+            max(MINIMUM_SIZE[0], needed.width()), max(MINIMUM_SIZE[1], needed.height())
+        )
 
     def restyle(self) -> None:
         """The theme changed: draw the icons in the new colours."""
@@ -142,13 +163,22 @@ class MainWindow(QMainWindow):
             view.ensure_loaded()
 
     def refresh_login(self) -> None:
-        self.worker.submit(operations.auth_status, self._show_login, self.statusBar().showMessage)
+        self.worker.submit(operations.auth_status, self._show_login, self._login_check_failed)
+
+    def _login_check_failed(self, text: str) -> None:
+        self.first_login_check_done = True
+        self.statusBar().showMessage(text)
+
+    def _quiet_moment(self) -> bool:
+        """For a question at start: the login is known, and no other dialog is open."""
+        return self.first_login_check_done and QApplication.activeModalWidget() is None
 
     @staticmethod
     def settings() -> Settings:
         return auto_login.app_settings()
 
     def _show_login(self, status: dict[str, Any]) -> None:
+        self.first_login_check_done = True
         line = describe_login(status)
         if self._logged_in_by_itself and is_logged_in(status):
             line = f"{line} · {self._logged_in_by_itself}"
@@ -206,11 +236,17 @@ class MainWindow(QMainWindow):
         if self.login_dialog is None:
             try:
                 data_dir = Settings.from_environment().data_dir
+                pending = browser_login_pending(self.settings())
             except ParroError:
-                data_dir = None
+                data_dir, pending = None, False
             remembered = auto_login.load_remembered(data_dir) if data_dir else None
             self.login_dialog = LoginDialog(
-                self.worker, self._configured_username(), self, data_dir, remembered
+                self.worker,
+                self._configured_username(),
+                self,
+                data_dir,
+                remembered,
+                browser_pending=pending,
             )
             self.login_dialog.logged_in.connect(self._logged_in_by_hand)
         self.login_dialog.open()
@@ -248,9 +284,15 @@ def main(argv: list[str]) -> int:
     logging.basicConfig(level=logging.WARNING, format="[parro-gui] %(message)s", stream=sys.stderr)
     application = QApplication(argv)
     application.setApplicationName(APP_NAME)
+    application.setWindowIcon(app_icon())
+    flatpak_id = os.environ.get("FLATPAK_ID")
+    if flatpak_id:  # on Wayland, the dock finds the menu entry and the icon by this name
+        application.setDesktopFileName(flatpak_id)
     apply_theme(application)
+    use_desktop_font(application)
     window = MainWindow()
     window.show()
+    QTimer.singleShot(0, window.updates.at_start)  # asks once; tests' windows never ask
     code = application.exec()
     # Everything Qt owns goes before Python starts its own cleanup.
     window.close()

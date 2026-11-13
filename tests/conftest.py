@@ -80,7 +80,11 @@ def fixed_today(monkeypatch: pytest.MonkeyPatch) -> datetime:
 
 @pytest.fixture(scope="session")
 def application() -> Iterator[Any]:
-    """The one QApplication of the test run, shut down properly so Qt cannot crash at exit."""
+    """The one QApplication of the test run, shut down properly so Qt cannot crash at exit.
+
+    Without Qt (the jobs that test the client without the `gui` extra) its tests skip.
+    """
+    pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
     from PySide6.QtCore import QCoreApplication, QEvent
     from PySide6.QtWidgets import QApplication
 

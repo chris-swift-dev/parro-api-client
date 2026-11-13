@@ -20,6 +20,7 @@ from parro.api_client import ParroClient
 
 from .. import widgets
 from ..memory import Kept, Memory
+from ..notice import Notice
 from ..text import placeholder, safe_html
 from ..widgets import SafeTextBrowser
 from ..worker import Worker, submit_from
@@ -54,9 +55,7 @@ class Section(QWidget):
         self.next_notice = ""  # shown when the next load has finished
         self._action_running = False
         self.confirmation: ConfirmDialog | None = None
-        self.notice = QLabel()
-        self.notice.setTextFormat(Qt.TextFormat.PlainText)
-        self.notice.setWordWrap(True)
+        self.notice = Notice()
         self.title = QLabel()
         self.title.setObjectName("sectionTitle")
         self.title.setTextFormat(Qt.TextFormat.PlainText)

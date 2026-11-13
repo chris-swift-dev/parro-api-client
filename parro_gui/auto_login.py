@@ -11,7 +11,6 @@ decides. After a rejected password nothing logs in by itself until a login by ha
 """
 
 import dataclasses
-import json
 import os
 import stat
 from dataclasses import dataclass
@@ -20,11 +19,13 @@ from typing import Any
 
 from parro import operations
 from parro.api_client import ParroClient
-from parro.cache import write_private_file
 from parro.errors import ConfigurationError
 from parro.settings import Settings
 
-FILE_NAME = "desktop-app.json"
+from . import app_file
+
+FILE_NAME = app_file.FILE_NAME
+PART = "auto_login"
 
 
 @dataclass(frozen=True)
@@ -34,31 +35,24 @@ class Remembered:
 
 
 def remembered_path(data_dir: Path) -> Path:
-    return data_dir / FILE_NAME
+    return app_file.path_in(data_dir)
 
 
 def load_remembered(data_dir: Path) -> Remembered | None:
     try:
-        saved = json.loads(remembered_path(data_dir).read_text(encoding="utf-8"))
-        auto = saved["auto_login"]
+        auto = app_file.read_part(data_dir, PART)
         return Remembered(str(auto["username"]), Path(str(auto["password_file"])))
-    except (OSError, ValueError, KeyError, TypeError):
+    except (KeyError, TypeError):
         return None
 
 
 def save_remembered(data_dir: Path, remembered: Remembered | None) -> None:
     """Write the e-mail address and the file's path, or forget them (None)."""
-    path = remembered_path(data_dir)
     if remembered is None:
-        path.unlink(missing_ok=True)
+        app_file.write_part(data_dir, PART, None)
         return
-    content = {
-        "auto_login": {
-            "username": remembered.username,
-            "password_file": str(remembered.password_file),
-        }
-    }
-    write_private_file(path, json.dumps(content, indent=2).encode("utf-8"))
+    part = {"username": remembered.username, "password_file": str(remembered.password_file)}
+    app_file.write_part(data_dir, PART, part)
 
 
 def app_settings(environment: Any = None) -> Settings:

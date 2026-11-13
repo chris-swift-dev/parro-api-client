@@ -54,7 +54,8 @@ and run `python3 parro_cli.py` wherever this README says `parro-client`.
 
 A window instead of a terminal: see [Desktop app](#desktop-app). For Claude and other MCP clients, see
 [MCP server](#mcp-server). **API explorers:** the spec is
-browsable in **[Swagger UI](https://chris-swift-dev.github.io/parro-api-client/)**.
+browsable in **[Swagger UI](https://chris-swift-dev.github.io/parro-api-client/api/)**; the
+[project page](https://chris-swift-dev.github.io/parro-api-client/) has the downloads.
 
 ## What it does
 
@@ -191,8 +192,15 @@ Completing never runs a request and needs no login. Windows PowerShell is not co
 
 ## Desktop app
 
-Prefer a window? `parro-client-gui` does what the command line does, on Windows, macOS and Linux. It
-needs **Python 3.12 or newer**, and Qt, which adds about 300 MB:
+Prefer a window? The desktop app does what the command line does, on Windows, macOS and Linux.
+
+**Without Python:** download the installer for your computer from the
+[latest release](https://github.com/chris-swift-dev/parro-api-client/releases/latest): an `.msi` for
+Windows, a `.dmg` for macOS 14 or newer, a `.flatpak` for Linux. They are not signed yet, so Windows
+and macOS warn at the first start; **[docs/INSTALL-DESKTOP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/INSTALL-DESKTOP.md)**
+says what to do.
+
+**With Python 3.12 or newer**, together with the command line (Qt adds about 300 MB):
 
 ```bash
 pipx install "parro-api-client[gui]"
@@ -206,7 +214,8 @@ parro-client-gui
 
 It follows your system's light or dark setting. There is no web server or open port, and text from
 others stays text. It shares its login, cache and archive with the command line, and it can log in by
-itself from a password file, with the same one-attempt rule. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
+itself from a password file, with the same one-attempt rule. If you agree, it tells you about a
+new version, asking GitHub at most once a day and downloading nothing itself. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
 
 ## Changing things in Parro
 
@@ -310,7 +319,7 @@ All three are explained in **[docs/CALENDAR-AND-ARCHIVE.md](https://github.com/c
 
 ## The OpenAPI specification
 
-<a href="https://chris-swift-dev.github.io/parro-api-client/"><img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
+<a href="https://chris-swift-dev.github.io/parro-api-client/api/"><img src="https://raw.githubusercontent.com/chris-swift-dev/parro-api-client/main/docs/images/swagger-operations.png" width="600" alt="Swagger UI of the Parro REST API spec: the title and the GET operations of the Account, Groups, Events and Chat sections."></a>
 
 [`openapi/parro.public.openapi.json`](https://github.com/chris-swift-dev/parro-api-client/blob/main/openapi/parro.public.openapi.json) describes the API as
 observed from the web client: 34 operations of the Parro API and the login server's OAuth2 endpoints,

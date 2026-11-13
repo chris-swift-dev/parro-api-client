@@ -6,7 +6,12 @@ is built on the same `parro` package, so login, safety rules and data are shared
 
 ## Installing
 
-The app needs **Python 3.12 or newer**, and Qt, which comes with the `gui` extra:
+**Without Python:** each release has an installer for Windows (`.msi`), macOS 14 or newer (`.dmg`)
+and Linux (`.flatpak`), with Python and Qt inside. [INSTALL-DESKTOP.md](INSTALL-DESKTOP.md) says
+which file to take and what to do at the first start.
+
+**With Python**, together with the command line: the app needs **Python 3.12 or newer**, and Qt,
+which comes with the `gui` extra:
 
 ```bash
 pipx install "parro-api-client[gui]"
@@ -31,7 +36,7 @@ keep working on Python 3.10 or newer.
 | Overview | what is new, or everything |
 | Announcements | filter by group or unread, read the news from Parro, read or save attachments (one or all at once), mark as read |
 | Calendar | coming up or earlier, filter by group, answer invitations, sign up or withdraw as a helper, save attachments (one or all at once), export an `.ics` file, show the subscription link |
-| Chats | the same filters as the command line, read a conversation, send a message, mark as read |
+| Chats | the same filters as the command line, read a conversation (it opens at the newest message), send a message, mark as read |
 | Family | the account, children, groups, the state of the privacy choices, the link to a child's privacy page |
 | Archive | keep a local copy with `sync`, stop it at any time, see and empty the cache |
 
@@ -57,8 +62,10 @@ which the time next to them shows.
 ## Logging in
 
 The app uses the same login as the command line and the MCP server: log in with one, and the others
-are logged in too. You can type your password, or log in in your browser and paste back the address
-you end up on. Your password is not stored.
+are logged in too. The login dialog asks for your e-mail address and password. Only if that does not
+work for you, *Other ways to log in…* switches it to logging in in your browser: you log in on
+Parro's own page and paste back the address you end up on. A browser login you started but did not
+finish is still there the next time the dialog opens. Your password is not stored.
 
 The login server locks an account after a few failed attempts, so one click is one attempt and
 nothing is retried. After a rejected password the app says that login has stopped.
@@ -121,7 +128,20 @@ The app can change the same four things as the command line:
 The app follows your system's light or dark setting, also when you change it while the app is open.
 It looks the same on Windows, macOS and Linux, and text uses your system's font size.
 
+## New versions
+
+The first start asks whether the app may check for new versions. With yes, it asks GitHub for the
+newest release when it starts, at most once a day, on a thread of its own so Parro never waits for
+it. The request carries no token, no cookie and nothing about you; GitHub sees your IP address and
+the app's version. A newer version shows a button at the bottom of the window, which opens the
+release page in your browser after asking; the app downloads and installs nothing itself. The answer
+to the question is kept in `desktop-app.json`. *Help → Check for new versions at start* changes it,
+and *Help → Check for updates now* checks at once and says what it found.
+
 ## Good to know
+
+- A message above a section (loading, done, or an error) takes at most two lines. *Details…* shows
+  all of it, for example every file that could not be saved, and the close button removes it.
 
 - Requests run one at a time, so other sections wait while a sync is running. Stopping the sync frees
   them straight away.

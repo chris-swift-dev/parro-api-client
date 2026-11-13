@@ -1,6 +1,7 @@
 """The attachments of the chosen item: read them here, or save the file."""
 
 import base64
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -29,19 +30,35 @@ MAX_CHARS = 300_000
 SAVE_ALL = "Save all attachments…"
 
 
-def describe_saved(report: Any, folder: str) -> str:
-    """What Save all did: how many files went where, and each file that did not, with why."""
+def files(count: int) -> str:
+    return f"{count} {'file' if count == 1 else 'files'}"
+
+
+def reason(file: dict[str, Any]) -> str:
+    """Why a file was not saved: it could not be fetched, or not be written."""
+    return str(file.get("error") or file.get("save_error") or "not saved")
+
+
+def describe_saved(report: Any, folder: str) -> tuple[str, str]:
+    """What Save all did, short, and the files that were not saved, one per line.
+
+    The short text counts the reasons instead of naming every file: twenty files that failed for
+    one reason are one line, not twenty (live check of 0.12.0).
+    """
     summary = report.summary
-    files = summary.get("attachments") or [summary]
-    saved = [f for f in files if f.get("saved_to")]
-    failed = [f for f in files if not f.get("saved_to")]
-    words = f"Saved {len(saved)} {'file' if len(saved) == 1 else 'files'} in {folder}."
+    found = summary.get("attachments") or [summary]
+    saved = [f for f in found if f.get("saved_to")]
+    failed = [f for f in found if not f.get("saved_to")]
     if not failed:
-        return words
-    reasons = "; ".join(
-        f"{f.get('filename') or 'attachment'} ({f.get('error') or 'not saved'})" for f in failed
+        return f"Saved {files(len(saved))} in {folder}.", ""
+    reasons = Counter(str(reason(f)) for f in failed)
+    counted = "; ".join(f"{reason} ({count})" for reason, count in reasons.most_common())
+    text = f"Saved {len(saved)} of {files(len(found))} in {folder}."
+    text += f" {len(failed)} not saved: {counted}."
+    details = "Not saved:\n" + "\n".join(
+        f"- {f.get('filename') or 'attachment'}: {reason(f)}" for f in failed
     )
-    return f"{words} Not saved: {reasons}."
+    return text, details
 
 
 class ReadingDialog(QDialog):
@@ -123,9 +140,7 @@ class AttachmentBar(QWidget):
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
         name = f"{attachment.get('filename')} ({format_size(attachment.get('size'))})"
-        label = QLabel()
-        label.setTextFormat(Qt.TextFormat.PlainText)
-        label.setText(name)
+        label = widgets.ElidedLabel(name)  # a long name never pushes the buttons away
         read, save = QPushButton("Read"), QPushButton("Save…")
         attachment_id = attachment.get("attachment_id")
         read.clicked.connect(lambda: self.read(event_id, attachment_id, read))
@@ -189,11 +204,14 @@ class AttachmentBar(QWidget):
             lambda client: operations.read_attachments(
                 client, event_id=event_id, read_all=True, options=options
             ),
-            lambda report: self._saved_all(describe_saved(report, folder)),
+            lambda report: self._saved_all(*describe_saved(report, folder)),
             self._saved_all,
         )
 
-    def _saved_all(self, text: str) -> None:
+    def _saved_all(self, text: str, details: str = "") -> None:
         self._saving_all = False
         self._enable_save_all()
-        self.report_problem(text)
+        if details:
+            self.report_problem(text, details)
+        else:
+            self.report_problem(text)

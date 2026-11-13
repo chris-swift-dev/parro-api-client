@@ -1,8 +1,9 @@
 name: Release
 
 # Push a tag such as v0.1.0 to run this. It runs the client checks, checks that the tag matches
-# parro.__version__, builds the source archives and the Python packages (wheel and sdist) with
-# checksums, and creates a *draft* GitHub release with the CHANGELOG.md section as notes. Review
+# parro.__version__, builds the source archives, the Python packages (wheel and sdist) and the
+# desktop app's installers (installers.yml) with checksums and build attestations, and creates a
+# *draft* GitHub release with the CHANGELOG.md section as notes. Review
 # the draft on GitHub, then publish it there; publishing uploads the packages to PyPI
 # (publish.yml).
 #
@@ -19,11 +20,17 @@ jobs:
   checks:
     uses: ./.github/workflows/ci.yml
 
-  release:
+  installers:
     needs: checks
+    uses: ./.github/workflows/installers.yml
+
+  release:
+    needs: [checks, installers]
     runs-on: ubuntu-latest
     permissions:
       contents: write   # to create the release and upload its files
+      id-token: write   # with attestations: to sign the build attestations
+      attestations: write
     steps:
       - uses: actions/checkout@v7
 
@@ -37,10 +44,24 @@ jobs:
           python3 -m pip install -r requirements-release.txt
           python3 -m build --outdir dist
 
+      - name: The installers built by installers.yml
+        uses: actions/download-artifact@v8
+        with:
+          pattern: installer-*
+          path: dist/installers
+          merge-multiple: true
+
       - name: Build archives, checksums and notes
         run: |
           export SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)"
-          python3 tools/build_release.py --tag "$GITHUB_REF_NAME" --packages
+          python3 tools/build_release.py --tag "$GITHUB_REF_NAME" --packages --installers
+
+      - name: Attest that this workflow built the packages and installers
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/parro_api_client-*
+            dist/installers/*
 
       - name: Create draft release
         env:
@@ -52,6 +73,7 @@ jobs:
             dist/parro-api-client-"$version".tar.gz \
             dist/parro_api_client-"$version"-py3-none-any.whl \
             dist/parro_api_client-"$version".tar.gz \
+            dist/installers/* \
             dist/SHA256SUMS \
             --verify-tag \
             --draft \

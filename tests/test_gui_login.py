@@ -263,6 +263,42 @@ def test_a_wrong_address_is_shown_and_can_be_retried(window, opened):
     assert dialog.isVisible() and dialog.address.text() == ""
 
 
+def test_the_dialog_shows_only_the_password_form_at_first(window):
+    dialog = dialog_of(window)
+    assert not dialog.password_part.isHidden() and dialog.browser_part.isHidden()
+    assert dialog.other_ways_button.text() == login_module.OTHER_WAYS
+
+
+def test_other_ways_switches_to_the_browser_login_and_back(window):
+    dialog = dialog_of(window)
+    dialog.other_ways_button.click()
+    assert dialog.password_part.isHidden() and not dialog.browser_part.isHidden()
+    assert dialog.other_ways_button.text() == login_module.BACK_TO_PASSWORD
+    dialog.other_ways_button.click()
+    assert not dialog.password_part.isHidden() and dialog.browser_part.isHidden()
+
+
+def test_a_started_browser_login_can_be_finished_after_a_restart(
+    application, make_client, api, opened
+):
+    """The core keeps the unfinished login; the next dialog opens on it, with Finish on."""
+    first = MainWindow(make_client)
+    browser_login(first, opened)
+    state = fakes.query_of(opened[0])["state"]
+    dispose(first)
+    second = MainWindow(make_client)
+    dialog = dialog_of(second)
+    assert dialog.password_part.isHidden() and not dialog.browser_part.isHidden()
+    assert dialog.finish_button.isEnabled()
+    dialog.address.setText(
+        f"https://talk.parro.com/oauth2?code={fakes.AUTHORIZATION_CODE}&state={state}"
+    )
+    dialog.finish_button.click()
+    wait_until(lambda: second.logged_in)
+    assert api.idp.credential_posts() == []
+    dispose(second)
+
+
 def test_without_a_browser_it_shows_the_address(window, monkeypatch):
     monkeypatch.setattr(login_module, "open_url", lambda _address: False)
     dialog = dialog_of(window)

@@ -4,6 +4,67 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.12.0] - 2026-11-13
+
+The desktop app without Python: an installer for Windows, macOS and Linux, which names its
+publisher and can tell you about a new version. A project page with the downloads, and Swagger UI
+next to it. In the app, chats open at the newest message, messages above a section stay short, and
+the login dialog shows only what most people need.
+
+### Added
+
+- **The desktop app without Python:** each release has an installer for Windows (`.msi`), macOS 14 or
+  newer (`.dmg`, Apple silicon and Intel) and Linux (`.flatpak`, x86_64 and aarch64), with Python and
+  Qt inside. They are not signed yet; [docs/INSTALL-DESKTOP.md](docs/INSTALL-DESKTOP.md) explains the
+  first start on each system. Each file is in `SHA256SUMS` and has a GitHub build attestation
+  (`gh attestation verify`).
+- **Desktop app: telling you about a new version,** if you agree at the first start. It asks GitHub
+  at most once a day, sends nothing about you, and downloads nothing itself. A *Help* menu has the
+  switch, *Check for updates now* and *About*.
+- **The desktop app has its own icon,** in the window, the taskbar and the installers.
+- **The installers name their publisher,** `chris-swift-dev` (as in the licence): under *Installed
+  apps* on Windows, in *Get Info* on macOS, and in Linux software centres, which now also show the
+  app's summary, licence, homepage and the "unofficial" line. The warning at the first start on
+  Windows and macOS stays until the installers are signed. The package on PyPI names its author too.
+- **A project page,** [chris-swift-dev.github.io/parro-api-client](https://chris-swift-dev.github.io/parro-api-client/):
+  what it is, a download button per system (the one for your computer first), the three ways to use
+  it and the safety rules, on a phone too. It loads nothing from other sites and is rebuilt when a
+  release is published, so its buttons always name the newest installers.
+- **macOS: a Terminal shortcut past the first-start check,** for people who prefer it, in
+  [docs/INSTALL-DESKTOP.md](docs/INSTALL-DESKTOP.md).
+- **Desktop app: HTTPS certificates are checked by the operating system,** as a browser does it,
+  through the small `truststore` library (now part of the `gui` extra and the installers). Without
+  it, the installers' own Python could not verify Parro, GitHub or the attachment server on macOS and
+  some Windows computers. Certificates a company installs on the computer work too. The command line
+  and the MCP server are unchanged.
+
+### Changed
+
+- **Swagger UI moved to [`…/parro-api-client/api/`](https://chris-swift-dev.github.io/parro-api-client/api/),**
+  the spec to `api/parro.openapi.json` (the old address works too). Old links to an operation
+  (`…/#/Chat/…`) are sent on.
+- **Desktop app: a chat opens at its newest message,** like other chat apps. It stays at the end
+  while the window or the splitter changes size, until you scroll up; after *Send…* it is at the end
+  again, with your message.
+- **Desktop app: a message above a section takes at most two lines.** The rest, such as every file
+  that *Save all attachments…* could not save, is behind *Details…*, where it scrolls and can be
+  copied, and the message can be closed. *Save all* counts the reasons instead of listing every file.
+  Long attachment names are shortened with "…", so their buttons stay in view, and the window has a
+  minimum size (760 × 520) at which every section's buttons fit.
+- **Desktop app: the login dialog shows only the password form.** Logging in in the browser, which
+  few people need, is under *Other ways to log in…*; a browser login that was started and not
+  finished opens there directly, also after a restart. The command line and the MCP server are
+  unchanged.
+- **Desktop app:** `parro-client-gui --version`, and `--self-check`, which starts the app without a
+  screen and without logging in, to check an installation.
+
+### Fixed
+
+- **Saving attachments into a folder that cannot be written to** no longer stops at the first file
+  with "Something went wrong (PermissionError)" in the desktop app, or an error in the command line.
+  Each file now says it "could not be written" and why, and the other files are still read. *Save
+  all* counts it like any other reason.
+
 ## [0.11.0] - 2026-11-12
 
 A better desktop app: details that always fit in the window, saving all attachments at once, less

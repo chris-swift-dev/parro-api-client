@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- What Linux software centres show about the Flatpak: name, developer, licence, links.
+     Briefcase writes none; tools/build_installer.py installs this one (Plan 16 §1). -->
+<component type="desktop-application">
+  <id>io.github.chrisswiftdev.parro-gui</id>
+  <name>Parro Client</name>
+  <summary>Unofficial desktop app for Parro: school news, calendar and chats</summary>
+  <developer id="io.github.chrisswiftdev">
+    <name>chris-swift-dev</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT AND CC-BY-4.0 AND ISC</project_license>
+  <description>
+    <p>
+      Read your child's school news, calendar and chats from Parro in a window on your own
+      computer: announcements and their attachments, invitations, helper sign-ups and
+      conversations. Changes in Parro happen only when you confirm them.
+    </p>
+    <p>
+      This is an unofficial app. It is not affiliated with or endorsed by Topicus, ParnasSys or
+      Parro.
+    </p>
+  </description>
+  <categories>
+    <category>Education</category>
+    <category>Network</category>
+  </categories>
+  <launchable type="desktop-id">io.github.chrisswiftdev.parro-gui.desktop</launchable>
+  <url type="homepage">https://chris-swift-dev.github.io/parro-api-client/</url>
+  <url type="vcs-browser">https://github.com/chris-swift-dev/parro-api-client</url>
+  <url type="bugtracker">https://github.com/chris-swift-dev/parro-api-client/issues</url>
+  <content_rating type="oars-1.1"/>
+</component>

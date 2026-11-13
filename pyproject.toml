@@ -10,13 +10,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "parro-api-client"
-version = "0.11.0"
+version = "0.12.0"
 description = "Parro API client: a standalone CLI, an MCP server and a desktop app sharing one core; reads, and on request marks items as read, sends chat messages, signs up as helper and answers invitations"
 readme = "README.md"
 # The code is MIT; the README (in every package) and docs CC BY 4.0; the desktop app's icons ISC.
 license = "MIT AND CC-BY-4.0 AND ISC"
 license-files = ["LICENSE-CODE", "LICENSE", "parro_gui/icon_files/LICENSE"]
 requires-python = ">=3.10"
+# The name in the licence. The installers show it as publisher (Windows: "Installed apps") and
+# author (macOS, Linux). No e-mail address: the MSI would show it to anyone (Plan 16 §1).
+authors = [{ name = "chris-swift-dev" }]
 dependencies = []
 keywords = ["parro", "parnassys", "school", "cli", "mcp", "openapi"]
 classifiers = [
@@ -37,6 +40,8 @@ parro-client-mcp = "parro.mcp_server:run"
 parro-client-gui = "parro_gui.app:run"
 
 [project.urls]
+# Homepage, with this capital H, is what Briefcase reads: Windows shows it as the app's support link.
+Homepage = "https://chris-swift-dev.github.io/parro-api-client/"
 Repository = "https://github.com/chris-swift-dev/parro-api-client"
 Documentation = "https://chris-swift-dev.github.io/parro-api-client/"
 
@@ -50,8 +55,66 @@ parro_gui = ["icon_files/*"]  # the sidebar's icons and their licence
 [project.optional-dependencies]
 attachments = ["pymupdf", "pypdf", "pillow"]
 # Python 3.12 and newer only: see parro_gui/app.py for why.
-gui = ['PySide6-Essentials>=6.11; python_version >= "3.12"']
+# truststore: HTTPS certificates checked by the operating system (parro_gui/certificates.py).
+gui = ['PySide6-Essentials>=6.11; python_version >= "3.12"', 'truststore>=0.10; python_version >= "3.12"']
 dev = ["pytest", "ruff", "mypy", "openapi-schema-validator"]
+
+# The installers for people without Python (docs/PLAN-desktop-0.12.md): `briefcase build` and
+# `briefcase package` make an MSI, a DMG and a Flatpak with Python, Qt and the app inside. Name,
+# version, description and licence come from [project]. Only the desktop app is in them; the CLI
+# and the MCP server stay with pipx. PyMuPDF is left out: its licence (AGPL) would cover the bundle.
+[tool.briefcase]
+bundle = "io.github.chris-swift-dev"
+
+[tool.briefcase.app.parro-gui]
+formal_name = "Parro Client"
+description = "An unofficial desktop app for Parro: school news, calendar and chats"
+sources = ["parro", "parro_gui"]
+# The same Qt as requirements-gui.txt (a test checks it).
+requires = [
+    "PySide6-Essentials==6.12.0",
+    "truststore==0.10.5",  # HTTPS checked by the system: without it, macOS has no roots at all
+    "pypdf==6.21.4",
+    "pillow==13.0.0",
+]
+icon = "packaging/icon"
+
+[tool.briefcase.app.parro-gui.macOS]
+min_os_version = "14.0"  # PySide6 6.12's wheels are built for macOS 14 and newer
+universal_build = true
+requires = ["std-nslog~=2.0.0"]  # print() and logging reach macOS's Console
+
+# Briefcase's macOS template names no author: Finder's Get Info and the About box show this line.
+[tool.briefcase.app.parro-gui.macOS.info]
+NSHumanReadableCopyright = "Copyright © 2026 chris-swift-dev"
+
+# One Flatpak per processor, with its own Python and Qt (docs/PLAN-desktop-0.12.md §1.8). Briefcase's
+# PySide6 template uses KDE's runtime: it holds the system libraries Qt needs.
+[tool.briefcase.app.parro-gui.linux.flatpak]
+# A Flatpak id allows "-" only in its last part, and Briefcase allows no "_": the account name
+# without its dashes. (Flathub would expect io.github.chris_swift_dev; a matter for later.)
+bundle = "io.github.chrisswiftdev"
+flatpak_runtime = "org.kde.Platform"
+flatpak_runtime_version = "6.11"  # the newest on Flathub (2026-11); 6.9 is end-of-life
+flatpak_sdk = "org.kde.Sdk"
+
+# The sandbox: only what the app needs. Briefcase's defaults also open ~/.cache, ~/.config,
+# ~/.local/share and ~/Documents, and sound. ~/.parro-mcp (the login's tokens) and ~/.parro (the
+# data folder) are kept inside the sandbox, in ~/.var/app/<id>/; anything else in the sandbox's home
+# is gone when the app closes. Files chosen in a dialog come in through the desktop's file portal, so
+# no folder needs opening.
+[tool.briefcase.app.parro-gui.linux.flatpak.finish_arg]
+"socket=x11" = false
+"nosocket=wayland" = false
+"socket=wayland" = true
+"socket=fallback-x11" = true
+"socket=pulseaudio" = false
+"filesystem=xdg-cache" = false
+"filesystem=xdg-config" = false
+"filesystem=xdg-data" = false
+"filesystem=xdg-documents" = false
+"persist=.parro" = true
+"persist=.parro-mcp" = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -78,7 +141,7 @@ warn_unreachable = true
 
 [[tool.mypy.overrides]]
 # Optional libraries without type information.
-module = ["fitz", "pypdf", "PIL", "PIL.*", "openapi_schema_validator", "openapi_schema_validator.*"]
+module = ["fitz", "pypdf", "PIL", "PIL.*", "openapi_schema_validator", "openapi_schema_validator.*", "truststore"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

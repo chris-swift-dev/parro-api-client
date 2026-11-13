@@ -681,6 +681,7 @@ def attachment_reading(reading: dict[str, Any], options: RenderOptions) -> str:
         if reading.get("warning")
         else "",
         f"Saved to {reading['saved_to']}" if reading.get("saved_to") else "",
+        f"{WARNING_MARK} {reading['save_error']}" if reading.get("save_error") else "",
         f"Shown as an image ({reading.get('contentType')})"
         if reading.get("returned_as") == "image"
         else "",
