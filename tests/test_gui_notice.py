@@ -17,6 +17,7 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 QtWidgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
 from PySide6.QtCore import QPoint, QRect  # noqa: E402
+from PySide6.QtGui import QFont  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QAbstractButton,
     QApplication,
@@ -169,7 +170,8 @@ def test_thirty_failed_files_leave_the_details_their_room(window):
 def test_the_window_does_not_get_smaller_than_its_minimum(window):
     window.resize(300, 200)
     settle()
-    assert (window.width(), window.height()) == MINIMUM_SIZE
+    assert (window.width(), window.height()) == (window.minimumWidth(), window.minimumHeight())
+    assert window.minimumWidth() >= MINIMUM_SIZE[0] and window.minimumHeight() >= MINIMUM_SIZE[1]
 
 
 CONTROLS = (QAbstractButton, QComboBox, QSpinBox)
@@ -197,4 +199,24 @@ def test_at_the_minimum_size_every_control_fits(window, name):
     view = show(window, name)
     window.resize(*MINIMUM_SIZE)
     settle()
+    assert cut_off(window, view) == []
+
+
+@pytest.fixture
+def wider_text(application) -> Any:
+    """Text about as wide as on Windows, where 760 pixels squeezed buttons (CI of 0.12.0)."""
+    original = QFont(application.font())
+    bigger = QFont(original)
+    bigger.setPointSizeF(original.pointSizeF() * 1.3)
+    application.setFont(bigger)
+    yield
+    application.setFont(original)
+
+
+@pytest.mark.parametrize("name", SECTIONS)
+def test_with_wider_text_the_window_keeps_room_for_every_control(wider_text, window, name):
+    view = show(window, name)
+    window.resize(300, 200)  # as small as it goes
+    settle()
+    assert window.minimumWidth() > MINIMUM_SIZE[0], "the text needs more than 760 here"
     assert cut_off(window, view) == []

@@ -81,7 +81,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{APP_NAME} {__version__}")
         self.resize(1000, 680)
         # Measured (0.12.0): every section's buttons and filters fit from Qt's own 710 x 415, but
-        # the list and the text are cramped there. Below this the window does not go.
+        # the list and the text are cramped there. Below this the window does not go, and below
+        # what its text needs neither (fit_minimum_size).
         self.setMinimumSize(*MINIMUM_SIZE)
         self.worker = Worker(make_client, self, settings=self.settings)
         self.logged_in = False
@@ -136,6 +137,15 @@ class MainWindow(QMainWindow):
         self.login_timer.timeout.connect(self.refresh_login)
         self.login_timer.start()
         self.refresh_login()
+        self.fit_minimum_size()
+
+    def fit_minimum_size(self) -> None:
+        """MINIMUM_SIZE, or more when the text needs it: Qt takes an explicit minimum over what the
+        layout needs, and on Windows the wider text squeezed buttons at 760 (CI of 0.12.0)."""
+        needed = self.minimumSizeHint()
+        self.setMinimumSize(
+            max(MINIMUM_SIZE[0], needed.width()), max(MINIMUM_SIZE[1], needed.height())
+        )
 
     def restyle(self) -> None:
         """The theme changed: draw the icons in the new colours."""

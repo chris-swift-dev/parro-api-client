@@ -18,6 +18,17 @@ TIMEOUT_SECONDS = 10.0
 _VERSION = re.compile(r"^v?(\d{1,4})\.(\d{1,4})\.(\d{1,4})$")
 
 
+class GitHubRefused(NetworkError):
+    """GitHub answered, but not with the release (for example 403: too many requests).
+
+    The connection and its certificate worked: `--check-connection` counts this as ok.
+    """
+
+    def __init__(self, status: int) -> None:
+        super().__init__(f"GitHub answered {status} for the latest release.")
+        self.status = status
+
+
 @dataclass(frozen=True)
 class LatestRelease:
     version: str
@@ -61,7 +72,7 @@ def latest_release(transport: HttpTransport | None = None) -> LatestRelease | No
     if response.status == 404:
         return None
     if response.status != 200:
-        raise NetworkError(f"GitHub answered {response.status} for the latest release.")
+        raise GitHubRefused(response.status)
     try:
         answer = response.json()
     except ValueError:

@@ -64,6 +64,26 @@ def test_check_connection_shows_a_certificate_failure(no_truststore, monkeypatch
     assert "connection: failed" in capsys.readouterr().err
 
 
+def test_check_connection_counts_a_refusal_from_github_as_a_connection(
+    no_truststore, monkeypatch, capsys
+):
+    # CI of 0.12.0: the macOS runners share addresses, and GitHub may refuse with 403 for too
+    # many requests. The connection and its certificate worked, which is what is checked.
+    from parro.http import HttpResponse
+
+    class Refuses:
+        def __init__(self, _timeout: float) -> None:
+            pass
+
+        def send(self, request):
+            return HttpResponse(403, {}, b'{"message": "rate limit"}', request.url)
+
+    monkeypatch.setattr("parro.release_check.UrllibTransport", Refuses)
+    assert certificates.check_connection() == 0
+    out = capsys.readouterr().out
+    assert "connection: ok" in out and "answered 403" in out
+
+
 def test_the_app_option_needs_no_qt(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["parro-client-gui", "--check-connection"])
     monkeypatch.setattr(certificates, "check_connection", lambda: 7)

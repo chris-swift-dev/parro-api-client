@@ -34,12 +34,18 @@ def check_connection() -> int:
     build, where the offline self-check cannot see a certificate problem.
     """
     from parro.errors import ParroError
-    from parro.release_check import LATEST_RELEASE_API, latest_release
+    from parro.release_check import LATEST_RELEASE_API, GitHubRefused, latest_release
 
     used = use_system_certificates()
     print(f"certificates: {used}")
     try:
         release = latest_release()
+    except GitHubRefused as refused:
+        # GitHub answered, so the connection and its certificate are fine. A refusal such as 403
+        # when one address asked too often (shared CI machines: CI of 0.12.0) is not what
+        # this checks.
+        print(f"connection: ok ({LATEST_RELEASE_API} answered {refused.status})")
+        return 0
     except ParroError as problem:
         print(f"connection: failed: {problem}", file=sys.stderr)
         return 1
