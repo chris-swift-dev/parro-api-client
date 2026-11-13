@@ -89,6 +89,15 @@ flatpak uninstall --user io.github.chrisswiftdev.parro-gui
 flatpak install --user Parro-Client-0.12.1-linux-x86_64.flatpak
 ```
 
+**Two copies?** A software centre installs for all users, `flatpak install --user` only for you. If
+you used both ways, both copies stay, and the app menu opens the one installed with `--user`, which
+may be the older one. `flatpak list --app | grep parro` shows a line per copy; remove the one you do
+not want (both share the login and data, which stay):
+
+```bash
+flatpak uninstall --user io.github.chrisswiftdev.parro-gui
+```
+
 **Removing**, with the login and all data:
 
 ```bash
