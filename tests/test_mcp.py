@@ -150,6 +150,9 @@ def test_tool_interface_only_gains_optional_arguments():
         schoolyear={"type": "integer"},
     )
     expected["parro_chat_messages"]["properties"]["since"] = {"type": "string"}
+    expected["parro_attachment"]["properties"].update(
+        chatroom_id={"type": "integer"}, message_id={"type": "integer"}
+    )
     expected["parro_overview"] = {
         "properties": {"all": {"type": "boolean"}}
     }  # new tools, at the end
@@ -181,6 +184,7 @@ def test_every_tool_has_an_implementation_and_a_description():
         *parro_mcp.TOOL_DEFINITIONS,
         parro_mcp.MARK_READ_TOOL,
         parro_mcp.SEND_CHAT_TOOL,
+        parro_mcp.DELETE_CHAT_TOOL,
         parro_mcp.HELPER_SIGNUP_TOOL,
         parro_mcp.HELPER_WITHDRAW_TOOL,
         parro_mcp.RSVP_TOOL,

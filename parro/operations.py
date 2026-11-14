@@ -8,6 +8,7 @@ MCP tool always give identical output.
 """
 
 import json
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -29,6 +30,9 @@ from .errors import AttachmentError, ConfigurationError, ParroError
 from .geon import get_object_id, strip_geon_metadata
 from .naming import cli_command
 from .settings import LoginMethod
+from .summaries import drop_missing
+
+log = logging.getLogger(__name__)
 
 # With unread_only, look further back per group than `limit`, so older unread items are not missed.
 UNREAD_SCAN_PAGE_SIZE = 50
@@ -276,7 +280,8 @@ def calendar_details(client: ParroClient, item: dict[str, Any]) -> dict[str, Any
     calendar_item = item.get("calendarItem") or {}
     if summaries.wants_helpers(calendar_item):
         return summaries.summarize_calendar_details(client.get_calendar_item(event_id))
-    version = f"{item.get('lastModifiedAt')}|{calendar_item.get('lastModifiedAt')}"
+    # "2": details kept by an older version lack the item's link and the kind of each file.
+    version = f"2|{item.get('lastModifiedAt')}|{calendar_item.get('lastModifiedAt')}"
     cached = client.cache.get_json("events", f"{event_id}.json")
     if isinstance(cached, dict) and cached.get("version") == version:
         return dict(cached.get("details") or {})
@@ -447,6 +452,7 @@ def list_chat_messages(
     if raw:
         return response.payload
     result = {"chatroom_id": room_id, **summaries.summarize_chat_messages(response)}
+    mark_own_messages(client, result["messages"])
     if created_since:
         result["since"] = created_since
     if marked is not None:
@@ -478,6 +484,20 @@ def list_chat_members(
     return {"chatroom_id": room_id, **summaries.summarize_chat_members(response)}
 
 
+def own_identity_ids(client: ParroClient) -> frozenset[int]:
+    """The ids you write chat messages under (`message.identity`): your account's identity and
+    the guardian or teacher identities linked to it (live check 2026-11-14)."""
+    identity = client.get_account().get("identity") or {}
+    linked = [
+        person
+        for kind in ("guardians", "teachers")
+        for person in identity.get(kind) or []
+        if isinstance(person, dict)
+    ]
+    ids = (get_object_id(person) for person in (identity, *linked))
+    return frozenset(found for found in ids if found is not None)
+
+
 # ------------------------------------------------------------------------- attachments
 
 
@@ -498,18 +518,33 @@ def read_attachments(
     filename: str | None = None,
     content_type: str | None = None,
     options: attachments.ReadOptions | None = None,
+    chatroom_id: int | None = None,
+    message_id: int | None = None,
 ) -> AttachmentReport:
-    """Read the attachment(s) of an announcement or calendar item, or of a direct url."""
+    """Read the attachment(s) of an announcement or calendar item, of one chat message
+    (`chatroom_id` + `message_id`), or of a direct url."""
     options = options or attachments.ReadOptions()
     if url:
         reading = attachments.read_attachment_file(
             client, url, filename, content_type, None, options
         )
         return AttachmentReport(reading.summary, [reading.image] if reading.image else [])
-    if event_id is None:
-        raise ConfigurationError("Give an announcement (or calendar item) id, or a direct url.")
-    event = client.get_announcement_or_calendar_item(require_id(event_id, "event id"))
-    title = event.get("title") or (event.get("calendarItem") or {}).get("title")
+    if chatroom_id is not None or message_id is not None:
+        if event_id is not None:
+            raise ConfigurationError("Give an event id, or a chat and a message, not both.")
+        event = client.get_chat_message(
+            require_id(chatroom_id, "chatroom id"), require_id(message_id, "message id")
+        )
+        if event.get("deleted"):
+            raise AttachmentError("This message was deleted.")
+        title: Any = "Chat message"
+    elif event_id is None:
+        raise ConfigurationError(
+            "Give an announcement (or calendar item) id, a chat and a message id, or a direct url."
+        )
+    else:
+        event = client.get_announcement_or_calendar_item(require_id(event_id, "event id"))
+        title = event.get("title") or (event.get("calendarItem") or {}).get("title")
     files = choose_attachment_files(event, attachment_id, read_all)
     if files is None:
         return AttachmentReport(
@@ -536,7 +571,7 @@ def choose_attachment_files(
     """The files to read; None means "several, and the caller did not say which"."""
     files = [attachments.describe_attachment(a) for a in attachments.find_attachments(event)]
     if not files:
-        raise AttachmentError("This event has no attachments.")
+        raise AttachmentError("This has no attachments.")
     if attachment_id is not None:
         files = [f for f in files if f.attachment_id == int(attachment_id)]
         if not files:
@@ -562,6 +597,7 @@ def read_one_attachment(
             described.size,
             options,
             cache_key=described.cache_key(),
+            thumbnail=thumbnail_of(described),
         )
     except ParroError as problem:
         failed = {
@@ -573,6 +609,53 @@ def read_one_attachment(
     return attachments.AttachmentReading(
         {**reading.summary, "attachment_id": described.attachment_id}, reading.image
     )
+
+
+def thumbnail_of(described: attachments.AttachmentFile) -> attachments.Thumbnail | None:
+    if not described.thumbnail_url:
+        return None
+    return attachments.Thumbnail(described.thumbnail_url, described.thumbnail_cache_key())
+
+
+# The desktop app shows this many small pictures of one item or conversation, not more.
+MAX_THUMBNAILS = 60
+
+
+def load_thumbnails(
+    client: ParroClient,
+    event_id: int | None = None,
+    chatroom_id: int | None = None,
+    limit: int = 100,
+) -> dict[int, bytes]:
+    """The small pictures of the photos and videos of one event, or of a chat's newest `limit`
+    messages: attachment id → picture bytes. One that cannot be fetched is left out.
+
+    Pictures come from the cache when they are there. Nothing but the pictures is returned: no
+    address leaves this function.
+    """
+    if chatroom_id is not None:
+        room_id = require_id(chatroom_id, "chatroom id")
+        holders = client.list_chat_messages(room_id, limit=limit).items
+    else:
+        holders = [client.get_announcement_or_calendar_item(require_id(event_id, "event id"))]
+    pictures: dict[int, bytes] = {}
+    for holder in holders:
+        if not isinstance(holder, dict) or holder.get("deleted"):
+            continue
+        for found in attachments.find_attachments(holder):
+            described = attachments.describe_attachment(found)
+            thumbnail = thumbnail_of(described)
+            if thumbnail is None or described.attachment_id is None:
+                continue
+            if len(pictures) >= MAX_THUMBNAILS:
+                return pictures
+            try:
+                picture = attachments.fetch_thumbnail(client, thumbnail)
+            except ParroError as problem:
+                log.info("a thumbnail could not be fetched (%s)", type(problem).__name__)
+                continue
+            pictures[described.attachment_id] = picture.data
+    return pictures
 
 
 # ------------------------------------------------------------------------------- cache
@@ -587,7 +670,7 @@ def cache_info(client: ParroClient) -> dict[str, Any]:
         "files": info.files,
         "bytes": info.bytes,
         "max_bytes": info.max_bytes,
-        "holds": "attachment files and their text; calendar-item details. Never lists.",
+        "holds": "attachment files, their text and thumbnails; calendar-item details. Never lists.",
     }
 
 
@@ -749,6 +832,75 @@ def send_prepared_message(client: ParroClient, prepared: dict[str, Any]) -> dict
         "message_id": get_object_id(message),
         "created_at": message.get("createdAt"),
     }
+
+
+def mark_own_messages(client: ParroClient, messages: list[dict[str, Any]]) -> None:
+    """Add `yours: true` to the messages you wrote: those are the ones you can delete."""
+    own = own_identity_ids(client)
+    for message in messages:
+        identity = message.get("identity")
+        author = identity.get("id") if isinstance(identity, dict) else None
+        if author in own and not rendering.is_status_message(message):
+            message["yours"] = True
+
+
+MAX_DELETION_PREVIEW = 300
+
+
+def prepare_chat_message_deletion(
+    client: ParroClient, chatroom_id: int | None, message_id: int | None
+) -> dict[str, Any]:
+    """Which message would be deleted. Reads only; raises when it should not be deleted.
+
+    Only a message you wrote yourself, that is still there. The API's `permissions` do not say
+    who may delete what (live look 2026-11-14: READ on every message), so this is the rule.
+    """
+    room_id = require_id(chatroom_id, "chatroom id")
+    wanted = require_id(message_id, "message id")
+    room = client.get_chatroom(room_id)
+    message = summaries.summarize_chat_message(client.get_chat_message(room_id, wanted))
+    if message.get("id") != wanted:
+        raise ConfigurationError("Not deleted: this message is not in this chat.")
+    if rendering.is_status_message(message):
+        raise ConfigurationError("Not deleted: this is not a message someone wrote.")
+    if message.get("deleted"):
+        raise ConfigurationError("Not deleted: this message was deleted already.")
+    author = (message.get("identity") or {}).get("id")
+    if author not in own_identity_ids(client):
+        raise ConfigurationError("Not deleted: you can only delete a message you wrote yourself.")
+    text = str(message.get("text") or "")
+    return drop_missing(
+        {
+            "chatroom_id": room_id,
+            "title": room.get("title"),
+            "message_id": wanted,
+            "created_at": message.get("createdAt"),
+            "text": text[:MAX_DELETION_PREVIEW] + ("…" if len(text) > MAX_DELETION_PREVIEW else ""),
+            "attachment": rendering.attachment_marker(message) or None,
+        }
+    )
+
+
+def delete_prepared_message(client: ParroClient, prepared: dict[str, Any]) -> dict[str, Any]:
+    """Delete what prepare_chat_message_deletion() returned, once."""
+    client.delete_chat_message(prepared["chatroom_id"], prepared["message_id"])
+    return {
+        "deleted": True,
+        "chatroom_id": prepared["chatroom_id"],
+        "title": prepared.get("title"),
+        "message_id": prepared["message_id"],
+    }
+
+
+def delete_or_preview_chat_message(
+    client: ParroClient, chatroom_id: int | None, message_id: int | None, confirm: bool
+) -> dict[str, Any]:
+    """For an assistant, which has no terminal to ask at: the preview, or the deletion if
+    `confirm`."""
+    prepared = prepare_chat_message_deletion(client, chatroom_id, message_id)
+    if confirm:
+        return delete_prepared_message(client, prepared)
+    return {**prepared, "deleted": False, "preview": True}
 
 
 def send_or_preview_chat_message(

@@ -99,8 +99,15 @@ def test_first_sync_writes_every_item_with_its_documents(tmp_path):
 def test_nothing_on_disk_holds_a_link_and_everything_is_private(tmp_path):
     sync(tmp_path, make_api(), photos=True)
     root = tmp_path / "archive"
+    # The addresses allowed are those people wrote themselves: the web address a teacher added
+    # to a calendar item, and one typed in a chat message. Download links of files (photos,
+    # videos, documents) are never kept.
+    written_by_people = (b"https://www.example.com/natuurmuseum", b"https://www.example.com/route")
     for name, data in files_in(root).items():
-        assert b"https://" not in data and b"cloudfront" not in data, name
+        rest = data
+        for address in written_by_people:
+            rest = rest.replace(address, b"")
+        assert b"https://" not in rest and b"cloudfront" not in data, name
     if os.name == "posix":
         for path in root.rglob("*"):
             expected = 0o700 if path.is_dir() else 0o600

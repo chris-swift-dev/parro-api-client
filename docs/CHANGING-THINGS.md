@@ -1,6 +1,6 @@
 # Changing things in Parro
 
-The client [reads](../README.md). It can change four things in Parro, and only when you ask for it.
+The client [reads](../README.md). It can change five things in Parro, and only when you ask for it.
 This guide says how, who notices, and what can be undone.
 
 ## The rules for all of them
@@ -11,7 +11,8 @@ This guide says how, who notices, and what can be undone.
 - **For an assistant, each is off unless you switch it on,** with a setting of its own. One switch
   does not open another.
 
-Sending a message, signing up or withdrawing, and answering an invitation also follow these rules:
+Sending or deleting a message, signing up or withdrawing, and answering an invitation also follow
+these rules:
 
 - **You see it first.** The client shows what would happen and asks. Anything but `y` changes
   nothing.
@@ -64,8 +65,8 @@ know a message cannot be taken back, so treat sending as final.
 - After a timeout or a server error, the message may or may not have arrived. Look at
   `chat-messages <chatroom-id>` before you try again.
 - The text is never logged or stored, and sending does not mark the chat as read.
-- Only text, only existing chats: no new chats, replies to one message, attachments, editing or
-  deleting.
+- Only text, only existing chats: no new chats, replies to one message, attachments or editing.
+  A message of your own can be [deleted](#deleting-a-chat-message).
 
 **From an assistant.** The MCP tool is `parro_send_chat_message`, switched on with
 `PARRO_ALLOW_SEND_CHAT=1`. Its preview shows who would receive what.
@@ -75,6 +76,31 @@ know a message cannot be taken back, so treat sending as final.
 > read (your children's names, school letters) could end up in that message. The tool is marked as
 > destructive, so MCP clients that honour this ask you before each call. **Leave that approval on
 > for this tool**, and read the preview before you agree.
+
+## Deleting a chat message
+
+You can delete a message **you wrote yourself**. `chat-messages` shows the id on your own messages:
+
+```bash
+parro-client chat-messages <chatroom-id>             # your messages show #<message-id>
+parro-client chat-delete <chatroom-id> <message-id>  # shows the message and asks
+```
+
+**It cannot be undone, and others see it.** The message stays in the chat as "(message deleted)",
+for everyone. People who already read it, have read it.
+
+- It refuses a message someone else wrote, a message that is already deleted, and lines such as
+  "joined the chat". Whose message it is, is read from Parro again just before, not taken from
+  what was shown earlier.
+- After a timeout or a server error, the message may or may not have been deleted. Look at
+  `chat-messages <chatroom-id>` before you try again.
+- In the desktop app, your own messages have a small *Delete*; it shows the message, and only
+  **Confirm** deletes it.
+
+**From an assistant.** The MCP tool is `parro_delete_chat_message`, switched on with
+`PARRO_ALLOW_DELETE_CHAT=1`. Without `confirm: true` it only shows which message it would delete.
+The warning under [sending](#sending-a-chat-message) applies here too: text in Parro could try to
+talk an assistant into deleting something, so leave your MCP client's approval on for this tool.
 
 ## Helping out
 

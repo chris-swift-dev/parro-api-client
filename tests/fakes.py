@@ -162,6 +162,9 @@ ALLOWED_WRITE_PATHS = re.compile(
 
 
 CHAT_MESSAGE_PATH = re.compile(r"^/chatroom/\d+/chatmessage$")
+# Deleting one message: only without a body, and only a message the account itself wrote.
+ONE_CHAT_MESSAGE_PATH = re.compile(r"^/chatroom/(\d+)/chatmessage/(\d+)$")
+OWN_IDENTITY_ID = 2000000001  # Sanne de Vries, the guardian of the fixtures
 ADD_COMMITMENT_PATH = re.compile(r"^/calendaritem/(\d+)/resource/(\d+)/commitment/$")
 ONE_COMMITMENT_PATH = re.compile(r"^/calendaritem/(\d+)/resource/(\d+)/commitment/(\d+)$")
 RSVP_PATH = re.compile(r"^/calendaritem/(\d+)/calendaritemrsvp$")
@@ -243,6 +246,11 @@ class FakeParroApi:
     read_chats: set[int] = field(default_factory=set)
     # Messages that reached the chat, as (chatroom id, text); later GETs list them.
     sent_messages: list[tuple[int, str]] = field(default_factory=list)
+    # Messages deleted by the one allowed DELETE; later GETs show them as deleted, without text.
+    deleted_messages: set[int] = field(default_factory=set)
+    # The next deletions: "lost" deletes but the answer does not arrive, a number answers with
+    # that status and deletes nothing.
+    delete_outcomes: list[str | int] = field(default_factory=list)
     # The next sends: "lost" arrives but the answer does not, "broken" answers 201 without JSON,
     # a number answers with that status. A send with no entry here works normally.
     send_outcomes: list[str | int] = field(default_factory=list)
@@ -296,13 +304,21 @@ class FakeParroApi:
         allowed_rsvp = (
             request.method == "POST" and RSVP_PATH.match(path) and is_captured_rsvp(request.body)
         )
+        allowed_delete = (
+            request.method == "DELETE"
+            and bool(ONE_CHAT_MESSAGE_PATH.match(path))
+            and not request.body
+            and self._is_own_live_message(path)
+        )
         if request.method != "GET" and not (
-            allowed_put or allowed_post or allowed_helper or allowed_rsvp
+            allowed_put or allowed_post or allowed_helper or allowed_rsvp or allowed_delete
         ):
             raise ForbiddenWrite(f"the client must never send {request.method} {path}")
         token = request.headers.get("Authorization", "").removeprefix("Bearer ")
         if token in self.unauthorized_tokens or not token:
             return HttpResponse(401, {}, b"", request.url)
+        if allowed_delete:
+            return self._delete_chat_message(path, request)
         if request.method == "PUT":
             return self._mark_read(path, query_of(request.url), request)
         if request.method != "GET" and allowed_helper:
@@ -375,6 +391,39 @@ class FakeParroApi:
             "identity": {"dtype": "identity.RIdentityPrimer", "firstname": "Sanne"},
             "amount": amount,
         }
+
+    def _is_own_live_message(self, path: str) -> bool:
+        """True for a text message the account wrote that is still there. A DELETE for anything
+        else is a write the client must never send: it has to refuse before sending."""
+        message_id = int(path.rsplit("/", 1)[-1])
+        for message in self.load_sample("listChatMessages.200.json")["items"]:
+            if get_object_id(message) == message_id:
+                return (
+                    message["dtype"] == "chat.RChatTextMessage"
+                    and get_object_id(message["identity"]) == OWN_IDENTITY_ID
+                    and message_id not in self.deleted_messages
+                )
+        return False
+
+    def _delete_chat_message(self, path: str, request: HttpRequest) -> HttpResponse:
+        """DELETE …/chatmessage/{id}: 204 without a body, as in the capture."""
+        outcome = self.delete_outcomes.pop(0) if self.delete_outcomes else None
+        if isinstance(outcome, int):
+            return HttpResponse(outcome, {"content-type": GEON_TYPE}, b'{"code": 1}', request.url)
+        self.deleted_messages.add(int(path.rsplit("/", 1)[-1]))
+        if outcome == "lost":
+            raise NetworkError("No answer for DELETE /chatroom/{id}/chatmessage/{id}: timed out")
+        return HttpResponse(204, {}, b"", request.url)
+
+    def _shown_messages(self) -> list[dict[str, Any]]:
+        """The chat's messages; a deleted one keeps its place, without its text or its file."""
+        messages = []
+        for message in self.load_sample("listChatMessages.200.json")["items"]:
+            if get_object_id(message) in self.deleted_messages:
+                kept = {k: v for k, v in message.items() if k not in ("text", "attachment")}
+                message = {**kept, "deleted": True}
+            messages.append(message)
+        return messages
 
     def _post_chat_message(self, path: str, request: HttpRequest) -> HttpResponse:
         """POST …/chatmessage: 201, Location and the new message, as in the capture."""
@@ -603,12 +652,17 @@ class FakeParroApi:
             body = b'{"code": 403, "message": "CHAT_NOT_ACTIVE_MEMBER"}'
             return HttpResponse(403, {"content-type": GEON_TYPE}, body, request.url)
         if path.endswith("/chatmessage"):
-            messages = self.load_sample("listChatMessages.200.json")["items"]
+            messages = self._shown_messages()
             since = query.get("createdSince")
             if since:
                 limit = datetime.fromisoformat(since.replace("Z", "+00:00"))
                 messages = [m for m in messages if datetime.fromisoformat(m["createdAt"]) >= limit]
             return self._items(messages, request)
+        if "/chatmessage/" in path:
+            message_id = int(path.rsplit("/", 1)[-1])
+            messages = self._shown_messages()
+            found = [m for m in messages if get_object_id(m) == message_id]
+            return self._one_object(found[0], request.url) if found else self._not_found(request)
         if path == f"/chatroom/{room_id}":
             room = next(r for r in rooms if get_object_id(r) == room_id)
             changes = {"dtype": "chat.RChatRoom", **self.room_overrides}

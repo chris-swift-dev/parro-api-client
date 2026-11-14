@@ -23,11 +23,12 @@ links, or names and messages from a real Parro account. Use invented data, like 
   message; files written with permissions that are too open; anything that makes the client write
   to the Parro API other than the three mark-as-read calls (`PUT /event/{id}/read`,
   `PUT /event/markannouncementsasread`, `PUT /chatroom/{id}/read`) and sending one text message
-  (`POST /chatroom/{id}/chatmessage`) and signing up or withdrawing as a helper
+  (`POST /chatroom/{id}/chatmessage`) and deleting one message of the user's own
+  (`DELETE /chatroom/{id}/chatmessage/{messageId}`) and signing up or withdrawing as a helper
   (`POST /calendaritem/{id}/resource/{resourceId}/commitment/`,
   `DELETE /calendaritem/{id}/resource/{resourceId}/commitment/{commitmentId}`) and answering an
   invitation (`POST /calendaritem/{id}/calendaritemrsvp`), or that sends one of those without the
-  user asking for it (for example through `parro_mark_read`, `parro_send_chat_message`,
+  user asking for it (for example through `parro_mark_read`, `parro_send_chat_message`, `parro_delete_chat_message`,
   `parro_helper_signup`, `parro_helper_withdraw` or `parro_rsvp` while its switch is off, or a
   message, a helper change or an answer without confirmation); a message, a helper change or an
   answer that is sent twice by the client on its own; a way for an MCP tool to read the list of
@@ -44,6 +45,7 @@ you or Parro in it, or a link opened that was not built from the version number.
 Flatpak: a sandbox permission it does not need.
 
 The risk that text in Parro steers an assistant while `PARRO_ALLOW_SEND_CHAT=1`,
+`PARRO_ALLOW_DELETE_CHAT=1`,
 `PARRO_ALLOW_HELPER_SIGNUP=1` or `PARRO_ALLOW_RSVP=1` is on is known and described in the README
 ([messages](docs/CHANGING-THINGS.md#sending-a-chat-message), [helpers](docs/CHANGING-THINGS.md#helping-out),
 [invitations](docs/CHANGING-THINGS.md#answering-an-invitation)). A way to send a message, change a helper slot or

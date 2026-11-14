@@ -82,6 +82,7 @@ def test_the_source_and_the_running_server_agree():
             *parro_mcp.TOOL_DEFINITIONS,
             parro_mcp.MARK_READ_TOOL,
             parro_mcp.SEND_CHAT_TOOL,
+            parro_mcp.DELETE_CHAT_TOOL,
             parro_mcp.HELPER_SIGNUP_TOOL,
             parro_mcp.HELPER_WITHDRAW_TOOL,
             parro_mcp.RSVP_TOOL,

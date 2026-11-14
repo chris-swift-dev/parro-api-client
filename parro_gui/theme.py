@@ -26,6 +26,9 @@ class Colours:
     control: str
     hover: str
     disabled: str
+    own_message: str  # behind your own chat messages
+    other_message: str  # behind everyone else's
+    names: tuple[str, ...] = ()  # a colour per person in a chat, readable on `other_message`
 
 
 LIGHT = Colours(
@@ -42,6 +45,9 @@ LIGHT = Colours(
     control="#ffffff",
     hover="#eff2f7",
     disabled="#a2abb9",
+    own_message="#dbe7ff",
+    other_message="#eef1f5",
+    names=("#b3261e", "#1a7431", "#7a3fd1", "#8a5a00", "#0b6e8e", "#b0277a"),
 )
 DARK = Colours(
     background="#14171c",
@@ -57,7 +63,12 @@ DARK = Colours(
     control="#262c35",
     hover="#2e3540",
     disabled="#667080",
+    own_message="#223660",
+    other_message="#2a303a",
+    names=("#ff9a8f", "#7ee787", "#d2a8ff", "#e3b341", "#76d0ee", "#ff9bd2"),
 )
+
+NAME_COLOUR_COUNT = len(LIGHT.names)
 
 _STYLESHEET = """
 QStatusBar {{ background: {background}; color: {muted}; border-top: 1px solid {line}; }}
@@ -120,11 +131,16 @@ h2 {{ font-size: x-large; font-weight: 600; }}
 h3 {{ font-size: large; font-weight: 600; }}
 .meta {{ color: {muted}; }}
 a {{ color: {accent_link}; }}
+.day {{ color: {muted}; font-weight: 600; }}
+.time {{ color: {muted}; font-size: small; }}
+td.mine {{ background-color: {own_message}; }}
+td.other {{ background-color: {other_message}; }}
 """
 
 
 def stylesheet(colours: Colours) -> str:
-    return _STYLESHEET.format(**asdict(colours))
+    values = {key: value for key, value in asdict(colours).items() if key != "names"}
+    return _STYLESHEET.format(**values)
 
 
 def is_dark() -> bool:
@@ -137,7 +153,16 @@ def current_colours() -> Colours:
 
 def document_css() -> str:
     colours = current_colours()
-    return _DOCUMENT_CSS.format(muted=colours.muted, accent_link=colours.selected_text)
+    css = _DOCUMENT_CSS.format(
+        muted=colours.muted,
+        accent_link=colours.selected_text,
+        own_message=colours.own_message,
+        other_message=colours.other_message,
+    )
+    names = "".join(
+        f".name{number} {{ color: {colour}; }}\n" for number, colour in enumerate(colours.names)
+    )
+    return css + names
 
 
 def palette(colours: Colours) -> QPalette:

@@ -123,6 +123,7 @@
     "imported": false,
     "status": "OPEN",
     "description": "We vertrekken om 8.45 uur met de auto. Neem een lunchpakket mee.",
+    "url": "https://www.example.com/natuurmuseum",
     "location": "Natuurmuseum Voorbeeldstad",
     "pending": false,
     "owner": {

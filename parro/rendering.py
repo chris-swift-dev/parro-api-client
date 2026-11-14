@@ -444,6 +444,7 @@ def is_photo(attachment: dict[str, Any]) -> bool:
 # -------------------------------------------------------------------------------- calendar
 
 LOCATION_MARK = "📍"
+LINK_MARK = "🔗"
 HELPER_MARK = "🙋"
 
 
@@ -559,6 +560,8 @@ def detail_lines(item: dict[str, Any], options: RenderOptions) -> list[str]:
     for slot in details.get("helpers") or []:
         text = join_parts([helper_slot_text(slot), object_id(slot.get("id"))])
         lines.append(f"{HELPER_MARK} {text}")
+    if details.get("link"):
+        lines.append(f"{LINK_MARK} {details['link']}")
     for attachment in details.get("attachments") or []:
         lines.append(attachment_line(attachment))
     if details.get("attachments"):
@@ -624,8 +627,12 @@ def render_conversation(result: dict[str, Any], options: RenderOptions) -> str:
     for message in messages:
         when = parse_timestamp(message.get("createdAt"))
         day = format_day(when) if when else "Date unknown"
+        # A message with an attachment shows its id: that is what reads or saves the file. So
+        # does one of your own: that is what deletes it.
+        with_id = message.get("attachment") or (message.get("yours") and not message.get("deleted"))
+        message_id = object_id(message.get("id")) if with_id else ""
         header = join_parts(
-            [full_name_of(message.get("identity")), format_time(when) if when else ""]
+            [full_name_of(message.get("identity")), format_time(when) if when else "", message_id]
         )
         days.setdefault(day, []).append(f"{header}\n{quote(message_text(message))}")
     blocks = [f"## {day}\n\n" + "\n\n".join(entries) for day, entries in days.items()]
@@ -634,11 +641,66 @@ def render_conversation(result: dict[str, Any], options: RenderOptions) -> str:
     name = result.get("title") or join_parts(["Chat", object_id(result.get("chatroom_id"))])
     heading = f"# {name.replace(' · ', ' ')} ({shown})"
     body = blocks or ["No messages."]
-    return document(heading, *body, read_state_line(result))
+    room_id = result.get("chatroom_id")
+    with_file = [m for m in messages if m.get("attachment") and not m.get("deleted")]
+    files_hint = (
+        hint(
+            options,
+            f"attachment --chat {room_id} --message <id>",
+            f"parro_attachment(chatroom_id={room_id}, message_id=<id>)",
+        )
+        if with_file and room_id is not None
+        else ""
+    )
+    return document(heading, *body, files_hint, read_state_line(result))
 
 
 def message_text(message: dict[str, Any]) -> str:
-    return "(message deleted)" if message.get("deleted") else str(message.get("text") or "")
+    """What a message says: its text, then its attachment as a line such as
+    '[video] IMG_0001.MOV (11.4 MB)'. A status message says what happened."""
+    if message.get("deleted"):
+        return "(message deleted)"
+    status = status_text(message)
+    if status:
+        return f"({status})"
+    parts = [str(message.get("text") or "").strip("\n"), attachment_marker(message)]
+    return "\n".join(part for part in parts if part)
+
+
+STATUS_TEXTS = {"ENTER": "joined the chat", "LEAVE": "left the chat"}
+
+
+def is_status_message(message: dict[str, Any]) -> bool:
+    """True for 'someone joined', 'left' or 'renamed the chat' (chat.RChatStatusMessage)."""
+    return bool(message.get("status")) and "text" not in message
+
+
+def status_text(message: dict[str, Any]) -> str:
+    """'joined the chat', 'left the chat', 'renamed the chat to "…"'; '' for a real message."""
+    if not is_status_message(message):
+        return ""
+    status = str(message["status"])
+    if status == "TITLE_CHANGED":
+        title = message.get("title")
+        return f'renamed the chat to "{title}"' if title else "renamed the chat"
+    return STATUS_TEXTS.get(status) or status.replace("_", " ").lower()
+
+
+def attachment_marker(message: dict[str, Any]) -> str:
+    """'[photo] photo-123.jpg (1.3 MB)' for a message with an attachment, else ''."""
+    attachment = message.get("attachment")
+    if not isinstance(attachment, dict):
+        return ""
+    kind = attachment_kind(attachment)
+    size = format_size(attachment.get("size")) if attachment.get("size") else ""
+    name = str(attachment.get("filename") or "")
+    return f"[{kind}] {name}".rstrip() + (f" ({size})" if size else "")
+
+
+def attachment_kind(attachment: dict[str, Any]) -> str:
+    """'photo', 'video', 'audio' or 'file'."""
+    media = attachment.get("media")
+    return {"image": "photo"}.get(str(media), str(media)) if media else "file"
 
 
 def full_name_of(person: Any) -> str:
@@ -757,6 +819,7 @@ def render_archived_calendar_item(
         f"# {calendar_item.get('title') or '(no title)'}",
         "\n".join(line for line in lines if line),
         str(details.get("description") or "").strip(),
+        f"Link: {details['link']}" if details.get("link") else "",
         saved_file_lines(files),
     )
 
@@ -863,6 +926,37 @@ def render_chat_send(result: dict[str, Any], options: RenderOptions) -> str:
     message = join_parts(["Message", object_id(result.get("message_id"))])
     next_step = hint(options, f"chat-messages {room_id}", f"parro_chat_messages({room_id})")
     return document(f"# Sent to: {title}", join_parts([message, when]), next_step)
+
+
+def render_chat_deletion_preview(prepared: dict[str, Any]) -> str:
+    """Which message is about to be deleted: shown before anything is deleted."""
+    room = join_parts(["chat", object_id(prepared["chatroom_id"])])
+    what = join_parts(
+        [
+            f"Message {object_id(prepared['message_id'])}",
+            format_timestamp(prepared.get("created_at")),
+        ]
+    )
+    body = "\n".join(p for p in (prepared.get("text"), prepared.get("attachment")) if p)
+    return document(
+        f"# Delete your message in: {prepared.get('title') or room}\n{room}",
+        what,
+        quote(body or "(no text)"),
+        "This cannot be undone. Everyone in the chat will see that a message was deleted.",
+    )
+
+
+def render_chat_delete(result: dict[str, Any], options: RenderOptions) -> str:
+    """The outcome of chat-delete."""
+    room_id = result.get("chatroom_id")
+    if result.get("preview"):
+        return document(render_chat_deletion_preview(result), "Not deleted yet: nothing changed.")
+    if not result.get("deleted"):
+        return document("# Not deleted", "Nothing was deleted.")
+    title = result.get("title") or join_parts(["Chat", object_id(room_id)])
+    message = join_parts(["Message", object_id(result.get("message_id"))])
+    next_step = hint(options, f"chat-messages {room_id}", f"parro_chat_messages({room_id})")
+    return document(f"# Deleted from: {title}", message, next_step)
 
 
 def helper_item_line(result: dict[str, Any]) -> str:
@@ -1147,6 +1241,7 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "mark_read": render_mark_read,
     "mark_group_read": render_mark_group_read,
     "chat_send": render_chat_send,
+    "chat_delete": render_chat_delete,
     "helper": render_helper_change,
     "rsvp": render_rsvp,
     "attachment": render_attachment,

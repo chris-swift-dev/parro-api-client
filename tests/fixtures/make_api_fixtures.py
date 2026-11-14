@@ -291,16 +291,103 @@ def calendar_item(
     )
 
 
-def chat_message(message_id: int, author: dict[str, Any], when: str, text: str) -> dict[str, Any]:
+def chat_message(
+    message_id: int,
+    author: dict[str, Any],
+    when: str,
+    text: str | None,
+    attachment: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A message. One with an attachment often has no `text` key at all (live look 2026-11-14)."""
+    fields: dict[str, Any] = {
+        "lastModifiedAt": when,
+        "identity": author,
+        "createdAt": when,
+        "deleted": False,
+    }
+    if text is not None:
+        fields["text"] = text
+    if attachment is not None:
+        fields["attachment"] = attachment
+    return geon("chat.RChatTextMessage", message_id, **fields, allRead=False)
+
+
+def chat_status(
+    message_id: int, author: dict[str, Any], when: str, status: str, title: str | None = None
+) -> dict[str, Any]:
+    """'Someone joined', 'left' or 'renamed the chat': no text, a `status` instead."""
+    fields: dict[str, Any] = {"lastModifiedAt": when, "identity": author, "createdAt": when}
+    fields["status"] = status
+    if title:
+        fields["title"] = title
+    return geon("chat.RChatStatusMessage", message_id, **fields)
+
+
+def chat_attachment(attachment_id: int, kind: str, entries: list[dict[str, Any]]) -> dict[str, Any]:
     return geon(
-        "chat.RChatTextMessage",
-        message_id,
-        lastModifiedAt=when,
-        identity=author,
-        createdAt=when,
-        deleted=False,
-        text=text,
-        allRead=False,
+        "attachment.RChatMessageAttachment",
+        attachment_id,
+        lastModifiedAt="2026-11-01T10:00:00.000+01:00",
+        attachmentType=kind,
+        uploadId=f"00000000-0000-4000-8000-{attachment_id:012d}",
+        entries=entries,
+    )
+
+
+def chat_photo(attachment_id: int) -> dict[str, Any]:
+    """A photo in a chat: image entries without a file name, the THUMBNAIL first (seen live)."""
+    key = f"{attachment_id:032x}"
+    thumbnail = entry(
+        attachment_id + 2,
+        "THUMBNAIL",
+        f"{CDN}/thumbnail/{key}/1-{key}.jpeg",
+        96_614,
+        "image/jpg",
+        image=True,
+    )
+    source = entry(
+        attachment_id + 1,
+        "SOURCE",
+        f"{CDN}/image/{key}/1-{key}.jpeg",
+        1_333_337,
+        "image/jpeg",
+        image=True,
+    )
+    return chat_attachment(attachment_id, "IMAGE", [thumbnail, source])
+
+
+def chat_video(attachment_id: int, filename: str) -> dict[str, Any]:
+    """A video in a chat: the original, a stream and a thumbnail (findings, 2026-11-13)."""
+    key = f"{attachment_id:032x}"
+    return chat_attachment(
+        attachment_id,
+        "VIDEO",
+        [
+            entry(
+                attachment_id + 1,
+                "SOURCE",
+                f"{CDN}/video/{key}/1-{key}.MOV",
+                11_951_961,
+                "video/quicktime",
+                filename,
+            ),
+            entry(
+                attachment_id + 2,
+                "VIDEO",
+                f"{CDN}/video-hls/{key}/1-{key}.m3u8",
+                10_477_122,
+                "video/quicktime",
+                filename,
+            ),
+            entry(
+                attachment_id + 3,
+                "THUMBNAIL",
+                f"{CDN}/thumbnail/{key}/1-{key}.jpeg",
+                264_807,
+                "image/jpg",
+                image=True,
+            ),
+        ],
     )
 
 
@@ -654,6 +741,7 @@ MUSEUM_TRIP_DETAIL = calendar_item(
     ["2026-11-12T00:00:00+01:00"],
     detail={
         "description": "We vertrekken om 8.45 uur met de auto. Neem een lunchpakket mee.",
+        "url": "https://www.example.com/natuurmuseum",
         "location": "Natuurmuseum Voorbeeldstad",
         "pending": False,
         "owner": TEACHER_TOM,
@@ -850,6 +938,23 @@ CHAT_MESSAGES = [
         "2026-11-02T19:02:00.000+01:00",
         "Dag allemaal, wie kan er op 12 november rijden?",
     ),
+    # Older: a video without any text, a photo with text, and two status messages.
+    chat_message(
+        8100000000,
+        SANNE,
+        "2026-11-01T17:40:00.000+01:00",
+        None,
+        chat_video(8200000020, "IMG_0001.MOV"),
+    ),
+    chat_message(
+        8099999999,
+        TOM,
+        "2026-11-01T17:31:00.000+01:00",
+        "Kijk, zo ziet de route eruit: https://www.example.com/route",
+        chat_photo(8200000010),
+    ),
+    chat_status(8099999998, TOM, "2026-11-01T17:30:30.000+01:00", "TITLE_CHANGED", "Excursie"),
+    chat_status(8099999997, SANNE, "2026-11-01T17:30:00.000+01:00", "ENTER"),
 ]
 
 SYSTEM_NEWS = [

@@ -65,7 +65,7 @@ several groups, applies the unread filter *before* the limit, and builds compact
 5. on a **401**: asks the authenticator for one refresh and retries once. A second 401 raises
    `TokenRejected`, which also explains the `dtype` pitfall. **A 401 never starts a password login.**
 
-**The four kinds of write.** `ParroClient.mark_read(kind, id)` sends one of the three calls in
+**The five kinds of write.** `ParroClient.mark_read(kind, id)` sends one of the three calls in
 `READ_STATE_WRITES` (`PUT …/read`, empty body), through the same headers and 401 handling as `get()`.
 Only commands the user runs on purpose call it (`operations.mark_read`,
 `mark_group_announcements_read`, and the `--mark-read` flags); the MCP tool `parro_mark_read` exists
@@ -76,6 +76,12 @@ after a timeout or a `5xx` it says the outcome is unknown and does not send agai
 idempotency key). `operations.prepare_chat_message` does the reading and the refusals;
 `send_prepared_message` sends. Between those two, `chat-send` asks (`cli.run_chat_send`) and the MCP
 tool wants `confirm: true` (`send_or_preview_chat_message`, only with `PARRO_ALLOW_SEND_CHAT=1`).
+
+`ParroClient.delete_chat_message(chatroom_id, message_id)` sends the one captured `DELETE`, once,
+under the same rule. `operations.prepare_chat_message_deletion` fetches the message and refuses
+anything but a live message you wrote yourself; `delete_prepared_message` deletes. Between those
+two, `chat-delete` asks (`cli.run_chat_delete`) and the MCP tool wants `confirm: true`
+(`delete_or_preview_chat_message`, only with `PARRO_ALLOW_DELETE_CHAT=1`).
 
 `ParroClient.add_helper_commitment(item, slot, count)` and `remove_helper_commitment(item, slot,
 commitment)` change one helper slot, once, under the same rule of no repeat after a timeout or a
@@ -182,7 +188,7 @@ The installers are made by Briefcase from `[tool.briefcase]` in `pyproject.toml`
 | --- | --- |
 | add a CLI command or MCP tool | `parro/operations.py`, then `HANDLERS` / `COMMAND_VIEWS` in `parro/cli.py` and `TOOL_DEFINITIONS` / `TOOL_FUNCTIONS` / `TOOL_VIEWS` in `parro/mcp_server.py` (with the hints in the tool definition itself) |
 | change how something looks | `parro/rendering.py`, then `UPDATE_SNAPSHOTS=1 .venv/bin/pytest tests/test_rendering.py` and read the diff in `tests/snapshots/` |
-| call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`); GET only: a new write needs a decision first, see the four kinds of write in step 3 and `SECURITY.md` |
+| call a new endpoint | a small method on `ParroClient` (`parro/api_client.py`); GET only: a new write needs a decision first, see the five kinds of write in step 3 and `SECURITY.md` |
 | change output fields | `parro/summaries.py` (keep existing field names: clients depend on them) |
 | understand a login failure | `parro/authenticator.py`, `parro/login_methods.py`, `tests/test_login_safety.py` |
 | check what the API really does | `openapi/parro.openapi.json` and `samples/` (private) |

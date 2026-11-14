@@ -14,8 +14,23 @@ All in the spec; the important ones:
   use `event.RAnnouncementEventPrimer`: `event.RAnnouncementEvent` answers **401**, which looks like
   an expired token but is not.
 - Attachments: announcements keep them in `attachments[]`, calendar items in
-  `calendarItem.attachments[]`. Each carries an unsigned CloudFront URL that must be fetched
+  `calendarItem.attachments[]`, a chat message has at most one in `attachment` (and then often no
+  `text` key at all). Each carries an unsigned CloudFront URL that must be fetched
   **without** the Parro `Authorization` header and is never logged.
+- An attachment's `entries[]` have a `type`: `SOURCE` (the original), `THUMBNAIL` (a small JPEG of a
+  photo or video, at most 900 px) and, for a video, `VIDEO` (a stream). Their order varies. A photo's
+  entries have no `filename` (live look 2026-11-14).
+- `GET /chatroom/{id}/chatmessage` also returns `chat.RChatStatusMessage` items: `status` is `ENTER`,
+  `LEAVE` or `TITLE_CHANGED` (with `title`), and there is no `text`.
+- Deleting a message: `DELETE /chatroom/{id}/chatmessage/{messageId}`, no body, answers `204`
+  (captured 2026-11-14). The message stays in the list with `deleted: true`, without `text` or
+  `attachment`. A message's `permissions` name only `READ`, also for your own.
+- `message.identity`'s id is one of your own ids from `GET /account/me` for the messages you wrote.
+- A calendar item can carry a web address the teacher added: `calendarItem.url`, only in
+  `GET /event/{id}`, not in the list.
+- Some announcements also have `richTextContents`: a JSON string in Quill's "delta" form (`bold`,
+  `underline`, `blockquote`, `link`). `contents` holds the same words as plain text; the client
+  reads only that.
 - Calendar items of `type: VOLUNTEER` or `SCHOOLWIDE_VOLUNTEER` ask parents to help. The slots are in
   `calendarItem.resources[]` of `GET /event/{id}` (or `GET /calendaritem/{id}`): `amount` wanted,
   `amountCommitted`, and `commitedByMe` (the API's spelling). The list only carries the type.

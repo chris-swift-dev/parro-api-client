@@ -25,7 +25,7 @@ from parro_gui import text as gui_text  # noqa: E402
 from parro_gui import widgets as gui_widgets  # noqa: E402
 from parro_gui.views.attachments import ReadingDialog  # noqa: E402
 from parro_gui.views.base import EMPTY, LOADING, LOG_IN_FIRST  # noqa: E402
-from parro_gui.views.chats import conversation_html  # noqa: E402
+from parro_gui.views.conversation import conversation_html  # noqa: E402
 from parro_gui.views.overview import unread_line  # noqa: E402
 from parro_gui.window import SECTIONS, MainWindow  # noqa: E402
 from parro_gui.worker import LOG_IN_AGAIN  # noqa: E402

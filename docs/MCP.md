@@ -14,7 +14,7 @@ What `parro-client-mcp` offers to Claude and other MCP clients. How to add it to
 | `parro_groups` | Classes and school-wide groups, with the ids other tools need. |
 | `parro_announcements` | The main feed. Merges all groups, newest first, full text + attachment list. |
 | `parro_announcement` | One announcement by id, with author. |
-| **`parro_attachment`** | **Downloads an attachment of an announcement or calendar item and returns its text (PDF/docx/txt/csv/html) or the image.** |
+| **`parro_attachment`** | **Downloads an attachment of an announcement, calendar item or chat message (`chatroom_id` + `message_id`) and returns its text (PDF/docx/txt/csv/html) or the image. A video gives its small picture and details, never the film.** |
 | `parro_calendar` | Calendar items from today on, soonest first; `details: true` adds location, description and helper slots, `past: true` earlier items. |
 | `parro_chatrooms` / `parro_chat_messages` | Conversations: `unread`, `archived`, `type` and `schoolyear` filters; messages `since` a date. |
 | `parro_chat_members` | Who is in a chat: parents (with their children) and teachers, and who is admin. |
@@ -25,6 +25,7 @@ What `parro-client-mcp` offers to Claude and other MCP clients. How to add it to
 | `parro_privacy` | Per child: can parents change the privacy choices now, and when were they last changed; `link: true` gives the page to change them (keep it secret). |
 | `parro_mark_read` | Only with `PARRO_ALLOW_MARK_READ=1`: mark one announcement, calendar item or chat as read ([the school sees it](CHANGING-THINGS.md#marking-as-read)). |
 | `parro_send_chat_message` | Only with `PARRO_ALLOW_SEND_CHAT=1`: a preview of a chat message, or with `confirm: true` the message itself ([real people receive it](CHANGING-THINGS.md#sending-a-chat-message)). |
+| `parro_delete_chat_message` | Only with `PARRO_ALLOW_DELETE_CHAT=1`: a preview of which of your own chat messages would be deleted, or with `confirm: true` the deletion ([it cannot be undone](CHANGING-THINGS.md#deleting-a-chat-message)). |
 | `parro_helper_signup` / `parro_helper_withdraw` | Only with `PARRO_ALLOW_HELPER_SIGNUP=1`: a preview of signing up on a calendar item's helper slot (optional `count`) or withdrawing, or with `confirm: true` the change itself ([it is a promise in your name](CHANGING-THINGS.md#helping-out)). |
 | `parro_rsvp` | Only with `PARRO_ALLOW_RSVP=1`: a preview of answering a calendar item's invitation, or with `confirm: true` the answer itself ([the school sees it](CHANGING-THINGS.md#answering-an-invitation)). |
 
