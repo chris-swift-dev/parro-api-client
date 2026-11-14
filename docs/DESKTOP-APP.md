@@ -36,7 +36,7 @@ keep working on Python 3.10 or newer.
 | Overview | what is new, or everything |
 | Announcements | filter by group or unread, read the news from Parro, look at the photos, read, open or save attachments (one or all at once), mark as read |
 | Calendar | coming up or earlier, filter by group, the item's link, answer invitations, sign up or withdraw as a helper, look at, open or save attachments (one or all at once), export an `.ics` file, show the subscription link |
-| Chats | the same filters as the command line, read a conversation (it opens at the newest message), look at its photos, open or save its files, send a message, mark as read |
+| Chats | the same filters as the command line, read a conversation (it opens at the newest message), look at its photos, open or save its files, send a message, delete a message of your own, mark as read |
 | Family | the account, children, groups, the state of the privacy choices, the link to a child's privacy page |
 | Archive | keep a local copy with `sync`, stop it at any time, see and empty the cache |
 
@@ -50,9 +50,10 @@ half, until you do.
 
 **Photos, videos and documents.** The photos of an announcement or calendar item are small pictures
 side by side; in a chat a photo or a video shows its small picture in the message. Click one to see
-the photo, with *Save…*. A document has *Read*, which shows its text. A video or a sound recording
+the photo, scaled to fit the window, with *Actual size* and *Save…*. A document has *Read*, which shows its text. A video or a sound recording
 has *Open*: the app fetches the file and hands it to the player your computer uses for it, and
-removes its copy when the app closes. If no program opens the file, the app says so; save it then.
+removes its copy when the app closes. If nothing opens, use *Save…* instead. (In the Flatpak the
+copy is kept in the app's own cache folder, which is where the desktop can reach it.)
 
 **A chat** shows your own messages on the right and everyone else's on the left. A name appears once
 for several messages in a row, each person in a colour of their own, and not at all in a chat with
@@ -113,11 +114,11 @@ password checks.
 
 ## Changing things
 
-The app can change the same four things as the command line:
+The app can change the same five things as the command line:
 [see the guide](CHANGING-THINGS.md).
 
 - Nothing changes because you opened or read something.
-- Sending a message, signing up or withdrawing, and answering an invitation show exactly what would
+- Sending or deleting a message, signing up or withdrawing, and answering an invitation show exactly what would
   happen, and only **Confirm** does it. Enter does not. Marking as read asks once.
 - After a timeout or a server error the app says it may or may not have gone through, and offers no
   button to try again.

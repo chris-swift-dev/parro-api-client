@@ -42,11 +42,12 @@ log = logging.getLogger("parro_cli")
 EXIT_INTERRUPTED = 130
 
 DESCRIPTION = """\
-Client for Parro, the Dutch parent-school app. It reads. It can change four things, and only when
+Client for Parro, the Dutch parent-school app. It reads. It can change five things, and only when
 you ask: mark an announcement, calendar item or chat as read (`mark-read`, `--mark-read`; the
 school can see that), send a text message to a chat you are in (`chat-send`; it shows what would
-go to whom first), sign you up or withdraw you as a helper (`helper`; it asks first), and answer
-a calendar item's invitation (`rsvp`; it asks first).
+go to whom first), delete a chat message you wrote (`chat-delete`; it asks first), sign you up
+or withdraw you as a helper (`helper`; it asks first), and answer a calendar item's invitation
+(`rsvp`; it asks first).
 
 Logging in: set PARRO_USERNAME plus PARRO_PASSWORD_FILE (or PARRO_PASSWORD) and run `login`,
 or run `login --prompt` to type the password, or use the browser flow: `login-url`, log in in

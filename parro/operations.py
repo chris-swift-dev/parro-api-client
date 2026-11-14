@@ -30,6 +30,7 @@ from .errors import AttachmentError, ConfigurationError, ParroError
 from .geon import get_object_id, strip_geon_metadata
 from .naming import cli_command
 from .settings import LoginMethod
+from .summaries import drop_missing
 
 log = logging.getLogger(__name__)
 

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QIcon, QImage, QPixmap
+from PySide6.QtGui import QIcon, QImage, QPixmap, QResizeEvent, QShowEvent
 from PySide6.QtWidgets import (
     QAbstractButton,
     QDialog,
@@ -40,6 +40,7 @@ from ..worker import Worker, submit_from
 MAX_CHARS = 300_000
 SAVE_ALL = "Save all attachments…"
 OPEN_IN_PLAYER, SAVE_FILE = "Open", "Save…"
+ACTUAL_SIZE, FIT_TO_WINDOW = "Actual size", "Fit to window"
 # A photo in the strip is shown at most this large.
 STRIP_SIZE = 96
 PLAYED = ("video", "audio")
@@ -140,13 +141,21 @@ class ReadingDialog(QDialog):
         self.text = widgets.SafeTextBrowser()
         self.picture = QLabel()
         self.picture.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # The photo as fetched; what the label shows is scaled from it, never the other way round.
+        self.original = QPixmap()
+        self.fitted = True
+        self.picture_area = QScrollArea()
+        self.size_button = QPushButton(ACTUAL_SIZE)
+        self.size_button.setVisible(False)
+        self.size_button.clicked.connect(self.toggle_size)
         if report.images:
-            pixels = QPixmap()
-            pixels.loadFromData(base64.b64decode(report.images[0].base64_data))
-            self.picture.setPixmap(pixels)
-            scroll = QScrollArea()
-            scroll.setWidget(self.picture)
-            layout.addWidget(scroll)
+            self.original.loadFromData(base64.b64decode(report.images[0].base64_data))
+            self.picture_area.setWidget(self.picture)
+            self.picture_area.setWidgetResizable(True)
+            self.picture_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(self.picture_area, 1)
+            self.size_button.setVisible(True)
+            self._show_picture()
         else:
             notes = (summary.get("error"), summary.get("warning"))
             self.text.setHtml(
@@ -160,7 +169,44 @@ class ReadingDialog(QDialog):
         self.save_button.setVisible(save is not None)
         if save is not None:
             self.save_button.clicked.connect(lambda: save(self.save_button))
-        layout.addLayout(widgets.right_aligned(self.save_button))
+        layout.addLayout(widgets.right_aligned(self.size_button, self.save_button))
+
+    def toggle_size(self) -> None:
+        """Between the whole photo in the window, and the photo at its own size with scroll bars."""
+        self.fitted = not self.fitted
+        self.size_button.setText(ACTUAL_SIZE if self.fitted else FIT_TO_WINDOW)
+        self._show_picture()
+
+    def _show_picture(self) -> None:
+        if self.original.isNull():
+            return
+        if not self.fitted:
+            self.picture_area.setWidgetResizable(False)
+            self.picture.setPixmap(self.original)
+            self.picture.resize(self.original.size())
+            return
+        self.picture_area.setWidgetResizable(True)
+        room = self.picture_area.viewport().size()
+        size = self.original.size()
+        if size.width() > room.width() or size.height() > room.height():  # never enlarged
+            size = size.scaled(room, Qt.AspectRatioMode.KeepAspectRatio)
+        self.picture.setPixmap(
+            self.original.scaled(
+                size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        )
+
+    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802 (Qt's name)
+        super().resizeEvent(event)
+        if self.fitted:
+            self._show_picture()
+
+    def showEvent(self, event: QShowEvent) -> None:  # noqa: N802 (Qt's name)
+        super().showEvent(event)
+        if self.fitted:  # only now does the window know how much room the photo has
+            self._show_picture()
 
 
 class FileOpener:

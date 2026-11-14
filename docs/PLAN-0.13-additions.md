@@ -1,7 +1,8 @@
 # Plan 18: three additions to 0.13.0, before the release
 
-*Status: being built (2026-11-14) on branch `media-0.13`, into the same pull request as
-[Plan 17](PLAN-media-and-chat-0.13.md).*
+*Status: built (2026-11-14) on branch `media-0.13`, in the same pull request as
+[Plan 17](PLAN-media-and-chat-0.13.md). Still to check by the account owner: *Open* in the Flatpak,
+and the first real deletion (section 4).*
 
 **Goal:** after the live check of the installers on Windows, macOS and Linux:
 

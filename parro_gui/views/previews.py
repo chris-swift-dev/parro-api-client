@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from parro.rendering import format_date, join_parts, member_role
+from parro.rendering import format_date, format_timestamp, join_parts, member_role
 
 from ..text import bullets, document, heading, meta, paragraph, subheading
 
@@ -22,6 +22,20 @@ def chat_preview(prepared: dict[str, Any]) -> str:
         subheading("The message"),
         paragraph(prepared.get("text")),
         paragraph("Real people receive this under your name, and it cannot be taken back."),
+    )
+
+
+def chat_deletion_preview(prepared: dict[str, Any]) -> str:
+    """Which message is about to be deleted."""
+    return document(
+        heading(f"Delete your message in: {prepared.get('title') or 'chat'}"),
+        meta(format_timestamp(prepared.get("created_at"))),
+        subheading("The message"),
+        paragraph(prepared.get("text")),
+        paragraph(prepared.get("attachment")),
+        paragraph(
+            "This cannot be undone. Everyone in the chat will see that a message was deleted."
+        ),
     )
 
 

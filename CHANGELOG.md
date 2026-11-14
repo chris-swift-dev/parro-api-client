@@ -29,13 +29,24 @@ link is shown, everywhere.
 - **Desktop app: small pictures.** A photo or a video in a chat shows its small picture; so do the
   photos of an announcement or calendar item, side by side in place of a row per photo. A click
   shows the photo, with *Save…*. A video or recording asks *Open* or *Save…*; *Open* fetches it and
-  hands it to your computer's own player, and the copy is removed when the app closes.
+  hands it to your computer's own player, and the copy is removed when the app closes. In the
+  Flatpak that copy is kept in the app's cache folder: from the sandbox's own temporary folder the
+  desktop could not open it.
+- **Deleting a chat message you wrote yourself:** `chat-delete <chatroom-id> <message-id>` shows
+  the message and asks first; `chat-messages` now shows the id on your own messages. In the desktop
+  app your own messages have a small *Delete*, and only **Confirm** deletes. For an assistant it is
+  the MCP tool `parro_delete_chat_message`, off unless you set `PARRO_ALLOW_DELETE_CHAT=1`. It
+  cannot be undone, and everyone in the chat sees that a message was deleted.
+  **This changes the client's promise again:** it reads, and it can change five things, each only
+  when you ask ([the guide](docs/CHANGING-THINGS.md#deleting-a-chat-message)).
+- **Desktop app: a photo is shown scaled to fit its window,** and follows the window's size.
+  *Actual size* shows it as before, with scroll bars.
 - **Desktop app: an address written as `www.school.nl`** is a link too, and opens as `https://`.
 - **Links in the news from Parro keep their address:** "dit filmpje (https://…)" in place of only
   "dit filmpje".
 - **API description:** a chat message's `attachment`, the entry types `THUMBNAIL` and `VIDEO`,
-  status messages (`chat.RChatStatusMessage`), a calendar item's `url` and an announcement's
-  `richTextContents`.
+  status messages (`chat.RChatStatusMessage`), a calendar item's `url`, an announcement's
+  `richTextContents`, and `deleteChatMessage`.
 
 ### Changed
 

@@ -26,6 +26,7 @@ none of them for normal use. Back to the [README](../README.md).
 | `PARRO_CACHE_MAX_MB` | `500` |
 | `PARRO_ALLOW_MARK_READ` | `off`; `1` adds the MCP tool `parro_mark_read` ([the school sees it](CHANGING-THINGS.md#marking-as-read)). The CLI's `mark-read` needs no switch |
 | `PARRO_ALLOW_SEND_CHAT` | `off`; `1` adds the MCP tool `parro_send_chat_message` ([read this first](CHANGING-THINGS.md#sending-a-chat-message)). The CLI's `chat-send` needs no switch |
+| `PARRO_ALLOW_DELETE_CHAT` | `off`; `1` adds the MCP tool `parro_delete_chat_message` ([read this first](CHANGING-THINGS.md#deleting-a-chat-message)). The CLI's `chat-delete` needs no switch |
 | `PARRO_ALLOW_HELPER_SIGNUP` | `off`; `1` adds the MCP tools `parro_helper_signup` and `parro_helper_withdraw` ([read this first](CHANGING-THINGS.md#helping-out)). The CLI's `helper` needs no switch |
 | `PARRO_ALLOW_RSVP` | `off`; `1` adds the MCP tool `parro_rsvp` ([read this first](CHANGING-THINGS.md#answering-an-invitation)). The CLI's `rsvp` needs no switch |
 

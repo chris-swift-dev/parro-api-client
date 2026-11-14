@@ -241,3 +241,17 @@ saved, and personal data is left out. The findings that shaped the release are i
 | The calendar item's link | OK: 1 of 113 items has one (`calendarItem.url`), and it is shown |
 | No download link in what is printed | OK: no CDN address in any rendered conversation |
 | Not checked live yet | The desktop app on a real chat: the layout, the small pictures, *Open* handing a video to the system's player (on Windows, macOS and inside the Flatpak's sandbox), and a sound recording, of which the account has none |
+
+## Live check (2026-11-14, release 0.13.0: media and chats, part 2: the installers)
+
+The account owner tried the installers that CI built from the branch on Windows, macOS and Linux
+and reported what they saw. Personal data is left out. The fixes are in
+[Plan 18](PLAN-0.13-additions.md).
+
+| Check | Result |
+| --- | --- |
+| The chat layout, the small pictures, a click on a photo | OK on all three, with one remark: **a photo opened at its full size**, so the window showed a part of it. **Changed:** it is scaled to fit the window; *Actual size* shows it as before |
+| *Open* on a video, Windows and macOS | OK: the system's player opens |
+| *Open* on a video, the Flatpak | **Found:** nothing happens: no player, no dialog, no message. The app fetched the film into `/tmp`, which in a Flatpak exists only inside the sandbox, so the desktop's portal could not find the file it was asked to open (a reading of how the portal works; the Flatpak was not installed where the fix was written). **Fixed:** in a Flatpak the file is kept in the app's cache folder, which the desktop can reach. **To be checked again** with the Flatpak built from the fix |
+| Which chat messages may be deleted (read-only, 339 messages) | A message's `permissions` name only `READ`, also for your own, so the client's own rule decides: only a message you wrote |
+| Not checked live yet | Deleting a message: tested against the fake API only; a sound recording |

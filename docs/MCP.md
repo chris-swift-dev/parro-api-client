@@ -25,6 +25,7 @@ What `parro-client-mcp` offers to Claude and other MCP clients. How to add it to
 | `parro_privacy` | Per child: can parents change the privacy choices now, and when were they last changed; `link: true` gives the page to change them (keep it secret). |
 | `parro_mark_read` | Only with `PARRO_ALLOW_MARK_READ=1`: mark one announcement, calendar item or chat as read ([the school sees it](CHANGING-THINGS.md#marking-as-read)). |
 | `parro_send_chat_message` | Only with `PARRO_ALLOW_SEND_CHAT=1`: a preview of a chat message, or with `confirm: true` the message itself ([real people receive it](CHANGING-THINGS.md#sending-a-chat-message)). |
+| `parro_delete_chat_message` | Only with `PARRO_ALLOW_DELETE_CHAT=1`: a preview of which of your own chat messages would be deleted, or with `confirm: true` the deletion ([it cannot be undone](CHANGING-THINGS.md#deleting-a-chat-message)). |
 | `parro_helper_signup` / `parro_helper_withdraw` | Only with `PARRO_ALLOW_HELPER_SIGNUP=1`: a preview of signing up on a calendar item's helper slot (optional `count`) or withdrawing, or with `confirm: true` the change itself ([it is a promise in your name](CHANGING-THINGS.md#helping-out)). |
 | `parro_rsvp` | Only with `PARRO_ALLOW_RSVP=1`: a preview of answering a calendar item's invitation, or with `confirm: true` the answer itself ([the school sees it](CHANGING-THINGS.md#answering-an-invitation)). |
 

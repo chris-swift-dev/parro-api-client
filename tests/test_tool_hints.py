@@ -48,6 +48,7 @@ EXPECTED = {
     "parro_privacy": READ,
     "parro_mark_read": (False, False, True, True),
     "parro_send_chat_message": (False, True, False, True),
+    "parro_delete_chat_message": (False, True, True, True),
     "parro_helper_signup": (False, False, True, True),
     "parro_helper_withdraw": (False, True, True, True),
     "parro_rsvp": (False, True, True, True),
@@ -113,6 +114,7 @@ def all_tools() -> list[dict[str, Any]]:
         *parro_mcp.TOOL_DEFINITIONS,
         parro_mcp.MARK_READ_TOOL,
         parro_mcp.SEND_CHAT_TOOL,
+        parro_mcp.DELETE_CHAT_TOOL,
         parro_mcp.HELPER_SIGNUP_TOOL,
         parro_mcp.HELPER_WITHDRAW_TOOL,
         parro_mcp.RSVP_TOOL,
@@ -134,6 +136,7 @@ def test_every_tool_states_all_four_hints_as_booleans(name):
 def test_the_hints_reach_clients_through_tools_list(server, monkeypatch):
     monkeypatch.setenv("PARRO_ALLOW_MARK_READ", "1")
     monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    monkeypatch.setenv("PARRO_ALLOW_DELETE_CHAT", "1")
     monkeypatch.setenv("PARRO_ALLOW_HELPER_SIGNUP", "1")
     monkeypatch.setenv("PARRO_ALLOW_RSVP", "1")
     listed = server.handle_request({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
@@ -224,6 +227,7 @@ def test_mark_read_can_be_repeated(api, server, monkeypatch):
 
 def test_send_is_not_idempotent(api, server, monkeypatch):
     monkeypatch.setenv("PARRO_ALLOW_SEND_CHAT", "1")
+    monkeypatch.setenv("PARRO_ALLOW_DELETE_CHAT", "1")
     arguments = {"chatroom_id": CHAT, "text": "Tekst", "confirm": True}
     result_of(server.call_tool("parro_send_chat_message", arguments))
     result_of(server.call_tool("parro_send_chat_message", arguments))

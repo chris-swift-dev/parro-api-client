@@ -7,7 +7,8 @@ others, so it never depends on colour alone.
 
 Everything from other people is escaped (`parro_gui.text`). The only pictures are the thumbnails
 the app fetched itself, and a file opens through an internal `parro-attachment:` link that names
-the message, never through an address from the text.
+the message, never through an address from the text. Your own messages carry a `parro-delete:`
+link in the same way; it only starts the question, and the client checks again whose message it is.
 """
 
 import html
@@ -31,6 +32,7 @@ from ..text import document, heading, meta, safe_html
 from ..theme import NAME_COLOUR_COUNT
 
 ATTACHMENT_SCHEME = "parro-attachment"
+DELETE_SCHEME = "parro-delete"
 THUMBNAIL_SCHEME = "parro-thumbnail"
 # A thumbnail is shown at most this wide and high.
 THUMBNAIL_BOX = 240
@@ -47,6 +49,7 @@ class Conversation:
     # attachment id → (width, height) of the thumbnails the pane may show
     pictures: dict[Any, tuple[int, int]] = field(default_factory=dict)
     show_names: bool = True  # False in a chat with one other person
+    can_delete: bool = False  # your own messages get a Delete link
 
 
 def thumbnail_name(attachment_id: Any) -> str:
@@ -55,6 +58,10 @@ def thumbnail_name(attachment_id: Any) -> str:
 
 def attachment_link(message_id: Any) -> str:
     return f"{ATTACHMENT_SCHEME}:{message_id}"
+
+
+def delete_link(message_id: Any) -> str:
+    return f"{DELETE_SCHEME}:{message_id}"
 
 
 def fitted(width: int, height: int, box: int = THUMBNAIL_BOX) -> tuple[int, int]:
@@ -105,6 +112,9 @@ def bubble(message: dict[str, Any], mine: bool, with_name: bool, view: Conversat
         parts += [part for part in (safe_html(text), attachment_html(message, view)) if part]
     body = "<br>".join(parts)
     time = f'&nbsp;&nbsp;<span class="time">{format_time(when)}</span>' if when else ""
+    if mine and view.can_delete and not message.get("deleted") and message.get("id") is not None:
+        link = html.escape(delete_link(message.get("id")), quote=True)
+        time += f'&nbsp;&nbsp;<a class="time" href="{link}">Delete</a>'
     side, cell = ("right", "mine") if mine else ("left", "other")
     inner = (
         f'<table align="{side}" cellspacing="0" cellpadding="8">'

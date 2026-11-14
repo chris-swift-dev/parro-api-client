@@ -1,5 +1,6 @@
 """Conversations: the list with its filters, and one conversation."""
 
+import dataclasses
 from collections.abc import Callable
 from typing import Any
 
@@ -22,8 +23,14 @@ from ..widgets import right_aligned
 from ..worker import Worker
 from .attachments import FileOpener, image_from
 from .base import ListDetailSection
-from .conversation import ATTACHMENT_SCHEME, Conversation, conversation_html, thumbnail_name
-from .previews import chat_preview
+from .conversation import (
+    ATTACHMENT_SCHEME,
+    DELETE_SCHEME,
+    Conversation,
+    conversation_html,
+    thumbnail_name,
+)
+from .previews import chat_deletion_preview, chat_preview
 
 MAX_CHATS = 60
 MAX_MESSAGES = 100
@@ -76,8 +83,8 @@ class ChatsSection(ListDetailSection):
         self.side_layout.addLayout(right_aligned(self.send_button))
         # A click on a file in the conversation: the link names the message, nothing else.
         self.opener = FileOpener(worker, self.notice.setText, self)
-        self.detail.internal_schemes = (ATTACHMENT_SCHEME,)
-        self.detail.internal_link.connect(self._open_file)
+        self.detail.internal_schemes = (ATTACHMENT_SCHEME, DELETE_SCHEME)
+        self.detail.internal_link.connect(self._link_clicked)
         self._shown: tuple[Any, ...] | None = None  # room, messages, members, view
         # Not shown: it only keeps a second click from fetching the same file twice.
         self.open_button = QPushButton(self)
@@ -151,7 +158,9 @@ class ChatsSection(ListDetailSection):
 
         def show(found: tuple[Any, Any, Any]) -> None:
             messages, members, my_ids = found
-            view = Conversation(my_ids=my_ids, show_names=room.get("type") != "SINGLE")
+            view = Conversation(
+                my_ids=my_ids, show_names=room.get("type") != "SINGLE", can_delete=True
+            )
             self._shown = (room, messages, members, view)
             self.detail.show_at_end(conversation_html(room, messages, members, view))
             if any(with_picture(message) for message in messages.get("messages", [])):
@@ -173,7 +182,7 @@ class ChatsSection(ListDetailSection):
                 if image is not None:
                     self.detail.allow_image(thumbnail_name(attachment_id), image)
                     sizes[attachment_id] = (image.width(), image.height())
-            view = Conversation(view.my_ids, sizes, view.show_names)
+            view = dataclasses.replace(view, pictures=sizes)
             self._shown = (room, messages, members, view)
             self.detail.replace_keeping_place(conversation_html(room, messages, members, view))
 
@@ -184,19 +193,41 @@ class ChatsSection(ListDetailSection):
             arrived,
         )
 
-    def _open_file(self, link: str) -> None:
-        """A click on a message's file. The link holds the message's id; the file's details come
-        from the messages the app fetched, never from the link."""
+    def _link_clicked(self, link: str) -> None:
+        """A click on a message's file or on its Delete. The link holds only the message's id;
+        everything else comes from the messages the app fetched, never from the link."""
         if self._shown is None:
             return
         room, messages, _members, _view = self._shown
-        wanted = link.partition(":")[2]
+        scheme, _, wanted = link.partition(":")
         for message in messages.get("messages", []):
+            if str(message.get("id")) != wanted:
+                continue
             attachment = message.get("attachment")
-            if str(message.get("id")) == wanted and isinstance(attachment, dict):
+            if scheme == DELETE_SCHEME:
+                self._delete(room.get("id"), message.get("id"))
+            elif isinstance(attachment, dict):
                 where = {"chatroom_id": room.get("id"), "message_id": message.get("id")}
                 self.opener.activate(where, attachment, self.open_button)
-                return
+            return
+
+    def _delete(self, room_id: Any, message_id: Any) -> None:
+        """Reads first: the message as Parro has it now, and whether it is yours. Only Confirm
+        deletes."""
+        self.run_action(
+            self.open_button,
+            lambda client: operations.prepare_chat_message_deletion(client, room_id, message_id),
+            self._confirm_delete,
+        )
+
+    def _confirm_delete(self, prepared: dict[str, Any]) -> None:
+        self.ask_to_confirm(
+            "Delete a message",
+            chat_deletion_preview(prepared),
+            "Delete",
+            lambda client: operations.delete_prepared_message(client, prepared),
+            lambda _result: self.reload_here("Deleted."),
+        )
 
     def clear(self) -> None:
         super().clear()

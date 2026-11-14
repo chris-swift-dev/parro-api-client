@@ -214,7 +214,7 @@ DESCRIPTION = """\
 Description of the REST API behind **talk.parro.com**, the Dutch parent–school
 communication app by Topicus (ParnasSys). The API is a Topicus *geon* API. Every operation reads,
 except the three under **Read state**, which mark items as read, `sendChatMessage`, which sends a
-message to real people, `addCommitment` and `deleteCommitment` under **Helpers**, and `answerRsvp`
+message to real people, `deleteChatMessage`, which deletes one, `addCommitment` and `deleteCommitment` under **Helpers**, and `answerRsvp`
 under **RSVP**.
 This spec was derived from the web client's traffic: a captured browser session and sanitized response
 samples. Response schemas list **only fields seen in those samples**. Treat every object as
@@ -656,8 +656,8 @@ def build(samples_dir, public=False):
             "chat room's `rel: self` link. Answered `201` with the new message, and its address in "
             "`Location`.\n\n"
             "⚠️ **Real people receive this, under your name:** the teacher, or everyone in a group chat. "
-            "They get a notification. The capture shows no way to take a message back (a message's "
-            "`permissions` list only `READ`, also for your own), so treat sending as final.\n\n"
+            "They get a notification. A message can be deleted afterwards (`deleteChatMessage`), but "
+            "everyone still sees that there was one, and may have read it: treat sending as final.\n\n"
             "⚠️ **Do not resend blindly.** The request has no idempotency key: after a timeout there is no "
             "way to know whether the message arrived, so look at `GET /chatroom/{id}/chatmessage` first.\n\n"
             "**Not known** (finding out means messaging real people): the longest text allowed, the answer "
@@ -685,6 +685,28 @@ def build(samples_dir, public=False):
                         "schema": {"type": "string", "format": "uri"}}},
                     "content": content(collection(ref("ChatTextMessage")), ["sendChatMessage.201.json"])},
             **std_err},
+    }
+
+    # ---- deleting a message (captured 2026-11-14)
+    paths["/chatroom/{id}/chatmessage/{messageId}"]["delete"] = {
+        "tags": ["Chat"], "operationId": "deleteChatMessage",
+        "summary": "Delete a chat message",
+        "description":
+            "Deletes one message, as seen in a capture of the web app deleting a message of the user's "
+            "own. No request body. Answered `204` without a body.\n\n"
+            "⚠️ **It cannot be undone, and others see it.** The message stays in the list with "
+            "`deleted: true` and without its `text` or `attachment`, so everyone in the chat sees that a "
+            "message was deleted.\n\n"
+            "A message's `permissions` list only `READ`, also for your own (live look 2026-11-14), so "
+            "the API does not say which messages you may delete. Only deleting your own message was "
+            "captured; what it answers for someone else's is not known.",
+        "parameters": [{"$ref": "#/components/parameters/AppVersion"},
+                       {"$ref": "#/components/parameters/Role"},
+                       dict(id_param, description="Chatroom id from `GET /chatroom`."),
+                       {"name": "messageId", "in": "path", "required": True,
+                        "schema": {"type": "integer", "format": "int64"},
+                        "description": "Message id from `GET /chatroom/{id}/chatmessage`."}],
+        "responses": {"204": {"description": "Deleted. No body."}, **std_err},
     }
 
     # ---- helper slots: a promise in the user's name, so it says what others see

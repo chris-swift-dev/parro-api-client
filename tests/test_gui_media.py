@@ -486,3 +486,144 @@ def test_own_identity_ids_come_from_the_account(api, tmp_path):
     client = make_client(tmp_path, api)
 
     assert ME in operations.own_identity_ids(client)
+
+
+# ------------------------------------------------------------- a photo scaled to fit
+
+
+class Report:
+    """What read_attachments returns for a photo: a summary and the picture."""
+
+    def __init__(self, width: int, height: int) -> None:
+        import base64
+        from types import SimpleNamespace
+
+        self.summary = {"filename": "foto.jpg"}
+        data = base64.b64encode(jpeg(width, height)).decode()
+        self.images = [SimpleNamespace(base64_data=data, mime_type="image/jpeg")]
+
+
+def shown_size(dialog: Any) -> tuple[int, int]:
+    pixmap = dialog.picture.pixmap()
+    return pixmap.width(), pixmap.height()
+
+
+def test_a_large_photo_is_scaled_to_fit_the_window_and_follows_its_size(application):
+    """Live check of 0.13.0: a photo opened at its full size, so you saw a corner of it."""
+    dialog = attachment_views.ReadingDialog(Report(3000, 4000))
+    dialog.show()
+    wait_until(lambda: shown_size(dialog)[1] < 4000)
+
+    room = dialog.picture_area.viewport().size()
+    width, height = shown_size(dialog)
+    assert width <= room.width() and height <= room.height()
+    assert abs(width / height - 3000 / 4000) < 0.01, "its shape is kept"
+    assert max(room.height() - height, room.width() - width) >= 0 and height > room.height() - 3
+
+    dialog.resize(400, 320)
+    wait_until(lambda: shown_size(dialog)[1] < height)
+    smaller = dialog.picture_area.viewport().size()
+    assert shown_size(dialog)[1] <= smaller.height() and shown_size(dialog)[0] <= smaller.width()
+    dispose(dialog)
+
+
+def test_a_small_photo_is_not_enlarged(application):
+    dialog = attachment_views.ReadingDialog(Report(60, 80))
+    dialog.show()
+    QtWidgets.QApplication.processEvents()
+
+    assert shown_size(dialog) == (60, 80)
+    dispose(dialog)
+
+
+def test_the_button_switches_between_fit_and_actual_size(application):
+    dialog = attachment_views.ReadingDialog(Report(3000, 4000))
+    dialog.show()
+    wait_until(lambda: shown_size(dialog)[1] < 4000)
+    assert dialog.size_button.isVisible() and dialog.size_button.text() == "Actual size"
+
+    dialog.size_button.click()
+    assert shown_size(dialog) == (3000, 4000) and dialog.size_button.text() == "Fit to window"
+    assert dialog.picture_area.verticalScrollBar().maximum() > 0, "scroll bars, as before"
+
+    dialog.size_button.click()
+    wait_until(lambda: shown_size(dialog)[1] < 4000)
+    assert dialog.size_button.text() == "Actual size"
+    dispose(dialog)
+
+
+def test_a_document_has_no_size_button(application):
+    from types import SimpleNamespace
+
+    report = SimpleNamespace(summary={"filename": "brief.pdf", "text": "Beste ouders"}, images=[])
+    dialog = attachment_views.ReadingDialog(report)
+    dialog.show()
+
+    assert not dialog.size_button.isVisible() and "Beste ouders" in dialog.text.toPlainText()
+    dispose(dialog)
+
+
+# ---------------------------------------------------------------- deleting a message
+
+OWN_TEXT_MESSAGE, TOMS_MESSAGE = 8100000002, 8100000001
+
+
+def test_only_your_own_live_messages_get_a_delete_link():
+    from parro_gui.views.conversation import delete_link
+
+    messages = fixture_messages()
+    view = Conversation(my_ids=frozenset({ME}), can_delete=True)
+
+    html = messages_html(messages, view)
+
+    links = set(re.findall(r'href="parro-delete:(\d+)"', html))
+    assert links == {str(OWN_TEXT_MESSAGE), str(VIDEO_MESSAGE)}, "not Tom's, not the 'joined' line"
+    assert delete_link(OWN_TEXT_MESSAGE) == f"parro-delete:{OWN_TEXT_MESSAGE}"
+    assert "parro-delete" not in messages_html(messages, Conversation(my_ids=frozenset({ME})))
+    gone = [{**m, "deleted": True} for m in messages]
+    assert "parro-delete" not in messages_html(gone, view)
+
+
+def confirmation(view: Any) -> Any:
+    wait_until(lambda: getattr(view, "confirmation", None) is not None)
+    return view.confirmation
+
+
+def test_delete_shows_the_message_and_only_confirm_deletes(window, api):
+    view = open_chat(window)
+
+    view.detail._follow(QUrl(f"parro-delete:{OWN_TEXT_MESSAGE}"))
+    dialog = confirmation(view)
+
+    assert "Ik kan rijden, ik heb plek voor drie kinderen." in dialog.preview.toPlainText()
+    assert "cannot be undone" in dialog.preview.toPlainText()
+    assert not api.writes(), "looking at the question deletes nothing"
+
+    dialog.confirm_button.click()
+    dialog.confirm_button.click()
+    wait_until(lambda: not dialog.isVisible())
+    wait_until(lambda: "(message deleted)" in view.detail.toPlainText())
+
+    assert api.writes() == [f"DELETE /chatroom/8000000001/chatmessage/{OWN_TEXT_MESSAGE}"]
+    assert "plek voor drie kinderen" not in view.detail.toPlainText()
+    assert view.notice.text() == "Deleted."
+
+
+def test_cancel_deletes_nothing(window, api):
+    view = open_chat(window)
+
+    view.detail._follow(QUrl(f"parro-delete:{OWN_TEXT_MESSAGE}"))
+    confirmation(view).cancel_button.click()
+
+    assert not api.writes() and "plek voor drie kinderen" in view.detail.toPlainText()
+
+
+def test_a_forged_delete_link_for_someone_else_s_message_is_refused(window, api):
+    """The link only starts the question. Whose message it is, is checked again from Parro."""
+    view = open_chat(window)
+
+    view.detail._follow(QUrl(f"parro-delete:{TOMS_MESSAGE}"))
+    wait_until(lambda: "wrote yourself" in view.notice.text())
+    view.detail._follow(QUrl("parro-delete:999"))
+
+    assert not api.writes() and getattr(view, "confirmation", None) is None

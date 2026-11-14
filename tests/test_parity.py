@@ -49,7 +49,8 @@ def without_added_fields(item: dict[str, Any]) -> dict[str, Any]:
 def without_attachments(result: dict[str, Any], *keys: str) -> dict[str, Any]:
     """0.13: a message's attachment is compact, as an event's is; the original passed the raw
     object on. The messages themselves must still be the same."""
-    messages = [without(message, "attachment") for message in result["messages"]]
+    # Also 0.13: `yours` marks the messages you wrote, the ones you can delete.
+    messages = [without(message, "attachment", "yours") for message in result["messages"]]
     return {**without(result, *keys), "messages": messages}
 
 

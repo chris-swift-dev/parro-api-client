@@ -22,6 +22,9 @@ All in the spec; the important ones:
   entries have no `filename` (live look 2026-11-14).
 - `GET /chatroom/{id}/chatmessage` also returns `chat.RChatStatusMessage` items: `status` is `ENTER`,
   `LEAVE` or `TITLE_CHANGED` (with `title`), and there is no `text`.
+- Deleting a message: `DELETE /chatroom/{id}/chatmessage/{messageId}`, no body, answers `204`
+  (captured 2026-11-14). The message stays in the list with `deleted: true`, without `text` or
+  `attachment`. A message's `permissions` name only `READ`, also for your own.
 - `message.identity`'s id is one of your own ids from `GET /account/me` for the messages you wrote.
 - A calendar item can carry a web address the teacher added: `calendarItem.url`, only in
   `GET /event/{id}`, not in the list.
