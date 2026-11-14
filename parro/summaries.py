@@ -213,6 +213,8 @@ def summarize_announcement(
         "read": event.get("read"),
         "liked": event.get("liked"),
         "contents": event.get("contents"),
+        # The same text with its formatting, as the API gives it (see parro.richtext).
+        "rich_text": event.get("richTextContents") or None,
     }
     attachments = summarize_attachment_list(event)
     if attachments:

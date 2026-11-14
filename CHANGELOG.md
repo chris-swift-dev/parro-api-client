@@ -4,6 +4,39 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.14.0] - 2026-11-14
+
+The desktop app tells you about a new version again, and announcements keep their formatting.
+
+### Fixed
+
+- **Desktop app: a new version was not mentioned.** 0.12.0 never said that 0.13.0 was there, while
+  *Check for updates now* did. The check at start ran at most once a day, counted from the last
+  start: a release published later on a day the app had already been started was not found by any
+  start that day. And when it did find one, it only showed a button at the bottom of the window.
+  Now the app checks **each time it starts** (and once a day while it stays open), and the first
+  time it finds a version it says so in a dialog; after that, that version is only the button. A
+  check that fails, for example without network, no longer counts as that day's check.
+  **0.13.0 and older keep the old behaviour:** they tell you about 0.14.0 at the first start that
+  is a day after their last check, or at once with *Help → Check for updates now*.
+
+### Added
+
+- **Formatted announcements.** Some announcements are written with bold, underline, quotes, lists
+  or links. They were shown as plain text. The desktop app now shows the formatting; `announcement
+  <id>`, `announcements --full`, the MCP tools' markdown view and the archive show it as markdown
+  (`**bold**`, `> quote`). A link always shows its address: `klik hier (https://…)`. If the
+  formatted text cannot be read, or does not say the same as the plain text, the plain text is
+  shown as before.
+- In the JSON output an announcement with formatting has `rich_text`, the API's own value;
+  `contents` stays the plain text.
+- **API description:** what `richTextContents` holds.
+
+### Changed
+
+- The desktop app's question at the first start and its documents say "each time it starts" where
+  they said "at most once a day". What goes to GitHub is the same: one request, nothing about you.
+
 ## [0.13.0] - 2026-11-14
 
 Photos, videos and documents in a chat are shown, where a message used to look empty. The desktop

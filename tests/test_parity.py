@@ -32,7 +32,8 @@ def without(data: dict[str, Any], *keys: str) -> dict[str, Any]:
 
 
 # Fields the new feed adds (PLAN-readable-output phase 3); the original never had them.
-ADDED_ANNOUNCEMENT_FIELDS = ("author", "pinned", "groups")
+# 0.14: `rich_text`, the same text with its formatting.
+ADDED_ANNOUNCEMENT_FIELDS = ("author", "pinned", "groups", "rich_text")
 # 0.13: what kind of media an attachment is, and whether it has a small picture.
 ADDED_ATTACHMENT_FIELDS = ("media", "has_thumbnail")
 

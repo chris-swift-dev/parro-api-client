@@ -59,6 +59,9 @@ copy is kept in the app's own cache folder, which is where the desktop can reach
 for several messages in a row, each person in a colour of their own, and not at all in a chat with
 one other person. Who joined, left or renamed the chat is a small line in the middle.
 
+**An announcement with formatting** (bold, italic, underline, quotes, lists, links) is shown with
+it. A link shows its address behind it, so you see where it goes before you click.
+
 **Save all attachments…** asks once for a folder, then saves every file of the item. It says how many
 it saved, and names each file that failed and why; click again to try those. A file with the same
 name is never replaced: the new one gets a number, such as `Nieuwsbrief (2).pdf`.

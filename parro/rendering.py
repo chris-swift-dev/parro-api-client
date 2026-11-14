@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 
-from . import naming
+from . import naming, richtext
 from .attachments import extract_html_text, tidy_whitespace
 from .errors import ConfigurationError
 from .geon import parse_timestamp
@@ -337,12 +337,17 @@ def render_announcement_feed(result: dict[str, Any], options: RenderOptions) -> 
     return document(heading, *blocks) if blocks else document(heading, "No announcements.")
 
 
+def announcement_text(item: dict[str, Any]) -> str:
+    """An announcement's full text: with its formatting as markdown when it has any that can be
+    read and says the same as the plain text, else the plain text (parro.richtext)."""
+    lines = richtext.formatted(item.get("rich_text"), item.get("contents"))
+    if lines is None:
+        return str(item.get("contents") or "").strip()
+    return richtext.to_markdown(lines).strip()
+
+
 def render_feed_item(item: dict[str, Any], options: RenderOptions) -> str:
-    body = (
-        str(item.get("contents") or "").strip()
-        if options.full_text
-        else preview(item.get("contents"))
-    )
+    body = announcement_text(item) if options.full_text else preview(item.get("contents"))
     return "\n\n".join(
         part
         for part in (
@@ -405,7 +410,7 @@ def render_announcement(item: dict[str, Any], options: RenderOptions) -> str:
     likes = plural(counts["liked"], "like") if counts.get("liked") else ""
     return document(
         f"# {announcement_title(item)}\n{announcement_byline(item, [read_by, likes])}",
-        str(item.get("contents") or "").strip(),
+        announcement_text(item),
         attachment_list(item, options),
         read_state_line(item),
     )
@@ -794,7 +799,7 @@ def render_archived_announcement(item: dict[str, Any], files: list[SavedFile]) -
     """One announcement as an archive file: everything in full, attachments as local links."""
     return document(
         f"# {item.get('title') or '(no title)'}\n{announcement_byline(item)}",
-        str(item.get("contents") or "").strip(),
+        announcement_text(item),
         saved_file_lines(files),
     )
 

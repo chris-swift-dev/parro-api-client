@@ -1,7 +1,9 @@
 # Plan 19: Flathub, the update notice, and formatted announcements (0.14.0)
 
-*Status: proposed (2026-11-14). Parts 2 and 3 are being built on branch `release-0.14`. Part 1
-waits for your decisions (section 1.3): it cannot be built by an assistant.*
+*Status: parts 2 and 3 built (2026-11-14) on branch `release-0.14`, as version 0.14.0; the update
+notice is retested against GitHub's real answer (`docs/LIVE-CHECKS.md`). Still to check live: one
+formatted announcement (the login had expired). Part 1 waits for your decisions (section 1.3): it
+cannot be built by an assistant.*
 
 **Goal:**
 
@@ -138,8 +140,8 @@ same words. The code does not depend on either (3.3); the live check settles it.
   comes from the app, never from the announcement.
 - **CLI and MCP, markdown view:** `announcement <id>` shows `**bold**`, `> quotes`, lists and
   `text (address)`. Underline has no markdown form and stays plain.
-- **JSON output:** unchanged. `contents` stays the plain text; `announcement <id>` gains
-  `rich_text` (the API's own string) when there is one.
+- **JSON output:** `contents` stays the plain text; an announcement with formatting gains
+  `rich_text` (the API's own string), in the list and in `announcement <id>`.
 - **Spec:** the field is already there since 0.13.0; its description says what it holds.
 
 ### 3.3 Never worse than today

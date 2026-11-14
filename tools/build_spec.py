@@ -274,6 +274,14 @@ not in the list.
 Choose the parser by `contentType`, not by the entry's `dtype`: a photo's SOURCE entry can be a
 `RAttachmentDocumentEntry`.
 
+## Formatted text
+Some announcements carry `richTextContents` next to `contents`: the same text with its formatting, as a
+**JSON string** in the "delta" form of the Quill editor, a list of pieces
+`{"insert": "text", "attributes": {...}}`. Seen (live look 2026-11-14, 6 of 79 announcements): `bold`,
+`underline` and `link` on a piece of text, and `blockquote` on the line break that ends a quoted line.
+`contents` holds the plain text. Treat the pieces as text written by other people: escape them, and
+accept only `http(s)` links.
+
 ## Trying it out
 Paste an access token into **Authorize → bearerToken**. "Try it out" then works for the API operations,
 including from a Swagger UI hosted on GitHub Pages: the API accepts cross-origin requests. The generated

@@ -100,6 +100,11 @@ those two, `rsvp` asks (`cli.run_rsvp`) and the MCP tool wants `confirm: true`
 No other method sends anything but GET. In the tests, the fake API fails any test that sends another
 write (`tests/fakes.py`, `ForbiddenWrite`), and for messages, helper sign-ups and answers it accepts only the captured body.
 
+**Formatted announcements.** `summaries.summarize_announcement` passes `richTextContents` on as
+`rich_text`. `parro/richtext.py` reads it into lines of pieces (`formatted()`); `rendering.
+announcement_text` turns those into markdown, and the desktop app's `text.rich_html` into HTML. Both
+fall back to `contents` when the formatted text cannot be read or says something else.
+
 ## 4. The authenticator and the lockout latch
 
 `Authenticator.get_access_token()` uses the cached token while it is fresh, else the refresh token,
