@@ -30,6 +30,7 @@ from parro.rendering import (
     RenderOptions,
     choose_format,
     render,
+    render_chat_deletion_preview,
     render_chat_preview,
     render_helper_preview,
     render_rsvp_preview,
@@ -41,11 +42,12 @@ log = logging.getLogger("parro_cli")
 EXIT_INTERRUPTED = 130
 
 DESCRIPTION = """\
-Client for Parro, the Dutch parent-school app. It reads. It can change four things, and only when
+Client for Parro, the Dutch parent-school app. It reads. It can change five things, and only when
 you ask: mark an announcement, calendar item or chat as read (`mark-read`, `--mark-read`; the
 school can see that), send a text message to a chat you are in (`chat-send`; it shows what would
-go to whom first), sign you up or withdraw you as a helper (`helper`; it asks first), and answer
-a calendar item's invitation (`rsvp`; it asks first).
+go to whom first), delete a chat message you wrote (`chat-delete`; it asks first), sign you up
+or withdraw you as a helper (`helper`; it asks first), and answer a calendar item's invitation
+(`rsvp`; it asks first).
 
 Logging in: set PARRO_USERNAME plus PARRO_PASSWORD_FILE (or PARRO_PASSWORD) and run `login`,
 or run `login --prompt` to type the password, or use the browser flow: `login-url`, log in in
@@ -60,6 +62,7 @@ examples:
   {cli} login --prompt
   {cli} announcements --limit 5 --unread-only
   {cli} attachment 11000000000 --text
+  {cli} attachment --chat 12000000000 --message 13000000000 --save-to ~/Downloads
   {cli} mark-read announcement 11000000000
   {cli} get /accountsettings
   {cli} token          # paste into Swagger UI → Authorize → bearerToken
@@ -214,6 +217,7 @@ def add_reading_commands(command: CommandFactory) -> None:
 
     add_mark_read_command(command)
     add_chat_send_command(command)
+    add_chat_delete_command(command)
     add_helper_command(command)
     add_rsvp_command(command)
     add_local_data_commands(command)
@@ -347,8 +351,17 @@ def add_local_data_commands(command: CommandFactory) -> None:
 
 
 def add_attachment_command(command: CommandFactory) -> None:
-    attachment = command("attachment", "read the attachment(s) of an announcement or calendar item")
-    attachment.add_argument("event_id", type=int, help="announcement or calendar item id")
+    attachment = command(
+        "attachment",
+        "read the attachment(s) of an announcement or calendar item, or of a chat message",
+    )
+    attachment.add_argument(
+        "event_id", type=int, nargs="?", help="announcement or calendar item id"
+    )
+    attachment.add_argument("--chat", type=int, metavar="ID", help="with --message: the chat's id")
+    attachment.add_argument(
+        "--message", type=int, metavar="ID", help="the chat message with the attachment"
+    )
     which = attachment.add_mutually_exclusive_group()
     which.add_argument("--attachment-id", type=int, help="which attachment, when there are several")
     which.add_argument("--all", action="store_true", help="read every attachment")
@@ -358,6 +371,22 @@ def add_attachment_command(command: CommandFactory) -> None:
     )
     attachment.add_argument(
         "--max-chars", type=int, default=40_000, help="cut the text off here (default 40000)"
+    )
+
+
+def add_chat_delete_command(command: CommandFactory) -> None:
+    delete = command(
+        "chat-delete",
+        "delete a chat message you wrote yourself: it cannot be undone",
+    )
+    delete.add_argument("chatroom_id", type=int, help="chatroom id (see `chatrooms`)")
+    delete.add_argument(
+        "message_id", type=int, help="message id (`chat-messages` shows it on your own messages)"
+    )
+    delete.add_argument(
+        "--yes",
+        action="store_true",
+        help="delete without asking; without it you see the message and are asked first",
     )
 
 
@@ -401,6 +430,8 @@ def run_attachment(client: ParroClient, args: argparse.Namespace) -> Any:
         attachment_id=args.attachment_id,
         read_all=args.all,
         options=options,
+        chatroom_id=args.chat,
+        message_id=args.message,
     )
     if not args.text:
         return report.summary
@@ -477,6 +508,7 @@ COMMAND_VIEWS = {
     "chat-members": "chat_members",
     "mark-read": "mark_read",
     "chat-send": "chat_send",
+    "chat-delete": "chat_delete",
     "helper": "helper",
     "rsvp": "rsvp",
     "get": "get",
@@ -534,6 +566,19 @@ def run_chat_send(client: ParroClient, args: argparse.Namespace) -> dict[str, An
         if not ask(render_chat_preview(prepared), "Send this message? [y/N] "):
             return {"sent": False, "chatroom_id": prepared["chatroom_id"]}
     return operations.send_prepared_message(client, prepared)
+
+
+def run_chat_delete(client: ParroClient, args: argparse.Namespace) -> dict[str, Any]:
+    """Prepare, confirm, delete. Without --yes and without a person to ask, nothing is deleted."""
+    prepared = operations.prepare_chat_message_deletion(client, args.chatroom_id, args.message_id)
+    if not args.yes:
+        if not someone_can_answer():
+            raise ConfigurationError(
+                "Not deleted: there is nobody to ask here. Run it at a terminal, or add --yes."
+            )
+        if not ask(render_chat_deletion_preview(prepared), "Delete this message? [y/N] "):
+            return {"deleted": False, "chatroom_id": prepared["chatroom_id"]}
+    return operations.delete_prepared_message(client, prepared)
 
 
 HELPER_QUESTIONS = {
@@ -625,6 +670,7 @@ HANDLERS: dict[str, Handler] = {
         c, a.chatroom_id, include_former=a.former, raw=a.raw
     ),
     "chat-send": run_chat_send,
+    "chat-delete": run_chat_delete,
     "helper": run_helper,
     "rsvp": run_rsvp,
     "sync": lambda c, a: operations.sync_archive(

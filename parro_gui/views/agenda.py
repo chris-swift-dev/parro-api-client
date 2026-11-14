@@ -66,6 +66,7 @@ def agenda_html(item: dict[str, Any]) -> str:
         meta(format_date(calendar_item.get("startDate")), time_span(item)),
         meta(", ".join(group_names(item)), details.get("location"), rsvp_marker(item)),
         paragraph(details.get("description")),
+        paragraph(f"Link: {details['link']}") if details.get("link") else "",
         subheading("Helpers") if slots else "",
         bullets(slots) if slots else "",
     )

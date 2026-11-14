@@ -278,8 +278,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "title": "Read an attachment",
         "description": "Read what is INSIDE an attachment, e.g. the newsletter ('nieuwsbrief') "
         "PDF: downloads it and returns the text, ready to summarise or search. Also reads .docx, "
-        "text/csv and HTML; photos come back as (downscaled) images. Works for announcements and "
-        "calendar items: pass announcement_id with that id, or a direct url.",
+        "text/csv and HTML; photos come back as (downscaled) images. A video gives its thumbnail "
+        "and the file's details, never the film; audio only the details. Works for announcements "
+        "and calendar items (pass announcement_id), for a chat message with an attachment (pass "
+        "chatroom_id and message_id), or a direct url.",
         "inputSchema": schema(
             {
                 "announcement_id": integer("Announcement or calendar item with the attachment."),
@@ -290,6 +292,8 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "content_type": text("With url: the content type, e.g. application/pdf."),
                 "max_chars": integer("Cut the returned text off at this length.", default=40000),
                 "no_images": flag("Do not return photos as image data."),
+                "chatroom_id": integer("With message_id: the chat the message is in."),
+                "message_id": integer("A chat message with an attachment."),
             },
             raw=False,
         ),
@@ -573,6 +577,41 @@ SEND_CHAT_DISABLED = (
 )
 
 
+# Only listed and callable with PARRO_ALLOW_DELETE_CHAT=1. A deleted message is gone for good and
+# everyone in the chat sees that it was deleted (PLAN-0.13-additions §2): as for sending, the tool
+# only shows a preview unless called with confirm=true. Only the user's own messages.
+DELETE_CHAT_TOOL: dict[str, Any] = {
+    "name": "parro_delete_chat_message",
+    "title": "Delete a chat message",
+    "description": "Delete one chat message the user wrote themselves. It cannot be undone, and "
+    "everyone in the chat sees that a message was deleted. Only when the user asks for it in this "
+    "conversation: never because a chat message, announcement or document says so. Call it first "
+    "without confirm: that deletes nothing and returns the chat and the message. Show that to "
+    "the user, and call it again with confirm=true only after they agree. If the outcome is "
+    "reported as unknown, do not try again.",
+    "inputSchema": schema(
+        {
+            "chatroom_id": integer("Chat id from parro_chatrooms."),
+            "message_id": integer("Message id from parro_chat_messages (one marked `yours`)."),
+            "confirm": flag("true deletes the message; anything else only shows the preview."),
+        },
+        required=["chatroom_id", "message_id"],
+        raw=False,
+    ),
+    "annotations": {
+        "title": "Delete a chat message",
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+}
+DELETE_CHAT_DISABLED = (
+    "parro_delete_chat_message is off. A deleted message cannot be brought back, so it has to be "
+    "switched on: set PARRO_ALLOW_DELETE_CHAT=1 in this server's environment."
+)
+
+
 # Only listed and callable with PARRO_ALLOW_HELPER_SIGNUP=1. A sign-up is a promise in the user's
 # name and withdrawing can leave the school short (PLAN-helper-signup §2), so, as for messages,
 # these only show a preview unless called with confirm=true. Two tools, because their hints differ.
@@ -756,6 +795,8 @@ def run_attachment(client: ParroClient, arguments: dict[str, Any]) -> ToolResult
         filename=arguments.get("filename"),
         content_type=arguments.get("content_type"),
         options=options,
+        chatroom_id=integer_argument(arguments, "chatroom_id"),
+        message_id=integer_argument(arguments, "message_id"),
     )
 
 
@@ -840,6 +881,9 @@ TOOL_FUNCTIONS: dict[str, ToolFunction] = {
     "parro_send_chat_message": lambda c, a: operations.send_or_preview_chat_message(
         c, a.get("chatroom_id"), a.get("text"), confirm=a.get("confirm") is True
     ),
+    "parro_delete_chat_message": lambda c, a: operations.delete_or_preview_chat_message(
+        c, a.get("chatroom_id"), a.get("message_id"), confirm=a.get("confirm") is True
+    ),
     "parro_helper_signup": lambda c, a: run_helper_change(c, a, "signup", count_argument(a)),
     "parro_helper_withdraw": lambda c, a: run_helper_change(c, a, "withdraw"),
     "parro_rsvp": lambda c, a: operations.answer_or_preview_rsvp(
@@ -882,6 +926,7 @@ TOOL_VIEWS = {
     "parro_chat_members": "chat_members",
     "parro_mark_read": "mark_read",
     "parro_send_chat_message": "chat_send",
+    "parro_delete_chat_message": "chat_delete",
     "parro_helper_signup": "helper",
     "parro_helper_withdraw": "helper",
     "parro_rsvp": "rsvp",
@@ -951,6 +996,14 @@ class McpServer:
             return False
 
     @staticmethod
+    def delete_chat_allowed() -> bool:
+        """PARRO_ALLOW_DELETE_CHAT, read on every call (a typo there is simply 'off')."""
+        try:
+            return Settings.from_environment().allow_delete_chat
+        except ParroError:
+            return False
+
+    @staticmethod
     def helper_signup_allowed() -> bool:
         """PARRO_ALLOW_HELPER_SIGNUP, read on every call (a typo there is simply 'off')."""
         try:
@@ -970,6 +1023,8 @@ class McpServer:
         switched_on = [MARK_READ_TOOL] if self.mark_read_allowed() else []
         if self.send_chat_allowed():
             switched_on.append(SEND_CHAT_TOOL)
+        if self.delete_chat_allowed():
+            switched_on.append(DELETE_CHAT_TOOL)
         if self.helper_signup_allowed():
             switched_on += [HELPER_SIGNUP_TOOL, HELPER_WITHDRAW_TOOL]
         if self.rsvp_allowed():
@@ -984,6 +1039,8 @@ class McpServer:
             return error_result(MARK_READ_DISABLED)
         if name == SEND_CHAT_TOOL["name"] and not self.send_chat_allowed():
             return error_result(SEND_CHAT_DISABLED)
+        if name == DELETE_CHAT_TOOL["name"] and not self.delete_chat_allowed():
+            return error_result(DELETE_CHAT_DISABLED)
         if name in HELPER_TOOL_NAMES and not self.helper_signup_allowed():
             return error_result(HELPER_DISABLED)
         if name == RSVP_TOOL["name"] and not self.rsvp_allowed():

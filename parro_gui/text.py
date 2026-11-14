@@ -1,13 +1,15 @@
 """Turns text written by other people into HTML that can do nothing but be read.
 
 Announcements and chats are untrusted. Everything is escaped, and the only links are addresses
-that are written out in the text, so a link cannot pretend to go somewhere else.
+that are written out in the text, so a link cannot pretend to go somewhere else. An address
+written without its scheme ('www.school.nl') is a link too, and opens as https://.
 """
 
 import html
 import re
 
-_ADDRESS = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+# An address with its scheme, or one that starts with 'www.' at the start of a word.
+_ADDRESS = re.compile(r"https?://[^\s<>\"']+|(?<![\w@./-])www\.[\w-]+\.[^\s<>\"']+", re.IGNORECASE)
 _TRAILING = ".,;:!?)]}"
 
 
@@ -21,7 +23,8 @@ def safe_html(text: object) -> str:
             continue
         parts.append(html.escape(source[position : match.start()]))
         shown = html.escape(address)
-        parts.append(f'<a href="{html.escape(address, quote=True)}">{shown}</a>')
+        target = address if "://" in address else f"https://{address}"
+        parts.append(f'<a href="{html.escape(target, quote=True)}">{shown}</a>')
         position = match.start() + len(address)
     parts.append(html.escape(source[position:]))
     return "".join(parts).replace("\r\n", "\n").replace("\n", "<br>")

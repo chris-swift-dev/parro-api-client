@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "parro-api-client"
-version = "0.12.0"
+version = "0.13.0"
 description = "Parro API client: a standalone CLI, an MCP server and a desktop app sharing one core; reads, and on request marks items as read, sends chat messages, signs up as helper and answers invitations"
 readme = "README.md"
 # The code is MIT; the README (in every package) and docs CC BY 4.0; the desktop app's icons ISC.

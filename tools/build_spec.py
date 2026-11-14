@@ -214,7 +214,7 @@ DESCRIPTION = """\
 Description of the REST API behind **talk.parro.com**, the Dutch parent–school
 communication app by Topicus (ParnasSys). The API is a Topicus *geon* API. Every operation reads,
 except the three under **Read state**, which mark items as read, `sendChatMessage`, which sends a
-message to real people, `addCommitment` and `deleteCommitment` under **Helpers**, and `answerRsvp`
+message to real people, `deleteChatMessage`, which deletes one, `addCommitment` and `deleteCommitment` under **Helpers**, and `answerRsvp`
 under **RSVP**.
 This spec was derived from the web client's traffic: a captured browser session and sanitized response
 samples. Response schemas list **only fields seen in those samples**. Treat every object as
@@ -264,7 +264,13 @@ Attachment entries carry a CloudFront `url`. It is **unsigned and needs no authe
 it can download the file, so treat these URLs as secrets. Never send the Parro `Authorization` header to the CDN.
 Document entries also carry `expiresAt`, exactly one year after the announcement in the sample. Whether the CDN
 enforces it is unknown.
-Announcements keep attachments in `attachments[]`; calendar items in `calendarItem.attachments[]`.
+Announcements keep attachments in `attachments[]`; calendar items in `calendarItem.attachments[]`; a chat
+message has at most one, in `attachment`.
+Entries have a `type`: `SOURCE` is the original file; `THUMBNAIL` a small picture of a photo or a video; `VIDEO`
+a video prepared for streaming. Their order varies, so pick an entry by `type`. A photo's entries have no
+`filename`.
+A calendar item can also carry a web address the teacher added: `calendarItem.url`, only in `GET /event/{id}`,
+not in the list.
 Choose the parser by `contentType`, not by the entry's `dtype`: a photo's SOURCE entry can be a
 `RAttachmentDocumentEntry`.
 
@@ -456,7 +462,8 @@ def build(samples_dir, public=False):
                       "Group id from `GET /group`.", required=True)])},
         "/event/{id}": {"get": op(
             "getEvent", "Events", "One announcement or calendar item", event_item,
-            ["getEvent_announcement.200.json", "getEvent.200.json", "getEvent_attachment.200.json"],
+            ["getEvent_announcement.200.json", "getEvent.200.json", "getEvent_attachment.200.json",
+             "getEvent_link.200.json", "getEvent_richtext.200.json"],
             desc="`dtype` is required. Without it the API answers `406 EVENT_BAD_TYPE` (abstract "
                  "supertype `RAbstractEvent`). **Pitfall:** `dtype=event.RAnnouncementEvent` answers "
                  "**401**, not 406. Use `event.RAnnouncementEventPrimer` for announcements. A client that "
@@ -562,11 +569,17 @@ def build(samples_dir, public=False):
             params=[dict(id_param, description="Chatroom id from `GET /chatroom`."),
                     q("state", {"type": "string", "enum": ["SCHEDULED"]}, "The web app asks for `SCHEDULED`.")])},
         "/chatroom/{id}/chatmessage": {"get": op(
-            "listChatMessages", "Chat", "Messages in one chat conversation", ref("ChatTextMessage"),
-            ["listChatMessages.200.json"], coll=True,
-            desc="Without `sort`, only `chat.RChatTextMessage` comes back, **newest first** (live check "
-                 "2026-11-05: `Range: items=0-29` returned the newest 30 of 89 messages). Reverse them for "
-                 "reading order.\n\n"
+            "listChatMessages", "Chat", "Messages in one chat conversation",
+            poly("ChatTextMessage", "ChatStatusMessage",
+                 dtypes=["chat.RChatTextMessage", "chat.RChatStatusMessage"]),
+            ["listChatMessages.200.json", "listChatMessages_media.200.json"], coll=True,
+            desc="Messages come back **newest first** (live check 2026-11-05: `Range: items=0-29` "
+                 "returned the newest 30 of 89 messages). Reverse them for reading order.\n\n"
+                 "A message with a photo, video or document has an `attachment` and often no `text` "
+                 "at all. Status messages (`chat.RChatStatusMessage`: `status` is `ENTER`, `LEAVE` or "
+                 "`TITLE_CHANGED`, the last with the new `title`) have no text either. On 2026-11-05 a "
+                 "call without `sort` returned text messages only; on 2026-11-14 it returned status "
+                 "messages as well, so expect both.\n\n"
                  "With `sort` (what the web app sends), status messages (`chat.RChatStatusMessage`, e.g. "
                  "someone joining) come back as well, and the names are the **opposite** of what they say: "
                  "`desc-stream` is oldest first, `asc-stream` newest first (live check 2026-11-07).\n\n"
@@ -578,7 +591,9 @@ def build(samples_dir, public=False):
                     q("createdSince", {"type": "string", "format": "date-time"}, "Only messages created since."),
                     q("modifiedSince", {"type": "string", "format": "date-time"}, "Only messages changed since.")])},
         "/chatroom/{id}/chatmessage/{messageId}": {"get": op(
-            "getChatMessage", "Chat", "One chat message", ref("ChatTextMessage"), ["getChatMessage.200.json"],
+            "getChatMessage", "Chat", "One chat message", ref("ChatTextMessage"),
+            ["getChatMessage.200.json", "getChatMessage_video.200.json"],
+            desc="Reading one message leaves the chat's unread count as it was (live check 2026-11-14).",
             params=[dict(id_param, description="Chatroom id from `GET /chatroom`."),
                     {"name": "messageId", "in": "path", "required": True,
                      "schema": {"type": "integer", "format": "int64"},
@@ -641,8 +656,8 @@ def build(samples_dir, public=False):
             "chat room's `rel: self` link. Answered `201` with the new message, and its address in "
             "`Location`.\n\n"
             "⚠️ **Real people receive this, under your name:** the teacher, or everyone in a group chat. "
-            "They get a notification. The capture shows no way to take a message back (a message's "
-            "`permissions` list only `READ`, also for your own), so treat sending as final.\n\n"
+            "They get a notification. A message can be deleted afterwards (`deleteChatMessage`), but "
+            "everyone still sees that there was one, and may have read it: treat sending as final.\n\n"
             "⚠️ **Do not resend blindly.** The request has no idempotency key: after a timeout there is no "
             "way to know whether the message arrived, so look at `GET /chatroom/{id}/chatmessage` first.\n\n"
             "**Not known** (finding out means messaging real people): the longest text allowed, the answer "
@@ -670,6 +685,28 @@ def build(samples_dir, public=False):
                         "schema": {"type": "string", "format": "uri"}}},
                     "content": content(collection(ref("ChatTextMessage")), ["sendChatMessage.201.json"])},
             **std_err},
+    }
+
+    # ---- deleting a message (captured 2026-11-14)
+    paths["/chatroom/{id}/chatmessage/{messageId}"]["delete"] = {
+        "tags": ["Chat"], "operationId": "deleteChatMessage",
+        "summary": "Delete a chat message",
+        "description":
+            "Deletes one message, as seen in a capture of the web app deleting a message of the user's "
+            "own. No request body. Answered `204` without a body.\n\n"
+            "⚠️ **It cannot be undone, and others see it.** The message stays in the list with "
+            "`deleted: true` and without its `text` or `attachment`, so everyone in the chat sees that a "
+            "message was deleted.\n\n"
+            "A message's `permissions` list only `READ`, also for your own (live look 2026-11-14), so "
+            "the API does not say which messages you may delete. Only deleting your own message was "
+            "captured; what it answers for someone else's is not known.",
+        "parameters": [{"$ref": "#/components/parameters/AppVersion"},
+                       {"$ref": "#/components/parameters/Role"},
+                       dict(id_param, description="Chatroom id from `GET /chatroom`."),
+                       {"name": "messageId", "in": "path", "required": True,
+                        "schema": {"type": "integer", "format": "int64"},
+                        "description": "Message id from `GET /chatroom/{id}/chatmessage`."}],
+        "responses": {"204": {"description": "Deleted. No body."}, **std_err},
     }
 
     # ---- helper slots: a promise in the user's name, so it says what others see

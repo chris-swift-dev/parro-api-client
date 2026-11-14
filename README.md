@@ -4,9 +4,9 @@
 description for [Parro](https://talk.parro.com), the Dutch parent–school communication app by
 Topicus (ParnasSys). It reads announcements, newsletters (**including the text inside PDF
 attachments**), the calendar, chats and class info, and shows what you have not read yet. It can
-change four things, only when you ask: mark items as read, send a text message to a chat you are
-in, sign you up or withdraw you as a helper for a calendar item, and answer a calendar item's
-invitation.
+change five things, only when you ask: mark items as read, send a text message to a chat you are
+in, delete a chat message you wrote, sign you up or withdraw you as a helper for a calendar item,
+and answer a calendar item's invitation.
 
 [![Client checks](https://github.com/chris-swift-dev/parro-api-client/actions/workflows/ci.yml/badge.svg)](https://github.com/chris-swift-dev/parro-api-client/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/chris-swift-dev/parro-api-client)](https://github.com/chris-swift-dev/parro-api-client/releases/latest)
@@ -79,10 +79,10 @@ client speaks that API and adds three things:
    agenda per day, conversations in reading order, an overview of what is new. Every id stays
    visible, so the next command is always at hand.
 
-It **reads**. It can change four things in Parro, and only when you ask for it:
-mark an item as read, send a text message to a chat you are in, sign up or withdraw as a helper, and
-answer an invitation: see [Changing things in Parro](#changing-things-in-parro). Apart from those three `PUT …/read` calls, the
-`POST` of a message, the `POST` and `DELETE` of a helper sign-up and the `POST` of an answer, the
+It **reads**. It can change five things in Parro, and only when you ask for it:
+mark an item as read, send a text message to a chat you are in, delete a message you wrote, sign up
+or withdraw as a helper, and answer an invitation: see [Changing things in Parro](#changing-things-in-parro). Apart from those three `PUT …/read` calls, the
+`POST` and the `DELETE` of a message, the `POST` and `DELETE` of a helper sign-up and the `POST` of an answer, the
 Parro API only receives `GET`; the other `POST` requests go to the login server's token, revoke and login-form
 endpoints. Standard library only; PyMuPDF / pypdf (PDF text)
 and Pillow (photo downscaling) are optional.
@@ -163,8 +163,9 @@ Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-f
 `system-news [--full]`, `announcements [--group ID] [--limit N] [--unread-only] [--full]`,
 `announcement <id> [--mark-read]`, `calendar [--group ID] [--limit N] [--details] [--past] [--ics FILE]`,
 `calendar-link`, `attachment <event-id> [--attachment-id ID | --all] [--save-to DIR] [--text]`,
+`attachment --chat <chatroom-id> --message <message-id> [--save-to DIR]`,
 `chatrooms [--unread] [--archived only|include] [--type single|bot|calendar|group|family] [--schoolyear YEAR]`,
-`chat-messages <chatroom-id> [--since DATE] [--mark-read]`, `chat-members <chatroom-id> [--former]`,
+`chat-messages <chatroom-id> [--since DATE] [--mark-read]`, `chat-delete <chatroom-id> <message-id> [--yes]`, `chat-members <chatroom-id> [--former]`,
 `mark-read announcement|calendar|chat|group <id> [--yes]`,
 `chat-send <chatroom-id> [TEXT] [--file PATH] [--yes]`,
 `helper signup <event-id> [--slot ID] [--count N] [--yes]`,
@@ -219,13 +220,14 @@ new version, asking GitHub at most once a day and downloading nothing itself. Mo
 
 ## Changing things in Parro
 
-It reads. It can change four things, and only when you ask. Reading something never changes it. The
+It reads. It can change five things, and only when you ask. Reading something never changes it. The
 **[guide](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md)** has the commands, the refusals and what can be undone.
 
 | What | Command | MCP tool and its switch | Who notices |
 | --- | --- | --- | --- |
 | [Mark as read](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#marking-as-read) | `mark-read announcement <id>` | `parro_mark_read`, `PARRO_ALLOW_MARK_READ=1` | The school: read counts and read receipts |
 | [Send a text message](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#sending-a-chat-message) to a chat you are in | `chat-send <chatroom-id> "text"` | `parro_send_chat_message`, `PARRO_ALLOW_SEND_CHAT=1` | Real people, under your name. It cannot be taken back |
+| [Delete a chat message](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#deleting-a-chat-message) you wrote yourself | `chat-delete <chatroom-id> <message-id>` | `parro_delete_chat_message`, `PARRO_ALLOW_DELETE_CHAT=1` | Everyone in the chat sees that a message was deleted. It cannot be undone |
 | [Sign up or withdraw as a helper](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#helping-out) | `helper signup <event-id>`, `helper withdraw <event-id>` | `parro_helper_signup`, `parro_helper_withdraw`, `PARRO_ALLOW_HELPER_SIGNUP=1` | The school sees your name, and you may take the last place |
 | [Answer an invitation](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#answering-an-invitation) | `rsvp accept <event-id>` (or `decline`, `tentative`) | `parro_rsvp`, `PARRO_ALLOW_RSVP=1` | The school sees your answer. You can change it, not remove it |
 
@@ -337,13 +339,13 @@ facts the client relies on.
 **Is this an official Parro tool?** No. It is not affiliated with or endorsed by Topicus, ParnasSys
 or Parro. It uses the same API calls as the Parro web app, as observed from that app.
 
-**Can it post, change or delete anything in Parro?** It can do four things, and only when you
+**Can it post, change or delete anything in Parro?** It can do five things, and only when you
 ask: [mark an item as read](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#marking-as-read), [send a text message](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#sending-a-chat-message)
-to a chat you are in, [sign up or withdraw as a helper](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#helping-out), and
+to a chat you are in, [delete a chat message](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#deleting-a-chat-message) you wrote yourself, [sign up or withdraw as a helper](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#helping-out), and
 [answer an invitation](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/CHANGING-THINGS.md#answering-an-invitation). Assistants can do these only if you switch that
-on, separately for each. Apart from taking back your own helper sign-up, it cannot delete anything,
+on, separately for each. Apart from your own chat messages and taking back your own helper sign-up, it cannot delete anything,
 and it cannot start new chats or send attachments. Those are three fixed `PUT …/read` calls, three
-fixed `POST` calls and one fixed `DELETE`; every other request to the Parro
+fixed `POST` calls and two fixed `DELETE` calls; every other request to the Parro
 API is a `GET`, and the other `POST` requests go to the login server (logging in, refreshing,
 logging out).
 

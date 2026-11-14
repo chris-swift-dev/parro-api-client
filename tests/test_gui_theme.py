@@ -59,7 +59,11 @@ def test_text_meets_the_contrast_standard(colours, foreground, background):
 
 
 def test_both_themes_set_every_colour():
-    assert all(getattr(c, f.name).startswith("#") for c in THEMES for f in fields(c))
+    for colours in THEMES:
+        for colour_field in fields(colours):
+            value = getattr(colours, colour_field.name)
+            values = value if isinstance(value, tuple) else (value,)
+            assert values and all(v.startswith("#") for v in values), colour_field.name
 
 
 @pytest.fixture

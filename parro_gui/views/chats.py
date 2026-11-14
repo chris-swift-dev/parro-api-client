@@ -1,5 +1,6 @@
 """Conversations: the list with its filters, and one conversation."""
 
+import dataclasses
 from collections.abc import Callable
 from typing import Any
 
@@ -15,13 +16,21 @@ from PySide6.QtWidgets import (
 from parro import operations
 from parro.api_client import ParroClient
 from parro.operations import ChatFilter
-from parro.rendering import format_timestamp, full_name_of, join_parts, member_role, message_text
+from parro.rendering import format_timestamp, join_parts
 
-from ..text import document, heading, meta, paragraph
+from ..text import heading
 from ..widgets import right_aligned
 from ..worker import Worker
+from .attachments import FileOpener, image_from
 from .base import ListDetailSection
-from .previews import chat_preview
+from .conversation import (
+    ATTACHMENT_SCHEME,
+    DELETE_SCHEME,
+    Conversation,
+    conversation_html,
+    thumbnail_name,
+)
+from .previews import chat_deletion_preview, chat_preview
 
 MAX_CHATS = 60
 MAX_MESSAGES = 100
@@ -35,21 +44,6 @@ def chat_row(room: dict[str, Any]) -> str:
         title = f"● {title} ({unread})"
     kind = str(room.get("type") or "").lower()
     return f"{title}\n{join_parts([kind, format_timestamp(room.get('sortDate'))])}"
-
-
-def conversation_html(room: dict[str, Any], messages: Any, members: Any) -> str:
-    names = [
-        join_parts([person.get("name"), member_role(person)])
-        for person in members.get("members", [])
-    ]
-    ordered = sorted(messages.get("messages", []), key=lambda m: str(m.get("createdAt") or ""))
-    blocks = [heading(room.get("title") or "Chat"), meta(", ".join(names))]
-    for message in ordered:
-        blocks.append(
-            meta(full_name_of(message.get("identity")), format_timestamp(message.get("createdAt")))
-        )
-        blocks.append(paragraph(message_text(message)))
-    return document(*blocks)
 
 
 class ChatsSection(ListDetailSection):
@@ -87,6 +81,14 @@ class ChatsSection(ListDetailSection):
         self.send_button.clicked.connect(self.send)
         self.side_layout.addWidget(self.compose)
         self.side_layout.addLayout(right_aligned(self.send_button))
+        # A click on a file in the conversation: the link names the message, nothing else.
+        self.opener = FileOpener(worker, self.notice.setText, self)
+        self.detail.internal_schemes = (ATTACHMENT_SCHEME, DELETE_SCHEME)
+        self.detail.internal_link.connect(self._link_clicked)
+        self._shown: tuple[Any, ...] | None = None  # room, messages, members, view
+        # Not shown: it only keeps a second click from fetching the same file twice.
+        self.open_button = QPushButton(self)
+        self.open_button.setVisible(False)
 
     def memory_key(self) -> tuple[Any, ...]:
         return (
@@ -144,15 +146,94 @@ class ChatsSection(ListDetailSection):
         self.send_button.setEnabled(True)
         self.mark_button.setEnabled(bool(room.get("unreadCount")))
         room_id = room.get("id")
+        self._shown = None
+        self.detail.forget_images()
 
-        def task(client: ParroClient) -> tuple[Any, Any]:
+        def task(client: ParroClient) -> tuple[Any, Any, Any]:
             return (
                 operations.list_chat_messages(client, room_id, MAX_MESSAGES),
                 operations.list_chat_members(client, room_id),
+                operations.own_identity_ids(client),
             )
 
-        def show(found: tuple[Any, Any]) -> None:
-            self.detail.show_at_end(conversation_html(room, *found))
+        def show(found: tuple[Any, Any, Any]) -> None:
+            messages, members, my_ids = found
+            view = Conversation(
+                my_ids=my_ids, show_names=room.get("type") != "SINGLE", can_delete=True
+            )
+            self._shown = (room, messages, members, view)
+            self.detail.show_at_end(conversation_html(room, messages, members, view))
+            if any(with_picture(message) for message in messages.get("messages", [])):
+                self._fetch_pictures(room_id)
 
         self.detail.setHtml(heading(room.get("title") or "Chat"))
         self.fetch_detail(task, show)
+
+    def _fetch_pictures(self, room_id: Any) -> None:
+        """The small pictures arrive after the text, and are put in without moving the reader."""
+
+        def arrived(pictures: dict[Any, bytes]) -> None:
+            if self._shown is None:
+                return
+            room, messages, members, view = self._shown
+            sizes = dict(view.pictures)
+            for attachment_id, data in pictures.items():
+                image = image_from(data)
+                if image is not None:
+                    self.detail.allow_image(thumbnail_name(attachment_id), image)
+                    sizes[attachment_id] = (image.width(), image.height())
+            view = dataclasses.replace(view, pictures=sizes)
+            self._shown = (room, messages, members, view)
+            self.detail.replace_keeping_place(conversation_html(room, messages, members, view))
+
+        self.fetch_detail(
+            lambda client: operations.load_thumbnails(
+                client, chatroom_id=room_id, limit=MAX_MESSAGES
+            ),
+            arrived,
+        )
+
+    def _link_clicked(self, link: str) -> None:
+        """A click on a message's file or on its Delete. The link holds only the message's id;
+        everything else comes from the messages the app fetched, never from the link."""
+        if self._shown is None:
+            return
+        room, messages, _members, _view = self._shown
+        scheme, _, wanted = link.partition(":")
+        for message in messages.get("messages", []):
+            if str(message.get("id")) != wanted:
+                continue
+            attachment = message.get("attachment")
+            if scheme == DELETE_SCHEME:
+                self._delete(room.get("id"), message.get("id"))
+            elif isinstance(attachment, dict):
+                where = {"chatroom_id": room.get("id"), "message_id": message.get("id")}
+                self.opener.activate(where, attachment, self.open_button)
+            return
+
+    def _delete(self, room_id: Any, message_id: Any) -> None:
+        """Reads first: the message as Parro has it now, and whether it is yours. Only Confirm
+        deletes."""
+        self.run_action(
+            self.open_button,
+            lambda client: operations.prepare_chat_message_deletion(client, room_id, message_id),
+            self._confirm_delete,
+        )
+
+    def _confirm_delete(self, prepared: dict[str, Any]) -> None:
+        self.ask_to_confirm(
+            "Delete a message",
+            chat_deletion_preview(prepared),
+            "Delete",
+            lambda client: operations.delete_prepared_message(client, prepared),
+            lambda _result: self.reload_here("Deleted."),
+        )
+
+    def clear(self) -> None:
+        super().clear()
+        self._shown = None
+
+
+def with_picture(message: dict[str, Any]) -> bool:
+    attachment = message.get("attachment")
+    return isinstance(attachment, dict) and bool(attachment.get("has_thumbnail"))

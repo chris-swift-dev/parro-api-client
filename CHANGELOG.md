@@ -4,6 +4,59 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
+## [0.13.0] - 2026-11-14
+
+Photos, videos and documents in a chat are shown, where a message used to look empty. The desktop
+app shows a chat the way a messenger does, with small pictures you can click. A calendar item's
+link is shown, everywhere.
+
+### Added
+
+- **Files in a chat.** A message with a photo, a video or a document used to have no text at all,
+  so it looked empty. It now shows what it holds: `[video] IMG_0001.MOV (12 MB)`, after the text if
+  there is any. `attachment --chat <chat id> --message <message id>` reads or saves the file
+  (`--save-to DIR`); the MCP tool `parro_attachment` takes `chatroom_id` and `message_id`.
+- **A video or a sound recording is never read as text.** The MCP tool returns a video's small
+  picture and the file's details, never the film itself. The film is only fetched when you save it.
+- **"Joined", "left" and "renamed the chat"** are shown as such. They were a second kind of empty
+  message.
+- **A calendar item's link.** A teacher can add a web address to a calendar item. It was not shown
+  anywhere; now it is a line in `calendar --details`, in the MCP tool, in the archive and in the
+  desktop app.
+- **Desktop app: a chat that reads like a chat.** Your own messages are on the right, the others on
+  the left. A name appears once per run of messages, in a colour per person; the time is small, and
+  the date is a line between days.
+- **Desktop app: small pictures.** A photo or a video in a chat shows its small picture; so do the
+  photos of an announcement or calendar item, side by side in place of a row per photo. A click
+  shows the photo, with *Save…*. A video or recording asks *Open* or *Save…*; *Open* fetches it and
+  hands it to your computer's own player, and the copy is removed when the app closes. In the
+  Flatpak that copy is kept in the app's cache folder: from the sandbox's own temporary folder the
+  desktop could not open it.
+- **Deleting a chat message you wrote yourself:** `chat-delete <chatroom-id> <message-id>` shows
+  the message and asks first; `chat-messages` now shows the id on your own messages. In the desktop
+  app your own messages have a small *Delete*, and only **Confirm** deletes. For an assistant it is
+  the MCP tool `parro_delete_chat_message`, off unless you set `PARRO_ALLOW_DELETE_CHAT=1`. It
+  cannot be undone, and everyone in the chat sees that a message was deleted.
+  **This changes the client's promise again:** it reads, and it can change five things, each only
+  when you ask ([the guide](docs/CHANGING-THINGS.md#deleting-a-chat-message)).
+- **Desktop app: a photo is shown scaled to fit its window,** and follows the window's size.
+  *Actual size* shows it as before, with scroll bars.
+- **Desktop app: an address written as `www.school.nl`** is a link too, and opens as `https://`.
+- **Links in the news from Parro keep their address:** "dit filmpje (https://…)" in place of only
+  "dit filmpje".
+- **API description:** a chat message's `attachment`, the entry types `THUMBNAIL` and `VIDEO`,
+  status messages (`chat.RChatStatusMessage`), a calendar item's `url`, an announcement's
+  `richTextContents`, and `deleteChatMessage`.
+
+### Changed
+
+- In the JSON output, a chat message's `attachment` has the same compact form as an announcement's
+  (`attachment_id`, `filename`, `contentType`, `size`, …) in place of the API's own object. Each
+  attachment also says whether it is `media` (`image`, `video`, `audio`) and whether it has a small
+  picture. A photo, which has no name in Parro, is called `photo-<id>.jpg`.
+- The desktop app fetches the small pictures of the item or chat you open from Parro's file server,
+  without asking. They are kept in the same cache as other attachments (`cache --clear` empties it).
+
 ## [0.12.0] - 2026-11-13
 
 The desktop app without Python: an installer for Windows, macOS and Linux, which names its
