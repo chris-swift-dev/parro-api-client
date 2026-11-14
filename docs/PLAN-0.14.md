@@ -2,8 +2,8 @@
 
 *Status: parts 2 and 3 built (2026-11-14) on branch `release-0.14`, as version 0.14.0; the update
 notice is retested against GitHub's real answer (`docs/LIVE-CHECKS.md`). Still to check live: one
-formatted announcement (the login had expired). Part 1 waits for your decisions (section 1.3): it
-cannot be built by an assistant.*
+formatted announcement (the login had expired). **Part 1, Flathub, is set aside for now** (decided
+2026-11-14): nothing of it is built, and its decisions (section 1.3) are not taken.*
 
 **Goal:**
 
@@ -57,7 +57,7 @@ Three of these are not ours to solve with code:
 | 3 | The id: `io.github.chris_swift_dev.<name>` | Follows from 2 |
 | 4 | May I do the upstream preparations now: screenshots and `releases` in the MetaInfo, the icon check, and a page `docs/FLATHUB.md` with the rules above and the state of each | Yes, once 2 and 3 are known (the MetaInfo carries the name and the id) |
 
-Until you decide, nothing of part 1 is built.
+Set aside on 2026-11-14: nothing of part 1 is built, and these decisions are left open.
 
 ---
 
