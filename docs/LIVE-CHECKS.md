@@ -255,3 +255,17 @@ and reported what they saw. Personal data is left out. The fixes are in
 | *Open* on a video, the Flatpak | **Found:** nothing happens: no player, no dialog, no message. The app fetched the film into `/tmp`, which in a Flatpak exists only inside the sandbox, so the desktop's portal could not find the file it was asked to open (a reading of how the portal works; the Flatpak was not installed where the fix was written). **Fixed:** in a Flatpak the file is kept in the app's cache folder, which the desktop can reach. **To be checked again** with the Flatpak built from the fix |
 | Which chat messages may be deleted (read-only, 339 messages) | A message's `permissions` name only `READ`, also for your own, so the client's own rule decides: only a message you wrote |
 | Not checked live yet | Deleting a message: tested against the fake API only; a sound recording |
+
+## Live check (2026-11-14, release 0.13.0: media and chats, part 3: the additions of Plan 18)
+
+The account owner tried the installers that CI built from the branch with the additions, on
+Windows, macOS and Linux, and reported the result. Personal data is left out.
+
+| Check | Result |
+| --- | --- |
+| The app on all three systems, with the additions | OK: a pass on Windows, macOS and Linux |
+| *Open* on a video, the Flatpak (open since part 2) | OK with the fix: the file is now kept in the app's cache folder, and the desktop opens it |
+| A photo scaled to fit its window | OK |
+| Deleting a message of your own, against the real API | OK: one real deletion by the owner |
+| The copyright line in macOS's *Get Info* (open since 0.12.0) | OK, checked by the owner |
+| Not checked live | A sound recording, of which the account has none; the MCP tool `parro_delete_chat_message` (it uses the same deletion as the app and the command line) |

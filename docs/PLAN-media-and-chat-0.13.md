@@ -1,6 +1,8 @@
 # Plan 17: media attachments, links and a readable chat (0.13.0)
 
-*Status: built (2026-11-14) on branch `media-0.13`, all six decisions as recommended; `calendarItem.url` is also in the spec. The core is checked live (`docs/LIVE-CHECKS.md`); the desktop app still needs its live check before the release.*
+*Status: done (2026-11-14) on branch `media-0.13`, all six decisions as recommended;
+`calendarItem.url` is also in the spec. The core and the desktop app are checked live
+(`docs/LIVE-CHECKS.md`); three additions followed in [Plan 18](PLAN-0.13-additions.md).*
 
 **Goal:** four changes for the next release:
 
