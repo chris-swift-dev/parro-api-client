@@ -279,7 +279,8 @@ def calendar_details(client: ParroClient, item: dict[str, Any]) -> dict[str, Any
     calendar_item = item.get("calendarItem") or {}
     if summaries.wants_helpers(calendar_item):
         return summaries.summarize_calendar_details(client.get_calendar_item(event_id))
-    version = f"{item.get('lastModifiedAt')}|{calendar_item.get('lastModifiedAt')}"
+    # "2": details kept by an older version lack the item's link and the kind of each file.
+    version = f"2|{item.get('lastModifiedAt')}|{calendar_item.get('lastModifiedAt')}"
     cached = client.cache.get_json("events", f"{event_id}.json")
     if isinstance(cached, dict) and cached.get("version") == version:
         return dict(cached.get("details") or {})
@@ -479,6 +480,20 @@ def list_chat_members(
     if raw:
         return response.payload
     return {"chatroom_id": room_id, **summaries.summarize_chat_members(response)}
+
+
+def own_identity_ids(client: ParroClient) -> frozenset[int]:
+    """The ids you write chat messages under (`message.identity`): your account's identity and
+    the guardian or teacher identities linked to it (live check 2026-11-14)."""
+    identity = client.get_account().get("identity") or {}
+    linked = [
+        person
+        for kind in ("guardians", "teachers")
+        for person in identity.get(kind) or []
+        if isinstance(person, dict)
+    ]
+    ids = (get_object_id(person) for person in (identity, *linked))
+    return frozenset(found for found in ids if found is not None)
 
 
 # ------------------------------------------------------------------------- attachments

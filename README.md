@@ -163,6 +163,7 @@ Commands: `login [--prompt]`, `logout`, `status`, `token`, `login-url`, `login-f
 `system-news [--full]`, `announcements [--group ID] [--limit N] [--unread-only] [--full]`,
 `announcement <id> [--mark-read]`, `calendar [--group ID] [--limit N] [--details] [--past] [--ics FILE]`,
 `calendar-link`, `attachment <event-id> [--attachment-id ID | --all] [--save-to DIR] [--text]`,
+`attachment --chat <chatroom-id> --message <message-id> [--save-to DIR]`,
 `chatrooms [--unread] [--archived only|include] [--type single|bot|calendar|group|family] [--schoolyear YEAR]`,
 `chat-messages <chatroom-id> [--since DATE] [--mark-read]`, `chat-members <chatroom-id> [--former]`,
 `mark-read announcement|calendar|chat|group <id> [--yes]`,

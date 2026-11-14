@@ -3,6 +3,7 @@
 import copy
 import json
 import os
+import re
 import time
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
@@ -100,7 +101,8 @@ def test_a_long_chat_opens_at_the_newest_message(window):
     view = open_chat(window)
     assert newest_in_view(view.detail)
     text = view.detail.toPlainText()
-    assert text.index("Bericht nummer 1\n") < text.index(NEWEST), "still oldest to newest"
+    first = re.search(r"Bericht nummer 1\b(?!\d)", text)
+    assert first and first.start() < text.index(NEWEST), "still oldest to newest"
 
 
 def test_it_stays_at_the_end_while_the_size_changes(window):

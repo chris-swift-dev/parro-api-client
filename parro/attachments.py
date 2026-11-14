@@ -334,7 +334,11 @@ def extract_docx_text(data: bytes) -> str:
 
 
 class _HtmlTextCollector(HTMLParser):
-    """Visible text of an HTML document; block elements become line breaks."""
+    """Visible text of an HTML document; block elements become line breaks.
+
+    A link keeps its address: 'klik hier (https://…)'. Without it the reader has the words and
+    not where they lead. The address is left out when the link's text already is the address.
+    """
 
     SKIPPED = frozenset({"script", "style", "head", "title"})
     LINE_BREAKING = frozenset(
@@ -345,16 +349,29 @@ class _HtmlTextCollector(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.pieces: list[str] = []
         self._skipping_depth = 0
+        self._link: str | None = None  # the address of the <a> being read
+        self._link_start = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag in self.SKIPPED:
             self._skipping_depth += 1
         elif tag == "br":
             self.pieces.append("\n")
+        elif tag == "a" and not self._skipping_depth:
+            address = (dict(attrs).get("href") or "").strip()
+            is_web = address.lower().startswith(("https://", "http://"))
+            self._link, self._link_start = (address if is_web else None), len(self.pieces)
 
     def handle_endtag(self, tag: str) -> None:
         if tag in self.SKIPPED and self._skipping_depth:
             self._skipping_depth -= 1
+        elif tag == "a" and self._link:
+            shown = "".join(self.pieces[self._link_start :]).strip()
+            if self._link.rstrip("/") not in shown and shown.rstrip("/") not in self._link:
+                self.pieces.append(f" ({self._link})")
+            elif not shown:
+                self.pieces.append(self._link)
+            self._link = None
         elif tag in self.LINE_BREAKING:
             self.pieces.append("\n")
 

@@ -1,18 +1,28 @@
-"""The attachments of the chosen item: read them here, or save the file."""
+"""The attachments of the chosen item: read them here, open them, or save the file.
 
+A document is read here as text, a photo is shown here, and a video or a sound recording opens
+in the program the system uses for it. The same goes for the file of a chat message.
+"""
+
+import atexit
 import base64
+import shutil
+import tempfile
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import (
+    QAbstractButton,
     QDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QScrollArea,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -28,6 +38,37 @@ from ..worker import Worker, submit_from
 # A newsletter is long, but a window should not try to show a whole book.
 MAX_CHARS = 300_000
 SAVE_ALL = "Save all attachments…"
+OPEN_IN_PLAYER, SAVE_FILE = "Open", "Save…"
+# A photo in the strip is shown at most this large.
+STRIP_SIZE = 96
+PLAYED = ("video", "audio")
+
+_media_folder: Path | None = None
+
+
+def media_folder() -> Path:
+    """Where a video or recording is kept while its player shows it: a private folder that is
+    removed when the app closes."""
+    global _media_folder
+    if _media_folder is None or not _media_folder.is_dir():
+        _media_folder = Path(tempfile.mkdtemp(prefix="parro-media-"))
+        atexit.register(shutil.rmtree, _media_folder, ignore_errors=True)
+    return _media_folder
+
+
+def is_picture(attachment: dict[str, Any]) -> bool:
+    """A photo. Details kept from before 0.13 have no `media`, so the content type decides too."""
+    content_type = str(attachment.get("contentType") or "")
+    return attachment.get("media") == "image" or content_type.startswith("image/")
+
+
+def is_played(attachment: dict[str, Any]) -> bool:
+    return attachment.get("media") in PLAYED
+
+
+def file_label(attachment: dict[str, Any]) -> str:
+    size = format_size(attachment.get("size"))
+    return f"{attachment.get('filename') or 'attachment'}" + (f" ({size})" if size else "")
 
 
 def files(count: int) -> str:
@@ -62,9 +103,14 @@ def describe_saved(report: Any, folder: str) -> tuple[str, str]:
 
 
 class ReadingDialog(QDialog):
-    """One attachment: its text, or the picture."""
+    """One attachment: its text, or the picture. With `save`, a button that saves the file."""
 
-    def __init__(self, report: Any, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        report: Any,
+        parent: QWidget | None = None,
+        save: Callable[[QAbstractButton], None] | None = None,
+    ) -> None:
         super().__init__(parent)
         summary = report.summary
         self.setWindowTitle(str(summary.get("filename") or "Attachment"))
@@ -89,22 +135,137 @@ class ReadingDialog(QDialog):
                 )
             )
             layout.addWidget(self.text)
+        self.save_button = QPushButton(SAVE_FILE)
+        self.save_button.setVisible(save is not None)
+        if save is not None:
+            self.save_button.clicked.connect(lambda: save(self.save_button))
+        layout.addLayout(widgets.right_aligned(self.save_button))
+
+
+class FileOpener:
+    """Reads, opens or saves one file: of an event (`event_id`, `attachment_id`) or of a chat
+    message (`chatroom_id`, `message_id`). `where` holds those, as `read_attachments` takes them.
+    """
+
+    def __init__(self, worker: Worker, report_problem: Any, parent: QWidget) -> None:
+        self.worker = worker
+        self.report_problem = report_problem
+        self.parent = parent
+        self.dialog: ReadingDialog | None = None
+        self._opened: dict[Any, str] = {}  # files already fetched for a player, by attachment id
+
+    def activate(
+        self, where: dict[str, Any], attachment: dict[str, Any], button: QAbstractButton
+    ) -> None:
+        """What a click on a file does: a video or recording asks 'open or save', the rest is
+        shown here."""
+        if not is_played(attachment):
+            self.read(where, button)
+            return
+        kind = str(attachment.get("media"))
+        question = f"{file_label(attachment)}\n\nOpen this {kind} in your player, or save it?"
+        answer = widgets.choose(self.parent, question, [OPEN_IN_PLAYER, SAVE_FILE])
+        if answer == OPEN_IN_PLAYER:
+            self.open_in_player(where, attachment, button)
+        elif answer == SAVE_FILE:
+            self.save(where, button)
+
+    def read(self, where: dict[str, Any], button: QAbstractButton) -> None:
+        options = ReadOptions(max_chars=MAX_CHARS, include_images=True)
+        submit_from(
+            self.worker,
+            button,
+            lambda client: operations.read_attachments(client, options=options, **where),
+            lambda report: self._show_reading(report, where),
+            self.report_problem,
+        )
+
+    def _show_reading(self, report: Any, where: dict[str, Any]) -> None:
+        self.dialog = ReadingDialog(report, self.parent, save=lambda b: self.save(where, b))
+        self.dialog.open()
+
+    def open_in_player(
+        self, where: dict[str, Any], attachment: dict[str, Any], button: QAbstractButton
+    ) -> None:
+        """Fetch the file once, into a folder that goes when the app closes, and hand it to the
+        system. Nothing from the message decides which program opens: only the file itself."""
+        key = attachment.get("attachment_id")
+        known = self._opened.get(key)
+        if known and Path(known).is_file():
+            self._play(known)
+            return
+        folder = Path(tempfile.mkdtemp(dir=media_folder()))
+        options = ReadOptions(max_chars=1, include_images=False, save_directory=folder)
+        self.report_problem(f"Fetching {file_label(attachment)}…")
+
+        def fetched(report: Any) -> None:
+            summary = report.summary
+            path = summary.get("saved_to")
+            if not path:
+                problem = summary.get("error") or summary.get("save_error") or "not fetched"
+                self.report_problem(f"{file_label(attachment)}: {problem}")
+                return
+            self._opened[key] = str(path)
+            self._play(str(path))
+
+        submit_from(
+            self.worker,
+            button,
+            lambda client: operations.read_attachments(client, options=options, **where),
+            fetched,
+            self.report_problem,
+        )
+
+    def _play(self, path: str) -> None:
+        opened = widgets.open_file(path)
+        name = Path(path).name
+        self.report_problem(
+            f"Opened {name} in your player."
+            if opened
+            else f"No program on this computer opens {name}. Save the file instead."
+        )
+
+    def save(self, where: dict[str, Any], button: QAbstractButton) -> None:
+        folder = widgets.choose_folder(self.parent)
+        if not folder:
+            return
+        options = ReadOptions(max_chars=1, include_images=False, save_directory=Path(folder))
+        submit_from(
+            self.worker,
+            button,
+            lambda client: operations.read_attachments(client, options=options, **where),
+            self._saved,
+            self.report_problem,
+        )
+
+    def _saved(self, report: Any) -> None:
+        summary = report.summary
+        problem = summary.get("error") or summary.get("save_error")
+        self.report_problem(str(problem) if problem else f"Saved in {summary.get('saved_to')}.")
+
+
+def image_from(data: bytes) -> QImage | None:
+    image = QImage.fromData(data)
+    return None if image.isNull() else image
 
 
 class AttachmentBar(QWidget):
-    """A row per attachment of the chosen item."""
+    """The attachments of the chosen item: the photos as a strip of small pictures, and a row per
+    other file. A click on a photo shows it; a document has Read, a video or recording Open."""
 
     def __init__(self, worker: Worker, report_problem: Any, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.worker = worker
         self.report_problem = report_problem
-        self.dialog: ReadingDialog | None = None
+        self.opener = FileOpener(worker, report_problem, self)
         widgets.make_card(self)
         self.setVisible(False)
         self.rows = QVBoxLayout(self)
         self.rows.setContentsMargins(*widgets.CARD_MARGINS)
-        self.read_buttons: list[QPushButton] = []
+        # Every file's first button (a photo's picture, Read or Open), and the Save… buttons.
+        self.read_buttons: list[QAbstractButton] = []
         self.save_buttons: list[QPushButton] = []
+        self.photo_buttons: dict[Any, QToolButton] = {}
         self.event_id: Any = None
         # The section puts this button in its action row, next to Mark as read.
         self.save_all_button = QPushButton(SAVE_ALL)
@@ -112,13 +273,71 @@ class AttachmentBar(QWidget):
         self.save_all_button.clicked.connect(self.save_all)
         self._saving_all = False
 
+    @property
+    def dialog(self) -> ReadingDialog | None:
+        """The window that shows the file that was read last."""
+        return self.opener.dialog
+
     def show_attachments(self, event_id: Any, attachments: list[dict[str, Any]]) -> None:
         self.clear()
         self.event_id = event_id
+        photos = [a for a in attachments if is_picture(a)]
+        if photos:
+            self._add_strip(event_id, photos)
         for attachment in attachments:
-            self._add_row(event_id, attachment)
+            if attachment not in photos:
+                self._add_row(event_id, attachment)
         self.setVisible(bool(attachments))
         self._enable_save_all()
+        if any(a.get("has_thumbnail") for a in attachments):
+            self._fetch_pictures(event_id)
+
+    def _add_strip(self, event_id: Any, photos: list[dict[str, Any]]) -> None:
+        """The photos side by side; the strip scrolls sideways when there are many."""
+        strip = QWidget()
+        layout = QHBoxLayout(strip)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        for number, photo in enumerate(photos, start=1):
+            button = QToolButton()
+            button.setText(f"Photo {number}")
+            button.setToolTip(file_label(photo))
+            button.setAccessibleName(f"Photo {number} of {len(photos)}")
+            button.setIconSize(QSize(STRIP_SIZE, STRIP_SIZE))
+            button.setFixedSize(STRIP_SIZE + 10, STRIP_SIZE + 10)
+            where = {"event_id": event_id, "attachment_id": photo.get("attachment_id")}
+            button.clicked.connect(lambda _checked=False, w=where, b=button: self.opener.read(w, b))
+            layout.addWidget(button)
+            self.read_buttons.append(button)
+            self.photo_buttons[photo.get("attachment_id")] = button
+        layout.addStretch(1)
+        scroll = QScrollArea()
+        scroll.setWidget(strip)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setFixedHeight(STRIP_SIZE + 30)
+        # The card's own colour shows through: a scroll area would paint the window's.
+        scroll.viewport().setAutoFillBackground(False)
+        strip.setAutoFillBackground(False)
+        self.rows.addWidget(scroll)
+
+    def _fetch_pictures(self, event_id: Any) -> None:
+        """The small pictures arrive after the item is shown; for another item they are dropped."""
+
+        def arrived(pictures: dict[Any, bytes]) -> None:
+            if event_id != self.event_id:
+                return
+            for attachment_id, data in pictures.items():
+                button, image = self.photo_buttons.get(attachment_id), image_from(data)
+                if button is not None and image is not None:
+                    button.setIcon(QIcon(QPixmap.fromImage(image)))
+
+        self.worker.submit(
+            lambda client: operations.load_thumbnails(client, event_id=event_id),
+            arrived,
+            lambda _text: None,  # the photos still open without their small pictures
+        )
 
     def clear(self) -> None:
         while self.rows.count():
@@ -127,7 +346,7 @@ class AttachmentBar(QWidget):
             if widget is not None:
                 widget.hide()  # gone now, not only once the event loop deletes it
                 widget.deleteLater()
-        self.read_buttons, self.save_buttons = [], []
+        self.read_buttons, self.save_buttons, self.photo_buttons = [], [], {}
         self.event_id = None
         self.setVisible(False)
         self._enable_save_all()
@@ -139,54 +358,21 @@ class AttachmentBar(QWidget):
         row = QWidget()
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        name = f"{attachment.get('filename')} ({format_size(attachment.get('size'))})"
-        label = widgets.ElidedLabel(name)  # a long name never pushes the buttons away
-        read, save = QPushButton("Read"), QPushButton("Save…")
-        attachment_id = attachment.get("attachment_id")
-        read.clicked.connect(lambda: self.read(event_id, attachment_id, read))
-        save.clicked.connect(lambda: self.save(event_id, attachment_id, save))
+        label = widgets.ElidedLabel(file_label(attachment))  # never pushes the buttons away
+        played = is_played(attachment)
+        read, save = QPushButton(OPEN_IN_PLAYER if played else "Read"), QPushButton(SAVE_FILE)
+        where = {"event_id": event_id, "attachment_id": attachment.get("attachment_id")}
+        if played:
+            read.clicked.connect(lambda: self.opener.open_in_player(where, attachment, read))
+        else:
+            read.clicked.connect(lambda: self.opener.read(where, read))
+        save.clicked.connect(lambda: self.opener.save(where, save))
         layout.addWidget(label, 1)
         layout.addWidget(read)
         layout.addWidget(save)
         self.rows.addWidget(row)
         self.read_buttons.append(read)
         self.save_buttons.append(save)
-
-    def read(self, event_id: Any, attachment_id: Any, button: QPushButton) -> None:
-        options = ReadOptions(max_chars=MAX_CHARS, include_images=True)
-        submit_from(
-            self.worker,
-            button,
-            lambda client: operations.read_attachments(
-                client, event_id=event_id, attachment_id=attachment_id, options=options
-            ),
-            self._show_reading,
-            self.report_problem,
-        )
-
-    def _show_reading(self, report: Any) -> None:
-        self.dialog = ReadingDialog(report, self)
-        self.dialog.open()
-
-    def save(self, event_id: Any, attachment_id: Any, button: QPushButton) -> None:
-        folder = widgets.choose_folder(self)
-        if not folder:
-            return
-        options = ReadOptions(max_chars=1, include_images=False, save_directory=Path(folder))
-        submit_from(
-            self.worker,
-            button,
-            lambda client: operations.read_attachments(
-                client, event_id=event_id, attachment_id=attachment_id, options=options
-            ),
-            self._saved,
-            self.report_problem,
-        )
-
-    def _saved(self, report: Any) -> None:
-        summary = report.summary
-        problem = summary.get("error") or summary.get("save_error")
-        self.report_problem(str(problem) if problem else f"Saved in {summary.get('saved_to')}.")
 
     def save_all(self) -> None:
         """One folder question, then every file, one after another, through the one worker."""

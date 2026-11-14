@@ -34,9 +34,9 @@ keep working on Python 3.10 or newer.
 | Section | What you can do |
 | --- | --- |
 | Overview | what is new, or everything |
-| Announcements | filter by group or unread, read the news from Parro, read or save attachments (one or all at once), mark as read |
-| Calendar | coming up or earlier, filter by group, answer invitations, sign up or withdraw as a helper, save attachments (one or all at once), export an `.ics` file, show the subscription link |
-| Chats | the same filters as the command line, read a conversation (it opens at the newest message), send a message, mark as read |
+| Announcements | filter by group or unread, read the news from Parro, look at the photos, read, open or save attachments (one or all at once), mark as read |
+| Calendar | coming up or earlier, filter by group, the item's link, answer invitations, sign up or withdraw as a helper, look at, open or save attachments (one or all at once), export an `.ics` file, show the subscription link |
+| Chats | the same filters as the command line, read a conversation (it opens at the newest message), look at its photos, open or save its files, send a message, mark as read |
 | Family | the account, children, groups, the state of the privacy choices, the link to a child's privacy page |
 | Archive | keep a local copy with `sync`, stop it at any time, see and empty the cache |
 
@@ -47,6 +47,16 @@ row with *Save all attachments…* and *Mark as read*, which never scrolls away.
 attachments and the answer and helper rows scroll when there are more than fit. Drag the line between
 the text and that lower part to give either more room; the lower part takes what it needs, up to
 half, until you do.
+
+**Photos, videos and documents.** The photos of an announcement or calendar item are small pictures
+side by side; in a chat a photo or a video shows its small picture in the message. Click one to see
+the photo, with *Save…*. A document has *Read*, which shows its text. A video or a sound recording
+has *Open*: the app fetches the file and hands it to the player your computer uses for it, and
+removes its copy when the app closes. If no program opens the file, the app says so; save it then.
+
+**A chat** shows your own messages on the right and everyone else's on the left. A name appears once
+for several messages in a row, each person in a colour of their own, and not at all in a chat with
+one other person. Who joined, left or renamed the chat is a small line in the middle.
 
 **Save all attachments…** asks once for a folder, then saves every file of the item. It says how many
 it saved, and names each file that failed and why; click again to try those. A file with the same
@@ -119,6 +129,9 @@ The app can change the same four things as the command line:
 - **There is no web server or open port.** The app is a normal window.
 - **Text from others stays text.** Announcements and chats cannot run scripts or load remote images.
   A link opens in your browser only after you have seen the full address.
+- **The only pictures are Parro's own small pictures** of the photos and videos in what you opened.
+  The app fetches them itself from Parro's file server; nothing in a text can make it fetch
+  anything. A click on a file names the message, never an address.
 - **Other people's answers to invitations are not shown.**
 - The calendar subscription link and privacy links work without logging in, so they are only
   fetched when you ask, and stay in their own dialog.

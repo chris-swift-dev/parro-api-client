@@ -2,8 +2,8 @@
 
 from typing import Any
 
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QResizeEvent
+from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QImage, QResizeEvent
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -36,6 +36,21 @@ def ask(parent: QWidget | None, question: str) -> bool:
 
 def open_folder(path: str) -> bool:
     return QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+
+def open_file(path: str) -> bool:
+    """Open a file on this computer in the program the system uses for it."""
+    return QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+
+def choose(parent: QWidget | None, question: str, options: list[str]) -> str | None:
+    """A question with a button per option; None when the user cancelled."""
+    box = QMessageBox(QMessageBox.Icon.Question, APP_NAME, question, parent=parent)
+    buttons = [box.addButton(option, QMessageBox.ButtonRole.ActionRole) for option in options]
+    box.addButton(QMessageBox.StandardButton.Cancel)
+    box.exec()
+    clicked = box.clickedButton()
+    return next((o for o, button in zip(options, buttons, strict=True) if button is clicked), None)
 
 
 def choose_save_file(parent: QWidget | None, suggested: str, kinds: str) -> str:
@@ -99,10 +114,19 @@ class ElidedLabel(QLabel):
 
 
 class SafeTextBrowser(QTextBrowser):
-    """Shows text from others: loads nothing by itself, and links go to the browser after asking."""
+    """Shows text from others: loads nothing by itself, and links go to the browser after asking.
+
+    The only pictures it shows are those the app handed it with `allow_image`. A link with a
+    scheme named in `internal_schemes` is not opened: it is passed on through `internal_link`,
+    for the view to act on (a chat uses it to open a message's file).
+    """
+
+    internal_link = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.internal_schemes: tuple[str, ...] = ()
+        self._images: dict[str, QImage] = {}
         self.setOpenLinks(False)
         self.setOpenExternalLinks(False)
         self.anchorClicked.connect(self._follow)
@@ -126,6 +150,25 @@ class SafeTextBrowser(QTextBrowser):
         """
         self._show(text, follow_end=True)
 
+    def allow_image(self, name: str, image: QImage) -> None:
+        """Let the text show this picture, under this name (`<img src="name">`)."""
+        self._images[name] = image
+
+    def forget_images(self) -> None:
+        self._images = {}
+
+    def replace_keeping_place(self, text: str) -> None:
+        """The same text with something added (pictures arrived): the reader stays where they
+        were, and a chat that showed its end still does."""
+        bar = self.verticalScrollBar()
+        follow, at_end, place = self._follow_end, self._at_end, bar.value()
+        if follow and at_end:
+            self._show(text, follow_end=True)
+            return
+        self._show(text, follow_end=follow)
+        bar.setValue(min(place, bar.maximum()))
+        self._at_end = bar.value() >= bar.maximum()
+
     def _show(self, text: str, follow_end: bool) -> None:
         self._html = text
         self._follow_end = follow_end
@@ -146,6 +189,7 @@ class SafeTextBrowser(QTextBrowser):
         self._at_end = value >= self.verticalScrollBar().maximum()
 
     def clear(self) -> None:
+        self._images = {}
         self._html = ""  # or a later theme change would bring it back, also after logging out
         self._follow_end = False
         super().clear()
@@ -159,10 +203,15 @@ class SafeTextBrowser(QTextBrowser):
             self._at_end = True
             self._to_end()
 
-    def loadResource(self, _type: int, _name: QUrl | str) -> Any:  # noqa: N802 (Qt's name)
-        return None  # no remote images, no local files
+    def loadResource(self, _type: int, name: QUrl | str) -> Any:  # noqa: N802 (Qt's name)
+        # No remote images, no local files: only the pictures the app itself handed over.
+        wanted = name.toString() if isinstance(name, QUrl) else str(name)
+        return self._images.get(wanted)
 
     def _follow(self, url: QUrl) -> None:
+        if url.scheme().lower() in self.internal_schemes:
+            self.internal_link.emit(url.toString())
+            return
         if url.scheme().lower() not in OPENABLE_SCHEMES:
             return
         address = url.toString()

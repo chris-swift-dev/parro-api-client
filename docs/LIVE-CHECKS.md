@@ -220,3 +220,24 @@ Parro. Personal data is left out.
 | The login dialog | OK: only the password form; *Other ways to log in…* shows the browser login, *Log in with a password instead* goes back; cancelled without logging in |
 | The publisher on Windows | OK, checked by the owner with the MSI built in CI (2f4e068): *Installed apps* names **chris-swift-dev** as publisher. The warning before installing still says "Unknown publisher", as expected for an MSI that is not signed |
 | Not checked live yet | The copyright line in macOS's *Get Info* (CI checks it in the built app's `Info.plist`); the landing page on GitHub Pages, which goes live with the merge of 0.12.0 |
+
+## Live check (2026-11-14, release 0.13.0: media and chats, part 1: the core)
+
+Read-only, from the branch `media-0.13`, with the login the account owner made for it (**one
+password check**). Only counts and shapes were read; nothing was marked as read, no samples were
+saved, and personal data is left out. The findings that shaped the release are in
+[Plan 17](PLAN-media-and-chat-0.13.md), section 1.
+
+| Check | Result |
+| --- | --- |
+| All messages of 8 chats (339) through `message_text` | OK: **none is empty** any more. Before, 9 messages with only a file and 29 status messages showed nothing |
+| Status messages | OK: 25 "joined the chat", 3 "left the chat", 1 "renamed the chat to …" |
+| Files in chats | OK: 13 photos and 1 video, each with a name (made up for photos) and a small picture; 3 documents |
+| Your own messages | OK: 28 recognised from `GET /account/me` |
+| Small pictures of every chat (`load_thumbnails`) | OK: 14 fetched, 2.5 MB together; no film and no full photo was fetched |
+| A chat photo through `read_attachments` | OK: comes back as an image |
+| The chat video through `read_attachments` | OK: its small picture and the details (12 MB, `video`); the film was not fetched |
+| `GET /chatroom/{id}/chatmessage/{messageId}` | OK: answers the one message and leaves the chat's unread count as it was |
+| The calendar item's link | OK: 1 of 113 items has one (`calendarItem.url`), and it is shown |
+| No download link in what is printed | OK: no CDN address in any rendered conversation |
+| Not checked live yet | The desktop app on a real chat: the layout, the small pictures, *Open* handing a video to the system's player (on Windows, macOS and inside the Flatpak's sandbox), and a sound recording, of which the account has none |
