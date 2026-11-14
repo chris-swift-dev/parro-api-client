@@ -60,6 +60,7 @@ examples:
   {cli} login --prompt
   {cli} announcements --limit 5 --unread-only
   {cli} attachment 11000000000 --text
+  {cli} attachment --chat 12000000000 --message 13000000000 --save-to ~/Downloads
   {cli} mark-read announcement 11000000000
   {cli} get /accountsettings
   {cli} token          # paste into Swagger UI → Authorize → bearerToken
@@ -347,8 +348,17 @@ def add_local_data_commands(command: CommandFactory) -> None:
 
 
 def add_attachment_command(command: CommandFactory) -> None:
-    attachment = command("attachment", "read the attachment(s) of an announcement or calendar item")
-    attachment.add_argument("event_id", type=int, help="announcement or calendar item id")
+    attachment = command(
+        "attachment",
+        "read the attachment(s) of an announcement or calendar item, or of a chat message",
+    )
+    attachment.add_argument(
+        "event_id", type=int, nargs="?", help="announcement or calendar item id"
+    )
+    attachment.add_argument("--chat", type=int, metavar="ID", help="with --message: the chat's id")
+    attachment.add_argument(
+        "--message", type=int, metavar="ID", help="the chat message with the attachment"
+    )
     which = attachment.add_mutually_exclusive_group()
     which.add_argument("--attachment-id", type=int, help="which attachment, when there are several")
     which.add_argument("--all", action="store_true", help="read every attachment")
@@ -401,6 +411,8 @@ def run_attachment(client: ParroClient, args: argparse.Namespace) -> Any:
         attachment_id=args.attachment_id,
         read_all=args.all,
         options=options,
+        chatroom_id=args.chat,
+        message_id=args.message,
     )
     if not args.text:
         return report.summary

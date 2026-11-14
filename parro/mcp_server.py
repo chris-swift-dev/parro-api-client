@@ -278,8 +278,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "title": "Read an attachment",
         "description": "Read what is INSIDE an attachment, e.g. the newsletter ('nieuwsbrief') "
         "PDF: downloads it and returns the text, ready to summarise or search. Also reads .docx, "
-        "text/csv and HTML; photos come back as (downscaled) images. Works for announcements and "
-        "calendar items: pass announcement_id with that id, or a direct url.",
+        "text/csv and HTML; photos come back as (downscaled) images. A video gives its thumbnail "
+        "and the file's details, never the film; audio only the details. Works for announcements "
+        "and calendar items (pass announcement_id), for a chat message with an attachment (pass "
+        "chatroom_id and message_id), or a direct url.",
         "inputSchema": schema(
             {
                 "announcement_id": integer("Announcement or calendar item with the attachment."),
@@ -290,6 +292,8 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "content_type": text("With url: the content type, e.g. application/pdf."),
                 "max_chars": integer("Cut the returned text off at this length.", default=40000),
                 "no_images": flag("Do not return photos as image data."),
+                "chatroom_id": integer("With message_id: the chat the message is in."),
+                "message_id": integer("A chat message with an attachment."),
             },
             raw=False,
         ),
@@ -756,6 +760,8 @@ def run_attachment(client: ParroClient, arguments: dict[str, Any]) -> ToolResult
         filename=arguments.get("filename"),
         content_type=arguments.get("content_type"),
         options=options,
+        chatroom_id=integer_argument(arguments, "chatroom_id"),
+        message_id=integer_argument(arguments, "message_id"),
     )
 
 

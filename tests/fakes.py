@@ -609,6 +609,11 @@ class FakeParroApi:
                 limit = datetime.fromisoformat(since.replace("Z", "+00:00"))
                 messages = [m for m in messages if datetime.fromisoformat(m["createdAt"]) >= limit]
             return self._items(messages, request)
+        if "/chatmessage/" in path:
+            message_id = int(path.rsplit("/", 1)[-1])
+            messages = self.load_sample("listChatMessages.200.json")["items"]
+            found = [m for m in messages if get_object_id(m) == message_id]
+            return self._one_object(found[0], request.url) if found else self._not_found(request)
         if path == f"/chatroom/{room_id}":
             room = next(r for r in rooms if get_object_id(r) == room_id)
             changes = {"dtype": "chat.RChatRoom", **self.room_overrides}

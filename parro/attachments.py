@@ -1,10 +1,12 @@
-"""Attachments of announcements and calendar items: find them, download them, read them.
+"""Attachments of announcements, calendar items and chat messages: find, download, read them.
 
 Where they live (spec: "Attachments"):
   * announcements keep them in `attachments[]`;
-  * calendar items keep them in `calendarItem.attachments[]` (fix 4: never found before).
-Each attachment has `entries[]`: the SOURCE file and, for images, resized variants. Every entry has
-a CloudFront `url` that is unsigned: whoever has it can download the file. So:
+  * calendar items keep them in `calendarItem.attachments[]` (fix 4: never found before);
+  * a chat message has at most one, in `attachment`.
+Each attachment has `entries[]`: the SOURCE file and, for photos and videos, a THUMBNAIL picture
+(a video also has a VIDEO entry, a stream). Their order varies: pick an entry by its `type`. Every
+entry has a CloudFront `url` that is unsigned: whoever has it can download the file. So:
   * the Parro Authorization header is never sent to the CDN;
   * full attachment URLs are never logged (fix 7); logs show the host only.
 
@@ -23,7 +25,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from xml.etree import ElementTree
 
-from .errors import AttachmentError
+from .errors import AttachmentError, ParroError
 from .geon import get_object_id
 from .http import HttpRequest, HttpResponse
 
@@ -33,6 +35,7 @@ if TYPE_CHECKING:  # only for type hints: api_client does not import this module
 log = logging.getLogger(__name__)
 
 SOURCE_ENTRY_TYPE = "SOURCE"
+THUMBNAIL_ENTRY_TYPE = "THUMBNAIL"
 PDF_TYPE = "application/pdf"
 DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 # Content types that say nothing about the format; then the file extension decides.
@@ -53,7 +56,18 @@ FORMAT_BY_EXTENSION = {
     ".gif": "image",
     ".webp": "image",
     ".heic": "image",
+    ".mov": "video",
+    ".mp4": "video",
+    ".m4v": "video",
+    ".webm": "video",
+    ".mp3": "audio",
+    ".m4a": "audio",
+    ".aac": "audio",
+    ".wav": "audio",
+    ".ogg": "audio",
 }
+# Formats that are played, not read: they are fetched only to save or open them.
+PLAYED_FORMATS = frozenset({"video", "audio"})
 
 
 @dataclass(frozen=True)
@@ -67,6 +81,12 @@ class AttachmentFile:
     size: int | None
     url: str | None
     upload_id: str | None = None
+    thumbnail_url: str | None = None  # a small picture of a photo or a video, when there is one
+
+    def thumbnail_cache_key(self) -> str | None:
+        if self.attachment_id is None or not self.upload_id:
+            return None
+        return f"{self.attachment_id}-{self.upload_id}-thumbnail"
 
     def cache_key(self) -> str | None:
         """'<attachment id>-<upload id>-<size>': the same key always means the same bytes."""
@@ -76,8 +96,11 @@ class AttachmentFile:
 
 
 def find_attachments(event: dict[str, Any]) -> list[dict[str, Any]]:
-    """All attachments of an event: announcement-style and calendar-item-style (fix 4)."""
+    """All attachments of an event or a chat message: announcement-style, calendar-item-style
+    (fix 4) and a message's single `attachment`."""
     found = [a for a in event.get("attachments") or [] if isinstance(a, dict)]
+    if isinstance(event.get("attachment"), dict):
+        found.append(event["attachment"])
     calendar_item = event.get("calendarItem")
     if isinstance(calendar_item, dict):
         found.extend(a for a in calendar_item.get("attachments") or [] if isinstance(a, dict))
@@ -93,8 +116,17 @@ def pick_source_entry(attachment: dict[str, Any]) -> dict[str, Any]:
     return entries[0] if entries else {}
 
 
+def pick_entry(attachment: dict[str, Any], entry_type: str) -> dict[str, Any] | None:
+    """The entry of this `type` (e.g. THUMBNAIL), wherever it is in the list; None without one."""
+    for entry in attachment.get("entries") or []:
+        if isinstance(entry, dict) and entry.get("type") == entry_type:
+            return entry
+    return None
+
+
 def describe_attachment(attachment: dict[str, Any]) -> AttachmentFile:
     entry = pick_source_entry(attachment)
+    thumbnail = pick_entry(attachment, THUMBNAIL_ENTRY_TYPE) or {}
     return AttachmentFile(
         attachment_id=get_object_id(attachment),
         kind=attachment.get("attachmentType"),
@@ -103,11 +135,13 @@ def describe_attachment(attachment: dict[str, Any]) -> AttachmentFile:
         size=entry.get("size"),
         url=entry.get("url"),
         upload_id=attachment.get("uploadId"),
+        thumbnail_url=thumbnail.get("url"),
     )
 
 
 def detect_format(content_type: str | None, filename: str | None) -> str | None:
-    """'pdf', 'docx', 'html', 'text', 'image' or None (unknown), chosen by content type first."""
+    """'pdf', 'docx', 'html', 'text', 'image', 'video', 'audio' or None (unknown), chosen by
+    content type first."""
     media_type = (content_type or "").split(";", 1)[0].strip().lower()
     if media_type == PDF_TYPE:
         return "pdf"
@@ -117,6 +151,8 @@ def detect_format(content_type: str | None, filename: str | None) -> str | None:
         return "html"
     if media_type.startswith("image/"):  # includes the non-standard image/jpg (fix 6)
         return "image"
+    if media_type.startswith(("video/", "audio/")):
+        return media_type.split("/", 1)[0]
     if media_type.startswith("text/") or media_type in PLAIN_TEXT_TYPES:
         return "text"
     if media_type not in GENERIC_CONTENT_TYPES:
@@ -222,6 +258,11 @@ def extract_text(data: bytes, content_type: str | None, filename: str | None) ->
     if file_format == "image":
         raise AttachmentError(
             f"This attachment is an image ({content_type or filename}); it holds no text."
+        )
+    if file_format in PLAYED_FORMATS:
+        raise AttachmentError(
+            f"This attachment is {file_format} ({content_type or filename}); it holds no text. "
+            "Save the file instead (CLI: --save-to)."
         )
     raise AttachmentError(
         f"No text reader for content type {content_type!r} (file {filename!r}). "
@@ -406,14 +447,24 @@ def read_attachment_file(
     size_hint: int | None,
     options: ReadOptions,
     cache_key: str | None = None,
+    thumbnail: "Thumbnail | None" = None,
 ) -> AttachmentReading:
     """Download one attachment and return its text, or the (downscaled) image for photos.
 
     With a `cache_key` (see AttachmentFile.cache_key) the file and its text come from the cache
     when they are there, and go into it when they are not.
+
+    Video and audio are not read: the file is fetched only when it is to be saved, and what comes
+    back is the file's details and, with a `thumbnail`, that small picture.
     """
-    downloaded = download_or_reuse(client, url, size_hint, content_type, cache_key)
     name = filename or filename_from_url(url)
+    played = detect_format(content_type, name)
+    if played in PLAYED_FORMATS and options.save_directory is None:
+        details: dict[str, Any] = {"filename": name, "contentType": content_type}
+        if size_hint:
+            details["bytes"] = size_hint
+        return _read_played(client, str(played), details, options, thumbnail)
+    downloaded = download_or_reuse(client, url, size_hint, content_type, cache_key)
     summary: dict[str, Any] = {
         "filename": name,
         "contentType": downloaded.content_type,
@@ -428,8 +479,11 @@ def read_attachment_file(
             summary["save_error"] = (
                 f"could not be written: {problem.strerror or type(problem).__name__}"
             )
-    if detect_format(downloaded.content_type, name) == "image":
+    file_format = detect_format(downloaded.content_type, name)
+    if file_format == "image":
         return _read_image(client, downloaded, summary, options)
+    if file_format in PLAYED_FORMATS:
+        return _read_played(client, str(file_format), summary, options, thumbnail)
     extracted = extract_or_reuse(client, downloaded, name, cache_key)
     return AttachmentReading(_text_summary(summary, extracted, url, options.max_chars))
 
@@ -487,6 +541,43 @@ def _read_image(
     summary["returned_as"] = "image"
     image = AttachmentImage(base64.b64encode(data).decode("ascii"), mime_type)
     return AttachmentReading(summary, image)
+
+
+@dataclass(frozen=True)
+class Thumbnail:
+    """Where the small picture of a photo or video is, and the key it is cached under."""
+
+    url: str
+    cache_key: str | None = None
+
+
+def fetch_thumbnail(client: "ParroClient", thumbnail: Thumbnail) -> DownloadedFile:
+    """The small picture itself, from the cache or the CDN."""
+    return download_or_reuse(client, thumbnail.url, None, "image/jpeg", thumbnail.cache_key)
+
+
+def _read_played(
+    client: "ParroClient",
+    file_format: str,
+    summary: dict[str, Any],
+    options: ReadOptions,
+    thumbnail: Thumbnail | None,
+) -> AttachmentReading:
+    """Video or audio: never the file's contents, at most the thumbnail of a video."""
+    summary["format"] = file_format
+    if thumbnail is None or not options.include_images:
+        summary["returned_as"] = f"nothing ({file_format}; save it with --save-to)"
+        return AttachmentReading(summary)
+    try:
+        picture = fetch_thumbnail(client, thumbnail)
+    except ParroError as problem:
+        summary["returned_as"] = f"nothing ({file_format}; its thumbnail failed: {problem})"
+        return AttachmentReading(summary)
+    data, mime_type = shrink_image(
+        picture.data, picture.content_type, client.settings.max_image_pixels
+    )
+    summary["returned_as"] = f"thumbnail image (the {file_format} itself is not returned)"
+    return AttachmentReading(summary, AttachmentImage(base64.b64encode(data).decode(), mime_type))
 
 
 def _text_summary(

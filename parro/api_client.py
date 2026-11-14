@@ -490,6 +490,12 @@ class ParroClient:
             count_total=True,
         )
 
+    def get_chat_message(self, chatroom_id: int, message_id: int) -> dict[str, Any]:
+        """GET /chatroom/{id}/chatmessage/{messageId}: one message (live check 2026-11-14: it
+        leaves the chat's unread count as it was)."""
+        payload = self.get(f"/chatroom/{int(chatroom_id)}/chatmessage/{int(message_id)}").payload
+        return payload if isinstance(payload, dict) else {}
+
     def list_chatroom_members(
         self, chatroom_id: int, active_only: bool = True, limit: int = 100
     ) -> ApiResponse:

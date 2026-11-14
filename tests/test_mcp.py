@@ -150,6 +150,9 @@ def test_tool_interface_only_gains_optional_arguments():
         schoolyear={"type": "integer"},
     )
     expected["parro_chat_messages"]["properties"]["since"] = {"type": "string"}
+    expected["parro_attachment"]["properties"].update(
+        chatroom_id={"type": "integer"}, message_id={"type": "integer"}
+    )
     expected["parro_overview"] = {
         "properties": {"all": {"type": "boolean"}}
     }  # new tools, at the end

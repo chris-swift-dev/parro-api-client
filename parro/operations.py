@@ -8,6 +8,7 @@ MCP tool always give identical output.
 """
 
 import json
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -29,6 +30,8 @@ from .errors import AttachmentError, ConfigurationError, ParroError
 from .geon import get_object_id, strip_geon_metadata
 from .naming import cli_command
 from .settings import LoginMethod
+
+log = logging.getLogger(__name__)
 
 # With unread_only, look further back per group than `limit`, so older unread items are not missed.
 UNREAD_SCAN_PAGE_SIZE = 50
@@ -498,18 +501,33 @@ def read_attachments(
     filename: str | None = None,
     content_type: str | None = None,
     options: attachments.ReadOptions | None = None,
+    chatroom_id: int | None = None,
+    message_id: int | None = None,
 ) -> AttachmentReport:
-    """Read the attachment(s) of an announcement or calendar item, or of a direct url."""
+    """Read the attachment(s) of an announcement or calendar item, of one chat message
+    (`chatroom_id` + `message_id`), or of a direct url."""
     options = options or attachments.ReadOptions()
     if url:
         reading = attachments.read_attachment_file(
             client, url, filename, content_type, None, options
         )
         return AttachmentReport(reading.summary, [reading.image] if reading.image else [])
-    if event_id is None:
-        raise ConfigurationError("Give an announcement (or calendar item) id, or a direct url.")
-    event = client.get_announcement_or_calendar_item(require_id(event_id, "event id"))
-    title = event.get("title") or (event.get("calendarItem") or {}).get("title")
+    if chatroom_id is not None or message_id is not None:
+        if event_id is not None:
+            raise ConfigurationError("Give an event id, or a chat and a message, not both.")
+        event = client.get_chat_message(
+            require_id(chatroom_id, "chatroom id"), require_id(message_id, "message id")
+        )
+        if event.get("deleted"):
+            raise AttachmentError("This message was deleted.")
+        title: Any = "Chat message"
+    elif event_id is None:
+        raise ConfigurationError(
+            "Give an announcement (or calendar item) id, a chat and a message id, or a direct url."
+        )
+    else:
+        event = client.get_announcement_or_calendar_item(require_id(event_id, "event id"))
+        title = event.get("title") or (event.get("calendarItem") or {}).get("title")
     files = choose_attachment_files(event, attachment_id, read_all)
     if files is None:
         return AttachmentReport(
@@ -536,7 +554,7 @@ def choose_attachment_files(
     """The files to read; None means "several, and the caller did not say which"."""
     files = [attachments.describe_attachment(a) for a in attachments.find_attachments(event)]
     if not files:
-        raise AttachmentError("This event has no attachments.")
+        raise AttachmentError("This has no attachments.")
     if attachment_id is not None:
         files = [f for f in files if f.attachment_id == int(attachment_id)]
         if not files:
@@ -562,6 +580,7 @@ def read_one_attachment(
             described.size,
             options,
             cache_key=described.cache_key(),
+            thumbnail=thumbnail_of(described),
         )
     except ParroError as problem:
         failed = {
@@ -573,6 +592,53 @@ def read_one_attachment(
     return attachments.AttachmentReading(
         {**reading.summary, "attachment_id": described.attachment_id}, reading.image
     )
+
+
+def thumbnail_of(described: attachments.AttachmentFile) -> attachments.Thumbnail | None:
+    if not described.thumbnail_url:
+        return None
+    return attachments.Thumbnail(described.thumbnail_url, described.thumbnail_cache_key())
+
+
+# The desktop app shows this many small pictures of one item or conversation, not more.
+MAX_THUMBNAILS = 60
+
+
+def load_thumbnails(
+    client: ParroClient,
+    event_id: int | None = None,
+    chatroom_id: int | None = None,
+    limit: int = 100,
+) -> dict[int, bytes]:
+    """The small pictures of the photos and videos of one event, or of a chat's newest `limit`
+    messages: attachment id → picture bytes. One that cannot be fetched is left out.
+
+    Pictures come from the cache when they are there. Nothing but the pictures is returned: no
+    address leaves this function.
+    """
+    if chatroom_id is not None:
+        room_id = require_id(chatroom_id, "chatroom id")
+        holders = client.list_chat_messages(room_id, limit=limit).items
+    else:
+        holders = [client.get_announcement_or_calendar_item(require_id(event_id, "event id"))]
+    pictures: dict[int, bytes] = {}
+    for holder in holders:
+        if not isinstance(holder, dict) or holder.get("deleted"):
+            continue
+        for found in attachments.find_attachments(holder):
+            described = attachments.describe_attachment(found)
+            thumbnail = thumbnail_of(described)
+            if thumbnail is None or described.attachment_id is None:
+                continue
+            if len(pictures) >= MAX_THUMBNAILS:
+                return pictures
+            try:
+                picture = attachments.fetch_thumbnail(client, thumbnail)
+            except ParroError as problem:
+                log.info("a thumbnail could not be fetched (%s)", type(problem).__name__)
+                continue
+            pictures[described.attachment_id] = picture.data
+    return pictures
 
 
 # ------------------------------------------------------------------------------- cache
@@ -587,7 +653,7 @@ def cache_info(client: ParroClient) -> dict[str, Any]:
         "files": info.files,
         "bytes": info.bytes,
         "max_bytes": info.max_bytes,
-        "holds": "attachment files and their text; calendar-item details. Never lists.",
+        "holds": "attachment files, their text and thumbnails; calendar-item details. Never lists.",
     }
 
 

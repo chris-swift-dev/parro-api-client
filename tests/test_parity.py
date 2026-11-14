@@ -33,6 +33,24 @@ def without(data: dict[str, Any], *keys: str) -> dict[str, Any]:
 
 # Fields the new feed adds (PLAN-readable-output phase 3); the original never had them.
 ADDED_ANNOUNCEMENT_FIELDS = ("author", "pinned", "groups")
+# 0.13: what kind of media an attachment is, and whether it has a small picture.
+ADDED_ATTACHMENT_FIELDS = ("media", "has_thumbnail")
+
+
+def without_added_fields(item: dict[str, Any]) -> dict[str, Any]:
+    stripped = without(item, *ADDED_ANNOUNCEMENT_FIELDS)
+    if "attachments" in stripped:
+        stripped["attachments"] = [
+            without(a, *ADDED_ATTACHMENT_FIELDS) for a in stripped["attachments"]
+        ]
+    return stripped
+
+
+def without_attachments(result: dict[str, Any], *keys: str) -> dict[str, Any]:
+    """0.13: a message's attachment is compact, as an event's is; the original passed the raw
+    object on. The messages themselves must still be the same."""
+    messages = [without(message, "attachment") for message in result["messages"]]
+    return {**without(result, *keys), "messages": messages}
 
 
 def merged_feed(old: Any, new: Any) -> tuple[Any, Any]:
@@ -47,14 +65,12 @@ def merged_feed(old: Any, new: Any) -> tuple[Any, Any]:
         if item["id"] not in seen:
             seen.add(item["id"])
             old_items.append(item)
-    new_items = [
-        without(item, *ADDED_ANNOUNCEMENT_FIELDS) for item in new["announcements"][: len(old_items)]
-    ]
+    new_items = [without_added_fields(item) for item in new["announcements"][: len(old_items)]]
     return old_items, new_items
 
 
 def single_group_feed(old: Any, new: Any) -> tuple[Any, Any]:
-    stripped = [without(item, *ADDED_ANNOUNCEMENT_FIELDS) for item in new["announcements"]]
+    stripped = [without_added_fields(item) for item in new["announcements"]]
     return old, {**new, "announcements": stripped}
 
 
@@ -90,7 +106,7 @@ CASES: list[tuple[str, dict[str, Any], Adjust]] = [
     (
         "parro_chat_messages",
         {"chatroom_id": 8000000001},
-        lambda old, new: (old, without(new, "chatroom_id")),
+        lambda old, new: (without_attachments(old), without_attachments(new, "chatroom_id")),
     ),
     ("parro_get", {"path": "/accountsettings"}, None),
     ("parro_get", {"path": "/systemnews", "limit": 2}, None),
@@ -220,6 +236,8 @@ def test_tools_list_matches_the_original_plus_the_login_method(tmp_path, monkeyp
         "integer",
     }
     assert new_interface["parro_chat_messages"]["properties"].pop("since")["type"] == "string"
+    attachment = new_interface["parro_attachment"]["properties"]  # 0.13: a chat message's file
+    assert {attachment.pop(k)["type"] for k in ("chatroom_id", "message_id")} == {"integer"}
     assert new_interface.pop("parro_overview") == {"properties": {"all": {"type": "boolean"}}}
     assert new_interface.pop("parro_calendar_link") == {"properties": {}}
     assert set(new_interface.pop("parro_privacy")["properties"]) == {"child_id", "link", "raw"}

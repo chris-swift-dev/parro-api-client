@@ -9,7 +9,13 @@ from datetime import datetime
 from typing import Any
 
 from .api_client import ApiResponse, FeedEvent
-from .attachments import can_extract_text, describe_attachment, find_attachments
+from .attachments import (
+    AttachmentFile,
+    can_extract_text,
+    describe_attachment,
+    detect_format,
+    find_attachments,
+)
 from .authenticator import LoginStatus
 from .geon import full_name, get_object_id, parse_timestamp, strip_geon_metadata
 from .naming import cli_command
@@ -153,23 +159,43 @@ def summarize_unread_counts(response: ApiResponse) -> list[dict[str, Any]]:
 
 
 def summarize_attachment_list(event: dict[str, Any]) -> list[dict[str, Any]]:
+    """The attachments of an event or a chat message, compact. A photo has no file name in the
+    API, so it gets one here: 'photo-<attachment id>.jpg'."""
     summaries = []
     for attachment in find_attachments(event):
         described = describe_attachment(attachment)
+        file_format = detect_format(described.content_type, described.filename)
         summaries.append(
             drop_missing(
                 {
                     "attachment_id": described.attachment_id,
                     "kind": described.kind,
-                    "filename": described.filename,
+                    "filename": described.filename or made_up_filename(described, file_format),
                     "contentType": described.content_type,
                     "size": described.size,
                     "url": described.url,
                     "readable": can_extract_text(described.content_type, described.filename),
+                    "media": file_format if file_format in MEDIA_FORMATS else None,
+                    "has_thumbnail": True if described.thumbnail_url else None,
                 }
             )
         )
     return summaries
+
+
+# What `media` can be: shown or played, not read as text.
+MEDIA_FORMATS = ("image", "video", "audio")
+MEDIA_NAMES = {"image": "photo", "video": "video", "audio": "audio"}
+
+
+def made_up_filename(described: AttachmentFile, file_format: str | None) -> str | None:
+    """'photo-6000000201.jpg' for a file the API gives no name."""
+    if described.attachment_id is None:
+        return None
+    subtype = str(described.content_type or "").split(";", 1)[0].rpartition("/")[2].lower()
+    extension = {"jpeg": "jpg", "quicktime": "mov", "mpeg": "mp3"}.get(subtype, subtype)
+    name = MEDIA_NAMES.get(str(file_format), "attachment")
+    return f"{name}-{described.attachment_id}" + (f".{extension}" if extension.isalnum() else "")
 
 
 def summarize_announcement(
@@ -294,6 +320,9 @@ def summarize_calendar_details(event: dict[str, Any]) -> dict[str, Any]:
 
     Attachments are listed without their download `url`: these details may be cached, and links
     are never cached. `attachment <event id>` fetches a fresh link when one is needed.
+
+    `link` is the web address a teacher added to the item (`calendarItem.url`, only in this detail
+    call): part of the item's own text, so it is kept. Anything but http(s) is left out.
     """
     item = event.get("calendarItem") or {}
     attachments = [without_url(a) for a in summarize_attachment_list(event)]
@@ -301,6 +330,7 @@ def summarize_calendar_details(event: dict[str, Any]) -> dict[str, Any]:
         {
             "location": item.get("location") or None,
             "description": item.get("description") or None,
+            "link": web_address(item.get("url")),
             "helpers": summarize_helpers(item) or None,
             "attachments": attachments or None,
         }
@@ -347,6 +377,12 @@ def wants_helpers(calendar_item: dict[str, Any]) -> bool:
     return kind.endswith(VOLUNTEER_TYPE_SUFFIX) or bool(calendar_item.get("resources"))
 
 
+def web_address(value: Any) -> str | None:
+    """`value` when it is an http(s) address, else None."""
+    address = str(value or "").strip()
+    return address if address.lower().startswith(("https://", "http://")) else None
+
+
 def without_url(attachment: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in attachment.items() if key != "url"}
 
@@ -389,8 +425,17 @@ def summarize_privacy(response: ApiResponse) -> dict[str, Any]:
 def summarize_chatrooms(response: ApiResponse) -> dict[str, Any]:
     return {
         "total": total_or_count(response),
-        "chatrooms": [strip_geon_metadata(room) for room in response.items],
+        "chatrooms": [summarize_chatroom(room) for room in response.items],
     }
+
+
+def summarize_chatroom(room: dict[str, Any]) -> dict[str, Any]:
+    """A chat; its last message in the same compact form as in the conversation."""
+    summary: dict[str, Any] = strip_geon_metadata(room)
+    last = room.get("lastMessage")
+    if isinstance(last, dict):
+        summary["lastMessage"] = summarize_chat_message(last)
+    return summary
 
 
 def summarize_chat_members(response: ApiResponse) -> dict[str, Any]:
@@ -417,8 +462,17 @@ def summarize_chat_members(response: ApiResponse) -> dict[str, Any]:
 def summarize_chat_messages(response: ApiResponse) -> dict[str, Any]:
     return {
         "total": total_or_count(response),
-        "messages": [strip_geon_metadata(message) for message in response.items],
+        "messages": [summarize_chat_message(message) for message in response.items],
     }
+
+
+def summarize_chat_message(message: dict[str, Any]) -> dict[str, Any]:
+    """One message; its attachment (a photo, video, document) in the compact form of an event's."""
+    summary: dict[str, Any] = strip_geon_metadata(message)
+    found = summarize_attachment_list(message)
+    if found:
+        summary["attachment"] = found[0]
+    return summary
 
 
 # ------------------------------------------------------------------------------ anything
