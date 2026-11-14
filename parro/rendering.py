@@ -627,8 +627,10 @@ def render_conversation(result: dict[str, Any], options: RenderOptions) -> str:
     for message in messages:
         when = parse_timestamp(message.get("createdAt"))
         day = format_day(when) if when else "Date unknown"
-        # A message with an attachment shows its id: that is what reads or saves the file.
-        message_id = object_id(message.get("id")) if message.get("attachment") else ""
+        # A message with an attachment shows its id: that is what reads or saves the file. So
+        # does one of your own: that is what deletes it.
+        with_id = message.get("attachment") or (message.get("yours") and not message.get("deleted"))
+        message_id = object_id(message.get("id")) if with_id else ""
         header = join_parts(
             [full_name_of(message.get("identity")), format_time(when) if when else "", message_id]
         )
@@ -926,6 +928,37 @@ def render_chat_send(result: dict[str, Any], options: RenderOptions) -> str:
     return document(f"# Sent to: {title}", join_parts([message, when]), next_step)
 
 
+def render_chat_deletion_preview(prepared: dict[str, Any]) -> str:
+    """Which message is about to be deleted: shown before anything is deleted."""
+    room = join_parts(["chat", object_id(prepared["chatroom_id"])])
+    what = join_parts(
+        [
+            f"Message {object_id(prepared['message_id'])}",
+            format_timestamp(prepared.get("created_at")),
+        ]
+    )
+    body = "\n".join(p for p in (prepared.get("text"), prepared.get("attachment")) if p)
+    return document(
+        f"# Delete your message in: {prepared.get('title') or room}\n{room}",
+        what,
+        quote(body or "(no text)"),
+        "This cannot be undone. Everyone in the chat will see that a message was deleted.",
+    )
+
+
+def render_chat_delete(result: dict[str, Any], options: RenderOptions) -> str:
+    """The outcome of chat-delete."""
+    room_id = result.get("chatroom_id")
+    if result.get("preview"):
+        return document(render_chat_deletion_preview(result), "Not deleted yet: nothing changed.")
+    if not result.get("deleted"):
+        return document("# Not deleted", "Nothing was deleted.")
+    title = result.get("title") or join_parts(["Chat", object_id(room_id)])
+    message = join_parts(["Message", object_id(result.get("message_id"))])
+    next_step = hint(options, f"chat-messages {room_id}", f"parro_chat_messages({room_id})")
+    return document(f"# Deleted from: {title}", message, next_step)
+
+
 def helper_item_line(result: dict[str, Any]) -> str:
     """'Excursie Natuurmuseum · Thu 12 Nov 2026 · #7000000301'."""
     return join_parts(
@@ -1208,6 +1241,7 @@ VIEW_RENDERERS: dict[str, Renderer] = {
     "mark_read": render_mark_read,
     "mark_group_read": render_mark_group_read,
     "chat_send": render_chat_send,
+    "chat_delete": render_chat_delete,
     "helper": render_helper_change,
     "rsvp": render_rsvp,
     "attachment": render_attachment,

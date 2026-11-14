@@ -352,11 +352,40 @@ def test_a_video_is_fetched_only_after_you_choose_to_open_it(window, api, monkey
 
     assert "IMG_0001.MOV (12 MB)" in asked[0]
     assert Path(opened[0]).read_bytes() == b"film" and Path(opened[0]).name == "IMG_0001.MOV"
-    assert "Opened IMG_0001.MOV" in view.notice.text()
+    assert "Handed IMG_0001.MOV to your computer to open" in view.notice.text()
 
     view.detail._follow(QUrl(attachment_link(VIDEO_MESSAGE)))
     wait_until(lambda: len(opened) == 2)
     assert cdn_requests(api).count(source) == 1, "the second time it is not fetched again"
+
+
+def test_in_a_flatpak_a_fetched_file_is_kept_where_the_desktop_can_reach_it(tmp_path, monkeypatch):
+    """Live check of 0.13.0: in the Flatpak, Open did nothing. Its /tmp exists only inside the
+    sandbox, so the desktop could not find the file it was asked to open."""
+    cache = tmp_path / "cache"
+    leftover = cache / "parro-media" / "old" / "film.mov"
+    leftover.parent.mkdir(parents=True)
+    leftover.write_bytes(b"left behind by a killed app")
+    monkeypatch.setenv("FLATPAK_ID", "io.github.chrisswiftdev.parro-gui")
+    monkeypatch.setenv("XDG_CACHE_HOME", str(cache))
+    monkeypatch.setattr(attachment_views, "_media_folder", None)
+
+    folder = attachment_views.media_folder()
+
+    assert folder == cache / "parro-media" and folder.is_dir()
+    assert not leftover.exists(), "emptied at first use"
+    assert attachment_views.media_folder() == folder, "made once"
+    if os.name == "posix":
+        assert folder.stat().st_mode & 0o077 == 0, "only for you"
+
+
+def test_outside_a_flatpak_the_system_s_temporary_folder_is_used(monkeypatch):
+    monkeypatch.delenv("FLATPAK_ID", raising=False)
+
+    assert attachment_views.flatpak_media_folder(os.environ) is None
+    assert attachment_views.flatpak_media_folder({"FLATPAK_ID": "x"}) == (
+        Path.home() / ".cache" / "parro-media"
+    )
 
 
 def test_cancelling_the_question_fetches_nothing(window, api, monkeypatch):

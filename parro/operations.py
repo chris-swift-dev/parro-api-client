@@ -451,6 +451,7 @@ def list_chat_messages(
     if raw:
         return response.payload
     result = {"chatroom_id": room_id, **summaries.summarize_chat_messages(response)}
+    mark_own_messages(client, result["messages"])
     if created_since:
         result["since"] = created_since
     if marked is not None:
@@ -830,6 +831,75 @@ def send_prepared_message(client: ParroClient, prepared: dict[str, Any]) -> dict
         "message_id": get_object_id(message),
         "created_at": message.get("createdAt"),
     }
+
+
+def mark_own_messages(client: ParroClient, messages: list[dict[str, Any]]) -> None:
+    """Add `yours: true` to the messages you wrote: those are the ones you can delete."""
+    own = own_identity_ids(client)
+    for message in messages:
+        identity = message.get("identity")
+        author = identity.get("id") if isinstance(identity, dict) else None
+        if author in own and not rendering.is_status_message(message):
+            message["yours"] = True
+
+
+MAX_DELETION_PREVIEW = 300
+
+
+def prepare_chat_message_deletion(
+    client: ParroClient, chatroom_id: int | None, message_id: int | None
+) -> dict[str, Any]:
+    """Which message would be deleted. Reads only; raises when it should not be deleted.
+
+    Only a message you wrote yourself, that is still there. The API's `permissions` do not say
+    who may delete what (live look 2026-11-14: READ on every message), so this is the rule.
+    """
+    room_id = require_id(chatroom_id, "chatroom id")
+    wanted = require_id(message_id, "message id")
+    room = client.get_chatroom(room_id)
+    message = summaries.summarize_chat_message(client.get_chat_message(room_id, wanted))
+    if message.get("id") != wanted:
+        raise ConfigurationError("Not deleted: this message is not in this chat.")
+    if rendering.is_status_message(message):
+        raise ConfigurationError("Not deleted: this is not a message someone wrote.")
+    if message.get("deleted"):
+        raise ConfigurationError("Not deleted: this message was deleted already.")
+    author = (message.get("identity") or {}).get("id")
+    if author not in own_identity_ids(client):
+        raise ConfigurationError("Not deleted: you can only delete a message you wrote yourself.")
+    text = str(message.get("text") or "")
+    return drop_missing(
+        {
+            "chatroom_id": room_id,
+            "title": room.get("title"),
+            "message_id": wanted,
+            "created_at": message.get("createdAt"),
+            "text": text[:MAX_DELETION_PREVIEW] + ("…" if len(text) > MAX_DELETION_PREVIEW else ""),
+            "attachment": rendering.attachment_marker(message) or None,
+        }
+    )
+
+
+def delete_prepared_message(client: ParroClient, prepared: dict[str, Any]) -> dict[str, Any]:
+    """Delete what prepare_chat_message_deletion() returned, once."""
+    client.delete_chat_message(prepared["chatroom_id"], prepared["message_id"])
+    return {
+        "deleted": True,
+        "chatroom_id": prepared["chatroom_id"],
+        "title": prepared.get("title"),
+        "message_id": prepared["message_id"],
+    }
+
+
+def delete_or_preview_chat_message(
+    client: ParroClient, chatroom_id: int | None, message_id: int | None, confirm: bool
+) -> dict[str, Any]:
+    """For an assistant, which has no terminal to ask at: the preview, or the deletion if
+    `confirm`."""
+    prepared = prepare_chat_message_deletion(client, chatroom_id, message_id)
+    if confirm:
+        return delete_prepared_message(client, prepared)
+    return {**prepared, "deleted": False, "preview": True}
 
 
 def send_or_preview_chat_message(

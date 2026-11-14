@@ -6,10 +6,11 @@ in the program the system uses for it. The same goes for the file of a chat mess
 
 import atexit
 import base64
+import os
 import shutil
 import tempfile
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -46,12 +47,32 @@ PLAYED = ("video", "audio")
 _media_folder: Path | None = None
 
 
+def flatpak_media_folder(environment: Mapping[str, str]) -> Path | None:
+    """In a Flatpak, a folder the desktop can reach too; None elsewhere.
+
+    A Flatpak's /tmp exists only inside the sandbox. The desktop's portal, which opens a file in
+    another program for the app, cannot find a file there, and then nothing happens at all (live
+    check of 0.13.0). The app's cache folder is the same folder inside and outside the sandbox.
+    """
+    if not environment.get("FLATPAK_ID"):
+        return None
+    cache = environment.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    return Path(cache) / "parro-media"
+
+
 def media_folder() -> Path:
     """Where a video or recording is kept while its player shows it: a private folder that is
     removed when the app closes."""
     global _media_folder
     if _media_folder is None or not _media_folder.is_dir():
-        _media_folder = Path(tempfile.mkdtemp(prefix="parro-media-"))
+        shared = flatpak_media_folder(os.environ)
+        if shared is None:
+            _media_folder = Path(tempfile.mkdtemp(prefix="parro-media-"))
+        else:
+            # Left behind if the app was killed: a film of a child should not stay around.
+            shutil.rmtree(shared, ignore_errors=True)
+            shared.mkdir(parents=True, exist_ok=True, mode=0o700)
+            _media_folder = shared
         atexit.register(shutil.rmtree, _media_folder, ignore_errors=True)
     return _media_folder
 
@@ -217,10 +238,12 @@ class FileOpener:
         )
 
     def _play(self, path: str) -> None:
+        # The system opens it, and does not always say whether it could: in a Flatpak the app
+        # never hears back. So the message says what was done, and what to do if nothing opens.
         opened = widgets.open_file(path)
         name = Path(path).name
         self.report_problem(
-            f"Opened {name} in your player."
+            f"Handed {name} to your computer to open. If nothing opens, use Save… instead."
             if opened
             else f"No program on this computer opens {name}. Save the file instead."
         )

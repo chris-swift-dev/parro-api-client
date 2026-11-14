@@ -30,6 +30,7 @@ from parro.rendering import (
     RenderOptions,
     choose_format,
     render,
+    render_chat_deletion_preview,
     render_chat_preview,
     render_helper_preview,
     render_rsvp_preview,
@@ -215,6 +216,7 @@ def add_reading_commands(command: CommandFactory) -> None:
 
     add_mark_read_command(command)
     add_chat_send_command(command)
+    add_chat_delete_command(command)
     add_helper_command(command)
     add_rsvp_command(command)
     add_local_data_commands(command)
@@ -371,6 +373,22 @@ def add_attachment_command(command: CommandFactory) -> None:
     )
 
 
+def add_chat_delete_command(command: CommandFactory) -> None:
+    delete = command(
+        "chat-delete",
+        "delete a chat message you wrote yourself: it cannot be undone",
+    )
+    delete.add_argument("chatroom_id", type=int, help="chatroom id (see `chatrooms`)")
+    delete.add_argument(
+        "message_id", type=int, help="message id (`chat-messages` shows it on your own messages)"
+    )
+    delete.add_argument(
+        "--yes",
+        action="store_true",
+        help="delete without asking; without it you see the message and are asked first",
+    )
+
+
 def add_limit(parser: argparse.ArgumentParser, default: int) -> argparse.ArgumentParser:
     parser.add_argument(
         "--limit", type=int, default=default, help=f"how many items (default {default})"
@@ -489,6 +507,7 @@ COMMAND_VIEWS = {
     "chat-members": "chat_members",
     "mark-read": "mark_read",
     "chat-send": "chat_send",
+    "chat-delete": "chat_delete",
     "helper": "helper",
     "rsvp": "rsvp",
     "get": "get",
@@ -546,6 +565,19 @@ def run_chat_send(client: ParroClient, args: argparse.Namespace) -> dict[str, An
         if not ask(render_chat_preview(prepared), "Send this message? [y/N] "):
             return {"sent": False, "chatroom_id": prepared["chatroom_id"]}
     return operations.send_prepared_message(client, prepared)
+
+
+def run_chat_delete(client: ParroClient, args: argparse.Namespace) -> dict[str, Any]:
+    """Prepare, confirm, delete. Without --yes and without a person to ask, nothing is deleted."""
+    prepared = operations.prepare_chat_message_deletion(client, args.chatroom_id, args.message_id)
+    if not args.yes:
+        if not someone_can_answer():
+            raise ConfigurationError(
+                "Not deleted: there is nobody to ask here. Run it at a terminal, or add --yes."
+            )
+        if not ask(render_chat_deletion_preview(prepared), "Delete this message? [y/N] "):
+            return {"deleted": False, "chatroom_id": prepared["chatroom_id"]}
+    return operations.delete_prepared_message(client, prepared)
 
 
 HELPER_QUESTIONS = {
@@ -637,6 +669,7 @@ HANDLERS: dict[str, Handler] = {
         c, a.chatroom_id, include_former=a.former, raw=a.raw
     ),
     "chat-send": run_chat_send,
+    "chat-delete": run_chat_delete,
     "helper": run_helper,
     "rsvp": run_rsvp,
     "sync": lambda c, a: operations.sync_archive(

@@ -5,9 +5,10 @@ of it (get_account, list_groups, list_events, get_event, ...). They return the A
 untouched; summaries.py shapes it for people.
 
 Rules for this module:
-  * GET, plus exactly four kinds of write. mark_read() can only send the PUT requests in
+  * GET, plus exactly five kinds of write. mark_read() can only send the PUT requests in
     READ_STATE_WRITES (marking an announcement, a calendar item, a chat or a group's announcements
     as read). send_chat_message() can only send one text message to one chat.
+    delete_chat_message() can only delete one message of one chat.
     add_helper_commitment() and remove_helper_commitment() can only sign the user up on, or
     withdraw them from, a calendar item's helper slot. answer_rsvp() can only answer one calendar
     item's invitation. There is no generic put(), post() or delete(); nothing else can change
@@ -62,6 +63,10 @@ WriteMethod = Literal["GET", "PUT", "POST", "DELETE"]
 SEND_OUTCOME_UNKNOWN = (
     "The message may or may not have arrived, and it was not sent again. Look at the chat before "
     "you try again."
+)
+DELETE_OUTCOME_UNKNOWN = (
+    "The message may or may not have been deleted, and it was not tried again. Look at the chat "
+    "before you try again."
 )
 CALENDAR_OUTCOME_UNKNOWN = (
     "It may or may not have gone through, and it was not repeated. Look at the calendar item "
@@ -218,6 +223,31 @@ class ParroClient:
             return ApiResponse(response.json(), response.header("Content-Range"))
         except ValueError:  # sent all the same: the status says so
             return ApiResponse({}, None)
+
+    def delete_chat_message(self, chatroom_id: int, message_id: int) -> None:
+        """DELETE one message of one chat (captured 2026-11-14: no body, answered 204).
+
+        It cannot be undone, and everyone in the chat sees that a message was deleted. Sent once:
+        after an unclear outcome it is not repeated. Whose message it is, is the caller's to check
+        (operations.prepare_chat_message_deletion); nothing calls this on its own.
+        """
+        for value, name in ((chatroom_id, "chatroom"), (message_id, "message")):
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ConfigurationError(f"Deleting a message needs a positive {name} id.")
+        url = self.build_api_url(f"/chatroom/{chatroom_id}/chatmessage/{message_id}")
+        label = "DELETE /chatroom/{id}/chatmessage/{messageId}"
+        headers = self._build_headers(None, 0, False, True, True)
+        try:
+            response = self._send_with_one_refresh(url, headers, label, True, method="DELETE")
+        except (NetworkError, http.client.HTTPException) as failure:
+            raise NetworkError(f"{failure} {DELETE_OUTCOME_UNKNOWN}") from None
+        if response.status >= 500:
+            raise ApiError(
+                f"{_api_error(label, response)} {DELETE_OUTCOME_UNKNOWN}", status=response.status
+            )
+        if response.status not in (200, 204):
+            raise _api_error(label, response)
+        log.info("deleted a chat message")
 
     def add_helper_commitment(
         self, calendar_item_id: int, resource_id: int, count: int
