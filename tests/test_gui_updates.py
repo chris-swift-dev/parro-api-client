@@ -2,6 +2,7 @@
 
 import os
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,8 @@ from parro.errors import NetworkError  # noqa: E402
 from parro.release_check import LatestRelease, release_page  # noqa: E402
 from parro_gui import app_file, auto_login, updates  # noqa: E402
 from parro_gui.updates import DAY_SECONDS, Preference, Updates  # noqa: E402
+
+AVAILABLE = "Version 99.0.0 is available"
 from tests.gui_helpers import dispose, wait_until  # noqa: E402
 
 NEWER = LatestRelease("99.0.0", release_page("99.0.0"))
@@ -34,14 +37,6 @@ class GitHub:
         if self.fails:
             raise NetworkError("No answer for GET api.github.com: timed out")
         return self.answer
-
-
-class Clock:
-    def __init__(self) -> None:
-        self.now = 1_800_000_000.0
-
-    def __call__(self) -> float:
-        return self.now
 
 
 @pytest.fixture
@@ -69,10 +64,10 @@ def said(monkeypatch) -> dict[str, list[Any]]:
 def make(application, tmp_path):
     windows: list[QMainWindow] = []
 
-    def build(github: GitHub, clock: Clock | None = None) -> Updates:
+    def build(github: GitHub, ready: Any = None) -> Updates:
         window = QMainWindow()
         windows.append(window)
-        return Updates(window, tmp_path, clock or Clock(), github)
+        return Updates(window, tmp_path, github, ready or (lambda: True))
 
     yield build
     for window in windows:
@@ -89,10 +84,10 @@ def settled(found: Updates, github: GitHub, count: int) -> None:
 
 def test_the_answer_is_kept_next_to_the_remembered_login(tmp_path):
     auto_login.save_remembered(tmp_path, auto_login.Remembered("a@example.org", Path("/x")))
-    updates.save_preference(tmp_path, Preference(True, 5.0))
+    updates.save_preference(tmp_path, Preference(True, "0.13.0"))
     assert auto_login.load_remembered(tmp_path) is not None
     auto_login.save_remembered(tmp_path, None)
-    assert updates.load_preference(tmp_path) == Preference(True, 5.0)
+    assert updates.load_preference(tmp_path) == Preference(True, "0.13.0")
     assert set(app_file.read_all(tmp_path)) == {"update_check"}
 
 
@@ -101,18 +96,12 @@ def test_an_unreadable_answer_counts_as_not_asked(tmp_path):
     assert updates.load_preference(tmp_path) == Preference(None)
 
 
-@pytest.mark.parametrize(
-    ("preference", "is_due"),
-    [
-        (Preference(None), False),
-        (Preference(False), False),
-        (Preference(True), True),
-        (Preference(True, 1000.0 - DAY_SECONDS + 1), False),
-        (Preference(True, 1000.0 - DAY_SECONDS), True),
-    ],
-)
-def test_at_most_once_a_day(preference, is_due):
-    assert updates.due(preference, 1000.0) is is_due
+def test_a_file_from_before_0_14_is_read_as_it_is(tmp_path):
+    """It holds `last_checked`, which decided "at most once a day"; that is not used any more."""
+    app_file.write_part(tmp_path, "update_check", {"enabled": True, "last_checked": 1.8e9})
+    assert updates.load_preference(tmp_path) == Preference(True, None)
+    app_file.write_part(tmp_path, "update_check", {"enabled": True, "told_version": 13})
+    assert updates.load_preference(tmp_path) == Preference(True, None)
 
 
 # ----------------------------------------------------------------------------- at start
@@ -135,24 +124,72 @@ def test_after_yes_it_checks_in_the_background_and_shows_a_button(make, said):
     found.at_start()
     settled(found, github, 1)
     assert github.threads[0] is not threading.main_thread()
-    assert found.notice.text() == "Version 99.0.0 is available" and not found.notice.isHidden()
-    assert said["told"] == [] and said["opened"] == [], "quiet at start, nothing opened"
+    assert found.notice.text() == AVAILABLE and not found.notice.isHidden()
+    assert said["told"] == [] and said["opened"] == [], "nothing opened by itself"
     assert found.at_start_action.isChecked()
 
 
-def test_the_same_day_it_does_not_check_again(make, said):
-    github, clock = GitHub(), Clock()
-    first = make(github, clock)
+def test_every_start_checks_also_minutes_after_the_last_one(make, said):
+    """Live check of 0.13.0: 0.12.0 never mentioned it. The check ran at most once a day, counted
+    from the last start, and 0.13.0 was published later on a day the app had already been
+    started. A file as that version left it, checked a moment ago, must not stop the check."""
+    github = GitHub()
+    first = make(github)
+    app_file.write_part(
+        first.data_dir, "update_check", {"enabled": True, "last_checked": time.time()}
+    )
+    first.at_start()
+    settled(first, github, 1)
+    second = make(github)
+    second.at_start()
+    settled(second, github, 2)
+    assert not second.notice.isHidden() and second.notice.text() == AVAILABLE
+
+
+def test_a_new_version_is_said_once_in_a_dialog_and_then_only_the_button(make, said):
+    """A button in the status bar alone was easy to miss; a dialog at every start would nag."""
+    github = GitHub()
+    first = make(github)
     updates.save_preference(first.data_dir, Preference(True))
     first.at_start()
     settled(first, github, 1)
-    clock.now += DAY_SECONDS - 1
-    make(github, clock).at_start()
-    assert len(github.threads) == 1
-    clock.now += 1
-    later = make(github, clock)
-    later.at_start()
-    settled(later, github, 2)
+    wait_until(lambda: len(said["asked"]) == 1)
+    assert AVAILABLE in said["asked"][0] and "release page" in said["asked"][0]
+    assert said["opened"] == [], "answered no: nothing opens"
+    assert updates.load_preference(first.data_dir) == Preference(True, "99.0.0")
+
+    second = make(github)
+    second.at_start()
+    settled(second, github, 2)
+    for _ in range(5):
+        QtWidgets.QApplication.processEvents()
+    assert len(said["asked"]) == 1, "not asked again for the same version"
+    assert not second.notice.isHidden(), "the button is still there"
+
+
+def test_a_still_newer_version_is_said_again(make, said):
+    github = GitHub()
+    found = make(github)
+    updates.save_preference(found.data_dir, Preference(True, "98.0.0"))
+    found.at_start()
+    settled(found, github, 1)
+    wait_until(lambda: len(said["asked"]) == 1)
+    assert updates.load_preference(found.data_dir).told_version == "99.0.0"
+
+
+def test_the_dialog_about_a_new_version_waits_for_a_quiet_moment(make, said):
+    quiet = {"now": False}
+    github = GitHub()
+    found = make(github, ready=lambda: quiet["now"])
+    updates.save_preference(found.data_dir, Preference(True))
+    found.at_start()
+    settled(found, github, 1)
+    for _ in range(5):
+        QtWidgets.QApplication.processEvents()
+    assert said["asked"] == [] and not found.notice.isHidden()
+    assert updates.load_preference(found.data_dir).told_version is None, "not said yet"
+    quiet["now"] = True
+    wait_until(lambda: len(said["asked"]) == 1)
 
 
 def test_at_start_an_up_to_date_app_or_a_failure_says_nothing(make, said):
@@ -161,7 +198,49 @@ def test_at_start_an_up_to_date_app_or_a_failure_says_nothing(make, said):
         updates.save_preference(found.data_dir, Preference(True))
         found.at_start()
         settled(found, github, 1)
-        assert found.notice.isHidden() and said["told"] == []
+        assert found.notice.isHidden() and said["told"] == [] and said["asked"] == []
+
+
+def test_a_failed_check_at_start_does_not_silence_the_next_start(make, said):
+    """Until 0.13.0 the day's check was noted before the answer was in: a start without network
+    then meant no check for a day."""
+    offline = GitHub(fails=True)
+    first = make(offline)
+    updates.save_preference(first.data_dir, Preference(True))
+    first.at_start()
+    settled(first, offline, 1)
+    online = GitHub()
+    second = make(online)
+    second.at_start()
+    settled(second, online, 1)
+    assert not second.notice.isHidden()
+
+
+def test_an_app_left_open_checks_again_after_a_day(make, said):
+    github = GitHub(SAME)
+    found = make(github)
+    updates.save_preference(found.data_dir, Preference(True))
+    assert not found.daily.isActive()
+    found.at_start()
+    settled(found, github, 1)
+    assert found.daily.isActive() and found.daily.interval() == DAY_SECONDS * 1000
+    found.daily.timeout.emit()
+    wait_until(lambda: len(github.threads) == 2)
+    updates.save_preference(found.data_dir, Preference(False))  # switched off in the Help menu
+    found.daily.timeout.emit()
+    for _ in range(5):
+        QtWidgets.QApplication.processEvents()
+    assert len(github.threads) == 2, "switched off: not asked"
+
+
+def test_switched_off_nothing_is_checked_at_start(make, said):
+    github = GitHub()
+    found = make(github)
+    updates.save_preference(found.data_dir, Preference(False))
+    found.at_start()
+    for _ in range(5):
+        QtWidgets.QApplication.processEvents()
+    assert github.threads == [] and not found.daily.isActive()
 
 
 # ----------------------------------------------------------------------------- by hand
@@ -184,7 +263,7 @@ def test_check_now_works_also_when_checks_at_start_are_off(make, said):
     updates.save_preference(found.data_dir, Preference(False))
     found.check_now()
     settled(found, github, 1)
-    assert said["asked"] and "Version 99.0.0 is available" in said["asked"][-1]
+    assert said["asked"] and AVAILABLE in said["asked"][-1]
 
 
 def test_the_release_page_opens_only_on_yes(make, said):
@@ -261,7 +340,7 @@ def test_the_question_waits_for_a_quiet_moment(application, tmp_path, said):
     """Asked while another dialog is open, it would be blocked by it, and neither could be used."""
     quiet = {"now": False}
     window = QMainWindow()
-    found = Updates(window, tmp_path, Clock(), GitHub(), ready=lambda: quiet["now"])
+    found = Updates(window, tmp_path, GitHub(), ready=lambda: quiet["now"])
     try:
         found.at_start()
         QtWidgets.QApplication.processEvents()

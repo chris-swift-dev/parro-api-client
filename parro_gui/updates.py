@@ -1,16 +1,21 @@
 """Telling you about a new version (docs/PLAN-desktop-0.12.md §1.7).
 
 Only after you agreed: the first start asks once, and the answer is kept in desktop-app.json. Then
-at most once a day, at start, the app asks GitHub for the newest release (parro.release_check) on a
-thread of its own, so a slow answer never holds up Parro. A newer version shows a button that
-opens the release page; the app itself downloads and installs nothing. Failures at start say
-nothing; *Check for updates now* says what happened.
+at every start, and once a day while the app stays open, the app asks GitHub for the newest release
+(parro.release_check) on a thread of its own, so a slow answer never holds up Parro.
+
+A newer version shows a button that opens the release page, and the first time the app finds that
+version it also says so in a dialog: a button alone was easy to miss. The app itself downloads and
+installs nothing. Failures at start say nothing; *Check for updates now* says what happened.
+
+Until 0.13.0 the check at start ran at most once a day, counted from the last start. A release
+published later that day was then not found by any start (live check of 0.13.0: 0.12.0 never
+mentioned it). One small request per start is all the limit saved.
 """
 
 import os
 import sys
 import threading
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,14 +36,14 @@ PART = "update_check"
 DAY_SECONDS = 24 * 60 * 60
 QUESTION = (
     "Check for new versions when the app starts?\n\n"
-    "The app then asks GitHub, where it is published, for the newest version, at most once a day. "
+    "The app then asks GitHub, where it is published, for the newest version each time it starts. "
     "Nothing about you or your school goes with it. You can change this in the Help menu."
 )
 UP_TO_DATE = "You have the newest version, {version}."
 COULD_NOT_CHECK = "Could not check for a new version: {reason}"
 AVAILABLE = "Version {version} is available"
 PIPX_UPDATE = "pipx upgrade parro-api-client"
-WAIT_MS = 500  # how often the question at the first start looks for a quiet moment
+WAIT_MS = 500  # how often a question at start looks for a quiet moment
 
 
 def no_dialog_open() -> bool:
@@ -48,26 +53,21 @@ def no_dialog_open() -> bool:
 @dataclass(frozen=True)
 class Preference:
     enabled: bool | None  # None: not asked yet
-    last_checked: float | None = None
+    told_version: str | None = None  # the newest version a dialog at start already announced
 
 
 def load_preference(data_dir: Path) -> Preference:
+    """What was saved. A file from before 0.14 also holds `last_checked`; it is not used."""
     saved = app_file.read_part(data_dir, PART)
     if not isinstance(saved, dict) or not isinstance(saved.get("enabled"), bool):
         return Preference(None)
-    last = saved.get("last_checked")
-    return Preference(saved["enabled"], float(last) if isinstance(last, int | float) else None)
+    told = saved.get("told_version")
+    return Preference(saved["enabled"], told if isinstance(told, str) else None)
 
 
 def save_preference(data_dir: Path, preference: Preference) -> None:
-    part = {"enabled": preference.enabled, "last_checked": preference.last_checked}
+    part = {"enabled": preference.enabled, "told_version": preference.told_version}
     app_file.write_part(data_dir, PART, part)
-
-
-def due(preference: Preference, now: float) -> bool:
-    if not preference.enabled:
-        return False
-    return preference.last_checked is None or now - preference.last_checked >= DAY_SECONDS
 
 
 def installed_with_an_installer() -> bool:
@@ -119,13 +119,16 @@ class Updates(QObject):
         self,
         window: QMainWindow,
         data_dir: Path | None,
-        clock: Callable[[], float] = time.time,
         fetch: Callable[[], LatestRelease | None] = latest_release,
         ready: Callable[[], bool] = no_dialog_open,
     ) -> None:
         super().__init__(window)
-        self.window, self.data_dir, self.clock, self.fetch = window, data_dir, clock, fetch
+        self.window, self.data_dir, self.fetch = window, data_dir, fetch
         self.ready = ready
+        # An app that is left open for days still hears about a new version.
+        self.daily = QTimer(self)
+        self.daily.setInterval(DAY_SECONDS * 1000)
+        self.daily.timeout.connect(self._check_again)
         self.installer = installed_with_an_installer()
         self.release: LatestRelease | None = None
         self.notice = QPushButton()
@@ -156,10 +159,10 @@ class Updates(QObject):
             save_preference(self.data_dir, preference)
 
     def _set_enabled(self, enabled: bool) -> None:
-        self._store(Preference(enabled, self.preference().last_checked))
+        self._store(Preference(enabled, self.preference().told_version))
 
     def at_start(self) -> None:
-        """From main(): ask once, then check when a day has passed.
+        """From main(): ask once, then check, at every start.
 
         The question waits for a quiet moment: asked while the login dialog is open, it would sit
         behind it, blocked by it, and neither could be answered.
@@ -173,8 +176,12 @@ class Updates(QObject):
             preference = Preference(enabled)
             self._store(preference)
             self.at_start_action.setChecked(enabled)
-        if due(preference, self.clock()):
-            self._store(Preference(True, self.clock()))
+        if preference.enabled:
+            self._run(quietly=True)
+            self.daily.start()
+
+    def _check_again(self) -> None:
+        if self.preference().enabled:
             self._run(quietly=True)
 
     def check_now(self) -> None:
@@ -200,8 +207,23 @@ class Updates(QObject):
             self.notice.setVisible(True)
             if not quietly:
                 self.show_release()
+            elif self.preference().told_version != release.version:
+                self._announce()
         elif not quietly:
             self._tell(UP_TO_DATE.format(version=__version__))
+
+    def _announce(self) -> None:
+        """A version the check at start has not told about yet: say it once, in the dialog the
+        check by hand shows. It waits for a quiet moment, as the first question does. From then on
+        this version is only the button, so the app does not nag at every start."""
+        release = self.release
+        if release is None:
+            return
+        if not self.ready():
+            QTimer.singleShot(WAIT_MS, self._announce)
+            return
+        self._store(Preference(self.preference().enabled, release.version))
+        self.show_release()
 
     def _failed(self, reason: str) -> None:
         self.answers += 1

@@ -216,7 +216,7 @@ parro-client-gui
 It follows your system's light or dark setting. There is no web server or open port, and text from
 others stays text. It shares its login, cache and archive with the command line, and it can log in by
 itself from a password file, with the same one-attempt rule. If you agree, it tells you about a
-new version, asking GitHub at most once a day and downloading nothing itself. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
+new version, asking GitHub when it starts and downloading nothing itself. More in **[docs/DESKTOP-APP.md](https://github.com/chris-swift-dev/parro-api-client/blob/main/docs/DESKTOP-APP.md)**.
 
 ## Changing things in Parro
 

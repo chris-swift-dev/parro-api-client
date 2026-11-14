@@ -145,11 +145,14 @@ It looks the same on Windows, macOS and Linux, and text uses your system's font 
 ## New versions
 
 The first start asks whether the app may check for new versions. With yes, it asks GitHub for the
-newest release when it starts, at most once a day, on a thread of its own so Parro never waits for
-it. The request carries no token, no cookie and nothing about you; GitHub sees your IP address and
-the app's version. A newer version shows a button at the bottom of the window, which opens the
-release page in your browser after asking; the app downloads and installs nothing itself. The answer
-to the question is kept in `desktop-app.json`. *Help → Check for new versions at start* changes it,
+newest release each time it starts, and once a day while it stays open, on a thread of its own so
+Parro never waits for it. The request carries no token, no cookie and nothing about you; GitHub sees
+your IP address and the app's version. A newer version shows a button at the bottom of the window,
+which opens the release page in your browser after asking; the app downloads and installs nothing
+itself. The first time the app finds a version it also says so in a dialog; after that, that version
+is only the button. The answer to the question, and the version the dialog last named, are kept in
+`desktop-app.json`. (Until 0.13.0 the check ran at most once a day, and a release published later
+on a day the app had already been started was not found.) *Help → Check for new versions at start* changes it,
 and *Help → Check for updates now* checks at once and says what it found.
 
 ## Good to know

@@ -113,10 +113,13 @@ These came from windows that broke on real data:
   quiet moment: the first login check is done and `QApplication.activeModalWidget()` is None;
   retry with a timer otherwise.
 - **The update check** (opt-in, asked once): one GET to
-  `api.github.com/repos/OWNER/REPO/releases/latest` with no token or cookie, at most once a day,
-  on its own thread. Use only the version number from the answer (`^v?\d+\.\d+\.\d+$`, skip
-  drafts and pre-releases) and build the link yourself. Show a button "Version X is available";
-  open the browser only after asking. Never download or install. A Help menu holds the switch,
+  `api.github.com/repos/OWNER/REPO/releases/latest` with no token or cookie, at every start
+  (and once a day while the app stays open), on its own thread. Do not limit it to "once a day"
+  counted from the last start: a release published later that day is then missed by every start,
+  and do not note the check as done before the answer is in. Use only the version number from the answer (`^v?\d+\.\d+\.\d+$`, skip
+  drafts and pre-releases) and build the link yourself. Show a button "Version X is available",
+  and the first time a version is found also a dialog (a button alone is missed; remember the
+  version so later starts do not nag); open the browser only after asking. Never download or install. A Help menu holds the switch,
   *Check for updates now* and *About*. Store the answer in the app's settings file (mode 600).
 - **Login dialog:** show the common way only (password form); put rarer ways behind
   "Other ways to log in…", not remembered between openings (except a started, unfinished one).
