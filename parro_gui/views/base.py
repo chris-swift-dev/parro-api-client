@@ -19,6 +19,7 @@ from parro import operations
 from parro.api_client import ParroClient
 
 from .. import widgets
+from ..confirmations import Confirmations
 from ..memory import Kept, Memory
 from ..notice import Notice
 from ..text import placeholder, safe_html
@@ -34,6 +35,7 @@ NOTHING_CHOSEN = "Nothing to show here."
 SECTION_MARGINS = (20, 14, 20, 12)
 LIST_WIDTH = 330
 DETAIL_MIN_HEIGHT = 90  # the text keeps a few lines, however much is below it
+ONE_MOMENT = "One moment…"
 MARK_READ_QUESTION = "Mark this as read? The school can see that you did."
 
 
@@ -55,6 +57,10 @@ class Section(QWidget):
         self.next_notice = ""  # shown when the next load has finished
         self._action_running = False
         self.confirmation: ConfirmDialog | None = None
+        # Which changes are made without asking; the window gives every section the same one.
+        self.confirmations = Confirmations()
+        # Called when a fresh answer from Parro is in: the window then looks at the unread counts.
+        self.on_fetched: Callable[[], None] | None = None
         self.notice = Notice()
         self.title = QLabel()
         self.title.setObjectName("sectionTitle")
@@ -159,6 +165,8 @@ class Section(QWidget):
         )
         if generation == self._generation:
             self._show(kept, key)
+        if self.on_fetched is not None:
+            self.on_fetched()
 
     def _show(self, kept: Kept, key: tuple[Hashable, ...] | None) -> None:
         self.refresh_button.setEnabled(True)
@@ -205,11 +213,37 @@ class Section(QWidget):
         confirm_label: str,
         task: Callable[[ParroClient], Any],
         on_done: Callable[[Any], None],
+        action: str,
     ) -> None:
+        """Show what would happen and do it on Confirm; or, when the user switched the question
+        off for this `action` (parro_gui.confirmations), do it at once."""
+        if self.confirmations.skips(action):
+            self.act_without_asking(task, on_done)
+            return
         self.confirmation = ConfirmDialog(
             self.worker, title, preview_html, confirm_label, task, on_done, self
         )
         self.confirmation.open()
+
+    def act_without_asking(
+        self, task: Callable[[ParroClient], Any], on_done: Callable[[Any], None]
+    ) -> None:
+        """A change without its dialog: once, and what happened goes to the message line. While
+        it is on its way no other action of the section starts, as with the dialog open."""
+        if self._action_running:
+            return
+        self._action_running = True
+        self.notice.setText(ONE_MOMENT)
+
+        def finished(value: Any) -> None:
+            self._action_running = False
+            on_done(value)
+
+        def failed(text: str) -> None:
+            self._action_running = False
+            self.notice.setText(text)
+
+        self.worker.submit(task, finished, failed)
 
 
 class ListDetailSection(Section):
@@ -409,7 +443,7 @@ class ListDetailSection(Section):
 
     def mark_read(self, kind: str, item_id: Any) -> None:
         """Only ever from a button, and it asks first: the school sees it."""
-        if not widgets.ask(self, MARK_READ_QUESTION):
+        if not self.confirmations.skips("mark_read") and not widgets.ask(self, MARK_READ_QUESTION):
             return
         # Stays off after it worked: the reload that follows decides whether there is more to mark.
         self.run_action(

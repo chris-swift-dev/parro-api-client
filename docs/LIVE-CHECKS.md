@@ -272,8 +272,10 @@ Windows, macOS and Linux, and reported the result. Personal data is left out.
 
 ## Check (2026-11-14, release 0.14.0: the update notice)
 
-Reported by the account owner: 0.12.0, installed, never mentioned 0.13.0; *Check for updates now*
-did. Reproduced and retested here with the app's real window (no display) and the real answer of
+Reported by the account owner: 0.12.0, installed, did not mention 0.13.0; *Check for updates now*
+did. It turned out to be the daily limit, working as built: the button came a day later (said by
+the owner on 2026-11-16). What was missing was a sign of when the app had last looked; that is
+added (Plan 20). The limit itself is gone all the same. Reproduced and retested here with the app's real window (no display) and the real answer of
 `api.github.com`, which named `v0.13.0`. No Parro account is involved. See
 [Plan 19](PLAN-0.14.md), section 2.
 

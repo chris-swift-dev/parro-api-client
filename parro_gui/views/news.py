@@ -132,6 +132,7 @@ class NewsSection(ListDetailSection):
                 client, group_id, confirmed=True
             ),
             lambda _result: self.reload_here("Marked as read."),
+            action="mark_group_read",
         )
 
     def show_item(self, item: dict[str, Any]) -> None:

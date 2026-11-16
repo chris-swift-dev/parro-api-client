@@ -23,6 +23,10 @@ these rules:
 - **An assistant gets a preview first.** Called without `confirm: true`, the MCP tool changes nothing
   and returns the preview, so the assistant can show you what would happen.
 
+**In the desktop app** every change asks first, in the same way. There, and only there, you can
+switch the question off per action (*Settings → Confirmations…*); the reading before the change and
+"never repeated on its own" stay. See [the desktop app](DESKTOP-APP.md#changing-things).
+
 ## Marking as read
 
 `overview` shows only what you have not read yet. Reading something here does not change that:

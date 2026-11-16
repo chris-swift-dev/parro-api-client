@@ -258,6 +258,7 @@ class AgendaSection(ListDetailSection):
             word,
             lambda client: operations.apply_rsvp(client, prepared),
             lambda _result: self.reload_here(f"Answered: {word}."),
+            action="rsvp",
         )
 
     def change_slot(
@@ -279,6 +280,7 @@ class AgendaSection(ListDetailSection):
             "Sign up" if signing_up else "Withdraw",
             lambda client: operations.apply_helper_change(client, prepared),
             lambda _result: self.reload_here("Signed up." if signing_up else "Withdrawn."),
+            action="helper",
         )
 
     def show_item(self, item: dict[str, Any]) -> None:

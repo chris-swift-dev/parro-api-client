@@ -9,15 +9,19 @@ version it also says so in a dialog: a button alone was easy to miss. The app it
 installs nothing. Failures at start say nothing; *Check for updates now* says what happened.
 
 Until 0.13.0 the check at start ran at most once a day, counted from the last start. A release
-published later that day was then not found by any start (live check of 0.13.0: 0.12.0 never
-mentioned it). One small request per start is all the limit saved.
+published later that day was then found a day later, and nothing showed when the app had last
+looked: the owner took that for a check that did not work. So the Help menu and About now say when
+the app last checked and what it found, and one small request per start is all the limit saved.
 """
 
+import dataclasses
 import os
 import sys
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +32,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButto
 from parro import __version__
 from parro.errors import ParroError
 from parro.release_check import LatestRelease, is_newer, latest_release
+from parro.rendering import format_day
 
 from . import app_file
 from .widgets import APP_NAME, ask, open_url
@@ -50,24 +55,63 @@ def no_dialog_open() -> bool:
     return QApplication.activeModalWidget() is None
 
 
+FAILED = "failed"  # `last_found` after a check that got no answer
+
+
 @dataclass(frozen=True)
 class Preference:
     enabled: bool | None  # None: not asked yet
     told_version: str | None = None  # the newest version a dialog at start already announced
+    last_checked: float | None = None  # when the last check ended, as time.time()
+    last_found: str | None = None  # the newest release it named, "" for none, FAILED
 
 
 def load_preference(data_dir: Path) -> Preference:
-    """What was saved. A file from before 0.14 also holds `last_checked`; it is not used."""
+    """What was saved. A file from before 0.14 holds `last_checked` only: when, not what."""
     saved = app_file.read_part(data_dir, PART)
     if not isinstance(saved, dict) or not isinstance(saved.get("enabled"), bool):
         return Preference(None)
-    told = saved.get("told_version")
-    return Preference(saved["enabled"], told if isinstance(told, str) else None)
+    told, last, found = (saved.get(key) for key in ("told_version", "last_checked", "last_found"))
+    return Preference(
+        saved["enabled"],
+        told if isinstance(told, str) else None,
+        float(last) if isinstance(last, int | float) and not isinstance(last, bool) else None,
+        found if isinstance(found, str) else None,
+    )
 
 
 def save_preference(data_dir: Path, preference: Preference) -> None:
-    part = {"enabled": preference.enabled, "told_version": preference.told_version}
+    part = {
+        "enabled": preference.enabled,
+        "told_version": preference.told_version,
+        "last_checked": preference.last_checked,
+        "last_found": preference.last_found,
+    }
     app_file.write_part(data_dir, PART, part)
+
+
+def describe_moment(moment: float, now: float) -> str:
+    """'today 14:05', 'yesterday 09:30' or 'Sat 14 Nov 2026 14:05', in this computer's time."""
+    then, today = datetime.fromtimestamp(moment), datetime.fromtimestamp(now)
+    days = (today.date() - then.date()).days
+    if days in (0, 1):
+        return f"{'today' if days == 0 else 'yesterday'} {then:%H:%M}"
+    return f"{format_day(then)} {then:%H:%M}"
+
+
+def describe_last_check(preference: Preference, now: float, current: str = __version__) -> str:
+    """One line for the Help menu and About: when the app last looked, and what it found."""
+    if preference.last_checked is None:
+        return "Not checked yet"
+    when = describe_moment(preference.last_checked, now)
+    found = preference.last_found
+    if found == FAILED:
+        return f"Last check failed: {when}"
+    if found is None:  # a file from before 0.14: when, but not what
+        return f"Last checked: {when}"
+    if found and is_newer(found, current):
+        return f"Last checked: {when} · version {found} is available"
+    return f"Last checked: {when} · you have the newest version"
 
 
 def installed_with_an_installer() -> bool:
@@ -121,10 +165,11 @@ class Updates(QObject):
         data_dir: Path | None,
         fetch: Callable[[], LatestRelease | None] = latest_release,
         ready: Callable[[], bool] = no_dialog_open,
+        clock: Callable[[], float] = time.time,
     ) -> None:
         super().__init__(window)
         self.window, self.data_dir, self.fetch = window, data_dir, fetch
-        self.ready = ready
+        self.ready, self.clock = ready, clock
         # An app that is left open for days still hears about a new version.
         self.daily = QTimer(self)
         self.daily.setInterval(DAY_SECONDS * 1000)
@@ -138,6 +183,9 @@ class Updates(QObject):
         menu = window.menuBar().addMenu("&Help")
         self.check_now_action = QAction("Check for updates now", window)
         self.check_now_action.triggered.connect(self.check_now)
+        # When the app last looked and what it found: shown, not clickable.
+        self.last_check_action = QAction(window)
+        self.last_check_action.setEnabled(False)
         self.at_start_action = QAction("Check for new versions at start", window)
         self.at_start_action.setCheckable(True)
         self.at_start_action.setChecked(bool(self.preference().enabled))
@@ -145,8 +193,15 @@ class Updates(QObject):
         self.about_action = QAction(f"About {APP_NAME}", window)
         self.about_action.setMenuRole(QAction.MenuRole.AboutRole)
         self.about_action.triggered.connect(self.show_about)
-        for action in (self.check_now_action, self.at_start_action, self.about_action):
+        for action in (
+            self.check_now_action,
+            self.last_check_action,
+            self.at_start_action,
+            self.about_action,
+        ):
             menu.addAction(action)
+        menu.aboutToShow.connect(self._show_last_check)  # "today" may have become "yesterday"
+        self._show_last_check()
         self._check: UpdateCheck | None = None
         self._quietly = True
         self.answers = 0  # answers handled, from GitHub or a failure
@@ -159,7 +214,22 @@ class Updates(QObject):
             save_preference(self.data_dir, preference)
 
     def _set_enabled(self, enabled: bool) -> None:
-        self._store(Preference(enabled, self.preference().told_version))
+        self._store(dataclasses.replace(self.preference(), enabled=enabled))
+
+    def last_check_text(self) -> str:
+        return describe_last_check(self.preference(), self.clock())
+
+    def _show_last_check(self) -> None:
+        self.last_check_action.setText(self.last_check_text())
+
+    def _note_check(self, found: str) -> None:
+        """Keep when a check ended and what it found. Only once the answer is in: a check that
+        is still running, or was never answered, is not a check."""
+        preference = self.preference()
+        if preference.enabled is not None:  # nothing is kept before the first question
+            changed = dataclasses.replace(preference, last_checked=self.clock(), last_found=found)
+            self._store(changed)
+        self._show_last_check()
 
     def at_start(self) -> None:
         """From main(): ask once, then check, at every start.
@@ -201,6 +271,7 @@ class Updates(QObject):
         quietly = self._quietly
         self.answers += 1
         self.check_now_action.setEnabled(True)
+        self._note_check(release.version if release is not None else "")
         if release is not None and is_newer(release.version):
             self.release = release
             self.notice.setText(AVAILABLE.format(version=release.version))
@@ -222,12 +293,13 @@ class Updates(QObject):
         if not self.ready():
             QTimer.singleShot(WAIT_MS, self._announce)
             return
-        self._store(Preference(self.preference().enabled, release.version))
+        self._store(dataclasses.replace(self.preference(), told_version=release.version))
         self.show_release()
 
     def _failed(self, reason: str) -> None:
         self.answers += 1
         self.check_now_action.setEnabled(True)
+        self._note_check(FAILED)
         if not self._quietly:
             self._tell(COULD_NOT_CHECK.format(reason=reason))
 
@@ -243,7 +315,8 @@ class Updates(QObject):
         QMessageBox.about(
             self.window,
             f"About {APP_NAME}",
-            f"{APP_NAME} {__version__}\n\nAn unofficial desktop app for Parro. Not affiliated with "
+            f"{APP_NAME} {__version__}\n{self.last_check_text()}\n\n"
+            "An unofficial desktop app for Parro. Not affiliated with "
             "or endorsed by Topicus, ParnasSys or Parro.\n\n"
             "https://github.com/chris-swift-dev/parro-api-client",
         )

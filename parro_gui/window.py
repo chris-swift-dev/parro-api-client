@@ -3,11 +3,12 @@
 import logging
 import os
 import sys
+import time
 from collections.abc import Callable
 from typing import Any
 
 from PySide6.QtCore import QSize, QTimer
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtGui import QAction, QCloseEvent
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -25,6 +26,8 @@ from parro.rendering import format_timestamp
 from parro.settings import Settings
 
 from . import auto_login
+from .badges import COUNTED, SectionDelegate, set_unread
+from .confirmations import Confirmations, ConfirmationsDialog
 from .desktop_font import use_desktop_font
 from .icons import ICON_SIZE, app_icon, section_icon
 from .login import LoginDialog, browser_login_pending
@@ -47,6 +50,8 @@ CHECKING_LOGIN = "Checking the login…"
 LOGIN_HALTED = "Login stopped after a rejected password. Check it, then log in."
 LOGIN_EXPIRED = "Your login has expired. A login lasts up to 8 hours."
 LOGIN_CHECK_INTERVAL_MS = 60_000
+UNREAD_INTERVAL_MS = 5 * 60_000
+UNREAD_PAUSE_SECONDS = 10.0
 LOGGING_IN_BY_ITSELF = "Logging in by itself, with the password file…"
 
 
@@ -92,6 +97,7 @@ class MainWindow(QMainWindow):
         self.sections.setFixedWidth(190)
         self.sections.setSpacing(1)
         self.sections.setIconSize(ICON_SIZE)
+        self.sections.setItemDelegate(SectionDelegate(self.sections))
         for row in range(self.sections.count()):
             self.sections.item(row).setSizeHint(QSize(0, SECTION_ROW_HEIGHT))
         self.restyle()
@@ -108,6 +114,7 @@ class MainWindow(QMainWindow):
         for name in SECTIONS:
             self.pages.addWidget(self.views[name])
             self.views[name].memory = self.memory
+            self.views[name].on_fetched = self.refresh_unread
         for name, view in self.views.items():
             view.set_title(name)
             view.reset(LOG_IN_FIRST)
@@ -127,17 +134,60 @@ class MainWindow(QMainWindow):
         self._may_log_in_by_itself = True
         self._logged_in_by_itself = ""
         self.first_login_check_done = False
-        self.updates = Updates(self, data_dir_of(self.settings), ready=self._quiet_moment)
+        data_dir = data_dir_of(self.settings)
+        self.confirmations = Confirmations(data_dir)
+        for view in self.views.values():
+            view.confirmations = self.confirmations
+        self.confirmations_dialog: ConfirmationsDialog | None = None
+        settings_menu = self.menuBar().addMenu("&Settings")
+        self.confirmations_action = QAction("Confirmations…", self)
+        # Not macOS's own Preferences entry: this is one small dialog, not all the settings.
+        self.confirmations_action.setMenuRole(QAction.MenuRole.NoRole)
+        self.confirmations_action.triggered.connect(self.show_confirmations)
+        settings_menu.addAction(self.confirmations_action)
+        self.updates = Updates(self, data_dir, ready=self._quiet_moment)
         self.account_button = QPushButton("Log in")
         self.account_button.clicked.connect(self._log_in_or_out)
         self.statusBar().addPermanentWidget(self.account_button)
         self.statusBar().showMessage(CHECKING_LOGIN)
+        # The unread counts beside the sections: while logged in, and after anything was fetched.
+        self._unread_asked_at: float | None = None
+        self.unread_timer = QTimer(self)
+        self.unread_timer.setInterval(UNREAD_INTERVAL_MS)
+        self.unread_timer.timeout.connect(self.refresh_unread)
+        self.unread_timer.start()
         self.login_timer = QTimer(self)
         self.login_timer.setInterval(LOGIN_CHECK_INTERVAL_MS)
         self.login_timer.timeout.connect(self.refresh_login)
         self.login_timer.start()
         self.refresh_login()
         self.fit_minimum_size()
+
+    def refresh_unread(self) -> None:
+        """Ask Parro for the unread counts, at most once in UNREAD_PAUSE_SECONDS: a section that
+        loads asks too, and several load in a row after a change."""
+        if not self.logged_in:
+            return
+        now = time.monotonic()
+        asked = self._unread_asked_at
+        if asked is not None and now - asked < UNREAD_PAUSE_SECONDS:
+            return
+        self._unread_asked_at = now
+        self.worker.submit(
+            operations.unread_totals, self.show_unread, lambda _text: self.show_unread({})
+        )
+
+    def show_unread(self, totals: dict[str, int]) -> None:
+        """Put the counts beside the sections. An empty answer (logged out, or the counts could
+        not be fetched) takes every badge away."""
+        for row, name in enumerate(SECTIONS):
+            count = totals.get(COUNTED[name]) if name in COUNTED and self.logged_in else None
+            set_unread(self.sections.item(row), name, count)
+        self.sections.viewport().update()
+
+    def show_confirmations(self) -> None:
+        self.confirmations_dialog = ConfirmationsDialog(self.confirmations, self)
+        self.confirmations_dialog.open()
 
     def fit_minimum_size(self) -> None:
         """MINIMUM_SIZE, or more when the text needs it: Qt takes an explicit minimum over what the
@@ -190,6 +240,11 @@ class MainWindow(QMainWindow):
             self._log_in_by_itself()
             return
         if self.logged_in != was_logged_in:
+            self._unread_asked_at = None
+            if self.logged_in:
+                self.refresh_unread()
+            else:
+                self.show_unread({})
             self.memory.forget()
             for view in self.views.values():
                 view.reset("" if self.logged_in else LOG_IN_FIRST)

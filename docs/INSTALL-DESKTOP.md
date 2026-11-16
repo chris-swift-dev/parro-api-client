@@ -126,7 +126,9 @@ switches it on or off, and *Help → Check for updates now* checks at once.
 
 ## Checking a download
 
-Every release has a file `SHA256SUMS` with a checksum for each file. Compare it with:
+Every release has a file `SHA256SUMS` with a checksum for each file, and the
+[project page](https://chris-swift-dev.github.io/parro-api-client/#download) shows the checksum of
+each installer under the download buttons. Compare it with:
 
 | System | Command |
 | --- | --- |

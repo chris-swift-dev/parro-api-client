@@ -105,6 +105,10 @@ write (`tests/fakes.py`, `ForbiddenWrite`), and for messages, helper sign-ups an
 announcement_text` turns those into markdown, and the desktop app's `text.rich_html` into HTML. Both
 fall back to `contents` when the formatted text cannot be read or says something else.
 
+**In the desktop app** (`parro_gui/`): `confirmations.py` holds which changes are made without
+asking (`Section.ask_to_confirm` consults it), `badges.py` draws the unread counts in the sidebar
+(`operations.unread_totals`), and `updates.py` the check for a new version.
+
 ## 4. The authenticator and the lockout latch
 
 `Authenticator.get_access_token()` uses the cached token while it is fresh, else the refresh token,

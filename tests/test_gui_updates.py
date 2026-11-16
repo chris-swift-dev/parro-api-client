@@ -3,6 +3,7 @@
 import os
 import threading
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -97,11 +98,44 @@ def test_an_unreadable_answer_counts_as_not_asked(tmp_path):
 
 
 def test_a_file_from_before_0_14_is_read_as_it_is(tmp_path):
-    """It holds `last_checked`, which decided "at most once a day"; that is not used any more."""
+    """It holds `last_checked`, which decided "at most once a day". Now it only says when."""
     app_file.write_part(tmp_path, "update_check", {"enabled": True, "last_checked": 1.8e9})
+    assert updates.load_preference(tmp_path) == Preference(True, None, 1.8e9, None)
+    odd = {"enabled": True, "told_version": 13, "last_checked": True, "last_found": 5}
+    app_file.write_part(tmp_path, "update_check", odd)
     assert updates.load_preference(tmp_path) == Preference(True, None)
-    app_file.write_part(tmp_path, "update_check", {"enabled": True, "told_version": 13})
-    assert updates.load_preference(tmp_path) == Preference(True, None)
+
+
+NOON = datetime(2026, 11, 16, 12, 0).timestamp()
+
+
+@pytest.mark.parametrize(
+    ("preference", "expected"),
+    [
+        (Preference(True), "Not checked yet"),
+        (Preference(None), "Not checked yet"),
+        (
+            Preference(True, None, NOON - 3600, "99.0.0"),
+            "Last checked: today 11:00 · version 99.0.0 is available",
+        ),
+        (
+            Preference(True, None, NOON - 3600, "0.0.1"),
+            "Last checked: today 11:00 · you have the newest version",
+        ),
+        (
+            Preference(True, None, NOON - 3600, ""),
+            "Last checked: today 11:00 · you have the newest version",
+        ),
+        (
+            Preference(True, None, NOON - 86400, updates.FAILED),
+            "Last check failed: yesterday 12:00",
+        ),
+        (Preference(True, None, NOON - 2 * 86400, None), "Last checked: Sat 14 Nov 2026 12:00"),
+    ],
+)
+def test_the_last_check_says_when_and_what_it_found(preference, expected):
+    """The owner waited for a notice without knowing the app had looked earlier that day."""
+    assert updates.describe_last_check(preference, NOON) == expected
 
 
 # ----------------------------------------------------------------------------- at start
@@ -156,7 +190,8 @@ def test_a_new_version_is_said_once_in_a_dialog_and_then_only_the_button(make, s
     wait_until(lambda: len(said["asked"]) == 1)
     assert AVAILABLE in said["asked"][0] and "release page" in said["asked"][0]
     assert said["opened"] == [], "answered no: nothing opens"
-    assert updates.load_preference(first.data_dir) == Preference(True, "99.0.0")
+    saved = updates.load_preference(first.data_dir)
+    assert (saved.enabled, saved.told_version, saved.last_found) == (True, "99.0.0", "99.0.0")
 
     second = make(github)
     second.at_start()
@@ -231,6 +266,44 @@ def test_an_app_left_open_checks_again_after_a_day(make, said):
     for _ in range(5):
         QtWidgets.QApplication.processEvents()
     assert len(github.threads) == 2, "switched off: not asked"
+
+
+def test_the_help_menu_and_about_show_the_last_check(make, said, monkeypatch):
+    github = GitHub(SAME)
+    found = make(github)
+    updates.save_preference(found.data_dir, Preference(True))
+    assert found.last_check_action.text() == "Not checked yet"
+    assert not found.last_check_action.isEnabled(), "a line to read, not to click"
+
+    found.at_start()
+    settled(found, github, 1)
+    assert found.last_check_action.text().startswith("Last checked: today ")
+    assert found.last_check_action.text().endswith("you have the newest version")
+    shown: list[str] = []
+    show = staticmethod(lambda _parent, _title, text: shown.append(text))
+    monkeypatch.setattr(QtWidgets.QMessageBox, "about", show)
+    found.show_about()
+    assert found.last_check_action.text() in shown[0]
+
+    again = make(GitHub(SAME))
+    assert again.last_check_action.text() == found.last_check_action.text(), "kept for next time"
+
+
+def test_a_failed_check_is_shown_as_failed_and_kept_apart_from_what_was_found(make, said):
+    offline = GitHub(fails=True)
+    found = make(offline)
+    updates.save_preference(found.data_dir, Preference(True))
+    found.at_start()
+    settled(found, offline, 1)
+    assert found.last_check_action.text().startswith("Last check failed: today ")
+
+
+def test_nothing_about_a_check_is_kept_before_the_first_question(make, said):
+    github = GitHub()
+    found = make(github)
+    found.check_now()
+    settled(found, github, 1)
+    assert updates.load_preference(found.data_dir) == Preference(None)
 
 
 def test_switched_off_nothing_is_checked_at_start(make, said):
@@ -330,7 +403,7 @@ def test_a_window_has_the_help_menu_and_checks_nothing_by_itself(
     window = MainWindow(lambda _settings: pytest.fail("no client needed"))
     try:
         titles = [action.text() for action in window.menuBar().actions()]
-        assert titles == ["&Help"]
+        assert titles == ["&Settings", "&Help"]
         assert window.updates._check is None and window.updates.data_dir == tmp_path / "data"
     finally:
         dispose(window)

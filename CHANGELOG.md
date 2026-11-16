@@ -4,24 +4,26 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 and versions follow [Semantic Versioning](https://semver.org/). The release workflow publishes the
 section of a version as its GitHub release notes, so write each section for users.
 
-## [0.14.0] - 2026-11-14
+## [0.14.0] - 2026-11-16
 
-The desktop app tells you about a new version again, and announcements keep their formatting.
-
-### Fixed
-
-- **Desktop app: a new version was not mentioned.** 0.12.0 never said that 0.13.0 was there, while
-  *Check for updates now* did. The check at start ran at most once a day, counted from the last
-  start: a release published later on a day the app had already been started was not found by any
-  start that day. And when it did find one, it only showed a button at the bottom of the window.
-  Now the app checks **each time it starts** (and once a day while it stays open), and the first
-  time it finds a version it says so in a dialog; after that, that version is only the button. A
-  check that fails, for example without network, no longer counts as that day's check.
-  **0.13.0 and older keep the old behaviour:** they tell you about 0.14.0 at the first start that
-  is a day after their last check, or at once with *Help → Check for updates now*.
+The desktop app shows what is unread beside each section, tells you sooner and more clearly about a
+new version, and can skip a confirmation you no longer want. Announcements keep their formatting,
+and the project page shows a checksum for each download.
 
 ### Added
 
+- **Desktop app: unread counts in the sidebar.** *Announcements*, *Calendar* and *Chats* show how
+  much is unread, as Parro itself counts it. The counts follow what you mark as read, and are
+  fetched again every five minutes. Looking at them changes nothing in Parro.
+- **Desktop app: skip a confirmation, per action.** *Settings → Confirmations…* has a tick for
+  marking as read, marking a whole group as read, sending a message, deleting a message, helper
+  sign-ups and answering an invitation. Untick one and a click does it at once. Everything asks
+  first until you change it. The app still checks first whether the change is possible, still
+  sends it only once, and says in the line above the section what happened. Sending and deleting
+  cannot be undone: untick those only if you are sure. The command line (`--yes`) and an
+  assistant's tools (`confirm: true`) are not affected.
+- **Desktop app: when it last looked for a new version.** *Help* and *About* show a line such as
+  "Last checked: today 14:05 · you have the newest version", or that the last check failed.
 - **Formatted announcements.** Some announcements are written with bold, underline, quotes, lists
   or links. They were shown as plain text. The desktop app now shows the formatting; `announcement
   <id>`, `announcements --full`, the MCP tools' markdown view and the archive show it as markdown
@@ -30,12 +32,26 @@ The desktop app tells you about a new version again, and announcements keep thei
   shown as before.
 - In the JSON output an announcement with formatting has `rich_text`, the API's own value;
   `contents` stays the plain text.
+- **The project page shows a checksum (SHA-256) for each installer,** under the download buttons,
+  with how to compare it on Windows, macOS and Linux. They are the values GitHub records for the
+  release's files, the same as in its `SHA256SUMS`.
 - **API description:** what `richTextContents` holds.
 
 ### Changed
 
-- The desktop app's question at the first start and its documents say "each time it starts" where
-  they said "at most once a day". What goes to GitHub is the same: one request, nothing about you.
+- **Desktop app: the check for a new version runs each time the app starts** (and once a day while
+  it stays open); it used to run at most once a day. With that limit, a release published later on
+  a day the app had already been started was only found the next day, and nothing showed that the
+  app had looked. The first time the app finds a version it now also says so in a dialog; after
+  that, that version is only the button at the bottom of the window. What goes to GitHub is the
+  same: one request, nothing about you. **0.13.0 and older keep the daily limit:** they mention
+  0.14.0 at the first start a day after their last check, or at once with *Help → Check for
+  updates now*.
+
+### Fixed
+
+- Desktop app: a check for a new version that failed, for example without network, counted as that
+  day's check, so the next start did not try again.
 
 ## [0.13.0] - 2026-11-14
 
