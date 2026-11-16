@@ -25,6 +25,7 @@ from tests.test_gui_writes import (  # noqa: F401
     chat,
     environment,
     make_client,
+    open_section,
     settle,
     window,
 )
@@ -37,6 +38,15 @@ def counts(window: Any) -> dict[str, int]:
 
 def unread_requests(api: Any) -> int:
     return len([r for r in api.api_requests() if "/identity/unreadcounts" in r.url])
+
+
+def started(window: Any) -> None:
+    """Until the counts are shown and the first section has loaded. The Overview asks Parro for
+    the unread counts too, for its own text: a test that counts those requests must not start
+    while that one is still on its way (it did on Windows, in CI)."""
+    wait_until(lambda: counts(window)["Chats"] == 1)
+    open_section(window, "Overview")
+    settle()
 
 
 # --------------------------------------------------------------------------- the counts
@@ -130,13 +140,13 @@ def test_the_counts_follow_what_you_mark_as_read(window, api, monkeypatch):
 
 
 def test_a_burst_of_loading_asks_for_the_counts_once(window, api):
-    wait_until(lambda: counts(window)["Chats"] == 1)
+    started(window)
     before = unread_requests(api)
 
     for _ in range(5):
         window.refresh_unread()
     for name in ("Announcements", "Calendar", "Chats"):
-        window.sections.setCurrentRow(SECTIONS.index(name))
+        open_section(window, name)  # until it has loaded: each load asks for the counts
         settle()
 
     assert unread_requests(api) == before, "not again within ten seconds"
@@ -144,7 +154,7 @@ def test_a_burst_of_loading_asks_for_the_counts_once(window, api):
 
 
 def test_logged_out_or_without_an_answer_the_badges_go(window, api):
-    wait_until(lambda: counts(window)["Chats"] == 1)
+    started(window)
 
     window.show_unread({})
     assert set(counts(window).values()) == {0}
