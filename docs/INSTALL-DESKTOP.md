@@ -119,14 +119,16 @@ to 8 hours. To log in by itself after that, the login dialog can remember a pass
 ## New versions
 
 The first start asks whether the app may check for new versions. If you say yes, it asks GitHub for
-the newest release when it starts, at most once a day. Nothing about you or your school goes with
-it. When there is a newer one, a button at the bottom of the window says so and opens the release
-page; the app never downloads or installs anything itself. *Help → Check for new versions at start*
+the newest release each time it starts. Nothing about you or your school goes with it. When there
+is a newer one, the app says so once in a dialog, and a button at the bottom of the window stays
+and opens the release page; the app never downloads or installs anything itself. *Help → Check for new versions at start*
 switches it on or off, and *Help → Check for updates now* checks at once.
 
 ## Checking a download
 
-Every release has a file `SHA256SUMS` with a checksum for each file. Compare it with:
+Every release has a file `SHA256SUMS` with a checksum for each file, and the
+[project page](https://chris-swift-dev.github.io/parro-api-client/#download) shows the checksum of
+each installer under the download buttons. Compare it with:
 
 | System | Command |
 | --- | --- |

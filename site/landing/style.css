@@ -101,6 +101,15 @@ section.wrap { padding-top: 56px; padding-bottom: 56px; }  /* .wrap alone would 
 .download-needs { color: var(--muted); font-size: 0.9rem; }
 .download-file { color: var(--accent); font-size: 0.9rem; font-weight: 600; margin-top: 8px; }
 .small { color: var(--muted); font-size: 0.92rem; max-width: 760px; }
+.checksums { margin: 0 0 18px; font-size: 0.92rem; color: var(--muted); max-width: 980px; }
+.checksums summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 4px 0; }
+.checksums p, .checksums ul { max-width: 760px; }
+.checksum-table { border-collapse: collapse; margin: 10px 0 14px; width: 100%; }
+.checksum-table th, .checksum-table td { text-align: left; vertical-align: top; padding: 8px 12px 8px 0;
+                                         border-top: 1px solid var(--line); }
+.checksum-table th { font-weight: 600; color: var(--text); white-space: nowrap; }
+.checksum-file { font-weight: 400; color: var(--muted); font-size: 0.85rem; }
+.checksums code { overflow-wrap: anywhere; user-select: all; }
 
 /* Three ways */
 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }

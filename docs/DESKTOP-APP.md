@@ -40,6 +40,11 @@ keep working on Python 3.10 or newer.
 | Family | the account, children, groups, the state of the privacy choices, the link to a child's privacy page |
 | Archive | keep a local copy with `sync`, stop it at any time, see and empty the cache |
 
+**Unread counts.** *Announcements*, *Calendar* and *Chats* show beside their name how much is
+unread, as Parro counts it (the same numbers as `parro-client unread`). They are fetched when you
+log in, every five minutes, and after you mark something as read or refresh a section. Looking at
+the counts changes nothing in Parro.
+
 The commands `token` and `get` and the raw JSON output are left out: they are developer tools.
 
 **An announcement or calendar item with a lot in it** still fits in the window. Under the text is a
@@ -58,6 +63,9 @@ copy is kept in the app's own cache folder, which is where the desktop can reach
 **A chat** shows your own messages on the right and everyone else's on the left. A name appears once
 for several messages in a row, each person in a colour of their own, and not at all in a chat with
 one other person. Who joined, left or renamed the chat is a small line in the middle.
+
+**An announcement with formatting** (bold, italic, underline, quotes, lists, links) is shown with
+it. A link shows its address behind it, so you see where it goes before you click.
 
 **Save all attachments…** asks once for a folder, then saves every file of the item. It says how many
 it saved, and names each file that failed and why; click again to try those. A file with the same
@@ -120,6 +128,11 @@ The app can change the same five things as the command line:
 - Nothing changes because you opened or read something.
 - Sending or deleting a message, signing up or withdrawing, and answering an invitation show exactly what would
   happen, and only **Confirm** does it. Enter does not. Marking as read asks once.
+- **You can switch a question off, per action:** *Settings → Confirmations…* has a tick for each of
+  them. Unticked, one click does it at once, and the line above the section says what happened.
+  The app still reads first and refuses what it would have refused, and still sends a change only
+  once. Sending and deleting cannot be undone, so think before you untick those. The choice is
+  kept in `desktop-app.json`; the command line and an assistant's tools are not affected.
 - After a timeout or a server error the app says it may or may not have gone through, and offers no
   button to try again.
 - A button that starts something stays off until it is done, and a section does one thing at a time,
@@ -145,11 +158,16 @@ It looks the same on Windows, macOS and Linux, and text uses your system's font 
 ## New versions
 
 The first start asks whether the app may check for new versions. With yes, it asks GitHub for the
-newest release when it starts, at most once a day, on a thread of its own so Parro never waits for
-it. The request carries no token, no cookie and nothing about you; GitHub sees your IP address and
-the app's version. A newer version shows a button at the bottom of the window, which opens the
-release page in your browser after asking; the app downloads and installs nothing itself. The answer
-to the question is kept in `desktop-app.json`. *Help → Check for new versions at start* changes it,
+newest release each time it starts, and once a day while it stays open, on a thread of its own so
+Parro never waits for it. The request carries no token, no cookie and nothing about you; GitHub sees
+your IP address and the app's version. A newer version shows a button at the bottom of the window,
+which opens the release page in your browser after asking; the app downloads and installs nothing
+itself. The first time the app finds a version it also says so in a dialog; after that, that version
+is only the button. The answer to the question, and the version the dialog last named, are kept in
+`desktop-app.json`, with when the app last checked and what it found. *Help* and *About* show that
+as a line: "Last checked: today 14:05 · you have the newest version". (Until 0.13.0 the check ran
+at most once a day, so a release published later on a day the app had already been started was
+found a day later.) *Help → Check for new versions at start* changes it,
 and *Help → Check for updates now* checks at once and says what it found.
 
 ## Good to know

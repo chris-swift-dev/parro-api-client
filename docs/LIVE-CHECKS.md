@@ -269,3 +269,32 @@ Windows, macOS and Linux, and reported the result. Personal data is left out.
 | Deleting a message of your own, against the real API | OK: one real deletion by the owner |
 | The copyright line in macOS's *Get Info* (open since 0.12.0) | OK, checked by the owner |
 | Not checked live | A sound recording, of which the account has none; the MCP tool `parro_delete_chat_message` (it uses the same deletion as the app and the command line) |
+
+## Check (2026-11-14, release 0.14.0: the update notice)
+
+Reported by the account owner: 0.12.0, installed, did not mention 0.13.0; *Check for updates now*
+did. It turned out to be the daily limit, working as built: the button came a day later (said by
+the owner on 2026-11-16). What was missing was a sign of when the app had last looked; that is
+added (Plan 20). The limit itself is gone all the same. Reproduced and retested here with the app's real window (no display) and the real answer of
+`api.github.com`, which named `v0.13.0`. No Parro account is involved. See
+[Plan 19](PLAN-0.14.md), section 2.
+
+| Saved state at start | The code of tag `v0.12.0` | The fix, told it is 0.12.0 |
+| --- | --- | --- |
+| Never checked | Asks GitHub; button "Version 0.13.0 is available"; no dialog | Asks; the button, and the dialog once |
+| Checked two days ago | The same | The same |
+| **Checked three hours ago** | **No request, no button: the cause** | Asks; the button, and the dialog once |
+| Checked a minute ago | (as three hours ago) | Asks; the button, and the dialog once |
+| A second start after the dialog | | Asks again; the button only, no second dialog |
+| Not checked live yet | | An installed 0.13.0 finding 0.14.0 (0.13.0 has the old once-a-day rule) |
+
+## Live check (2026-11-16, release 0.14.0: formatted announcements)
+
+By the account owner, against the real API, with the branch `release-0.14`. Personal data is left
+out.
+
+| Check | Result |
+| --- | --- |
+| An announcement with formatting (`richTextContents`) | OK: works as expected |
+| Not checked live yet | The unread counts in the sidebar against the Parro app's own; an action with its confirmation switched off; an installed 0.13.0 finding 0.14.0 |
+

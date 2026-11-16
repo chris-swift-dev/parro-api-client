@@ -136,6 +136,7 @@ class ChatsSection(ListDetailSection):
             "Send",
             lambda client: operations.send_prepared_message(client, prepared),
             self._sent,
+            action="send_chat",
         )
 
     def _sent(self, _result: dict[str, Any]) -> None:
@@ -227,6 +228,7 @@ class ChatsSection(ListDetailSection):
             "Delete",
             lambda client: operations.delete_prepared_message(client, prepared),
             lambda _result: self.reload_here("Deleted."),
+            action="delete_chat",
         )
 
     def clear(self) -> None:

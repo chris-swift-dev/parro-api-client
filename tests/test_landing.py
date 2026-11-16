@@ -29,8 +29,16 @@ NAMES = tool.build_release().installer_names("0.12.0")
 SIZES = [96, 141, 82, 79]
 
 
+DIGESTS = [f"{number}" * 64 for number in ("a", "b", "c", "d")]
+
+
 def release(tag: str = "v0.12.0", names: list[str] = NAMES, **extra: Any) -> dict[str, Any]:
-    assets = [{"name": n, "size": s * 1024 * 1024} for n, s in zip(names, SIZES, strict=False)]
+    """GitHub's answer for a release: each file with its size and, as GitHub gives it, its
+    SHA-256 as `digest`."""
+    assets: list[dict[str, Any]] = [
+        {"name": n, "size": s * 1024 * 1024, "digest": f"sha256:{d}"}
+        for n, s, d in zip(names, SIZES, DIGESTS, strict=False)
+    ]
     assets.append({"name": "SHA256SUMS", "size": 900})
     return {"tag_name": tag, "draft": False, "prerelease": False, "assets": assets, **extra}
 
@@ -123,6 +131,45 @@ def test_without_a_release_with_installers_the_buttons_go_to_the_releases_page(t
     assert f"{GITHUB}/releases" in buttons
     assert "/download/" not in text and "<script>alert" not in text
     assert text.count("on the releases page") == 4
+
+
+def test_each_installer_shows_its_checksum_from_github(built):
+    _out, text, _page = built
+    block = text[text.index('<details class="checksums">') : text.index("</details>")]
+    for name, digest in zip(NAMES, DIGESTS, strict=True):
+        assert name in block and f"<code>{digest}</code>" in block
+    assert f"{GITHUB}/releases/download/v0.12.0/SHA256SUMS" in block
+    assert "sha256sum FILE" in block and "Get-FileHash FILE" in block
+    assert "does not show who" in block, "says what a checksum is and is not"
+    assert text.index('id="downloads"') < text.index('<details class="checksums">')
+
+
+@pytest.mark.parametrize(
+    "digest",
+    [
+        None,
+        "",
+        "sha256:" + "a" * 63,
+        "sha256:" + "A" * 64,
+        "sha512:" + "a" * 64,
+        "a" * 64,
+        'sha256:"><script>alert(1)</script>' + "a" * 40,
+        17,
+    ],
+)
+def test_a_checksum_that_is_not_one_never_reaches_the_page(tmp_path, digest):
+    answer = release()
+    answer["assets"][1]["digest"] = digest
+    _version, text, _page = build(tmp_path, answer)
+    assert '<details class="checksums">' not in text and "<script>alert" not in text
+    assert DIGESTS[0] not in text, "all four or none: a table with a gap would mislead"
+    assert f"{GITHUB}/releases/download/v0.12.0/SHA256SUMS" in text, "the file still has them"
+    assert f'href="{GITHUB}/releases/download/v0.12.0/{NAMES[1]}"' in text, "the button stays"
+
+
+def test_without_a_release_there_is_no_word_about_checksums(tmp_path):
+    _version, text, _page = build(tmp_path, None)
+    assert "SHA256SUMS" not in text and "{{" not in text
 
 
 def test_nothing_from_the_answer_but_the_version_and_sizes_reaches_the_page(tmp_path):

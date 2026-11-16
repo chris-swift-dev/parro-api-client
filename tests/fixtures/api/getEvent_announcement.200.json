@@ -159,5 +159,6 @@
     "role": "TEACHER"
   },
   "draft": false,
-  "pinned": false
+  "pinned": false,
+  "richTextContents": "[{\"insert\": \"Beste ouders en verzorgers,\\n\\nIn de bijlage vindt u \"}, {\"insert\": \"nieuwsbrief nr. 3\", \"attributes\": {\"bold\": true}}, {\"insert\": \" met de agenda tot de \"}, {\"insert\": \"kerstvakantie\", \"attributes\": {\"underline\": true}}, {\"insert\": \".\\n\\nMet vriendelijke groet,\\nLotte Bakker\\nadministratie\\n\"}]"
 }

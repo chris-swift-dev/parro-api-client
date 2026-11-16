@@ -135,6 +135,7 @@ a {{ color: {accent_link}; }}
 .time {{ color: {muted}; font-size: small; }}
 td.mine {{ background-color: {own_message}; }}
 td.other {{ background-color: {other_message}; }}
+td.quote {{ background-color: {other_message}; }}
 """
 
 

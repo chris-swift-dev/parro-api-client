@@ -215,7 +215,13 @@ def announcement(
     attachments: list[dict[str, Any]] | None = None,
     pinned: bool = False,
     liked: bool = False,
+    rich_text: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    """An announcement. `rich_text`: the same words with formatting, as Quill's "delta" pieces;
+    the API sends them as a JSON string in `richTextContents` (live look 2026-11-14)."""
+    extra = {}
+    if rich_text is not None:
+        extra["richTextContents"] = json.dumps(rich_text, ensure_ascii=False)
     return geon(
         "event.RAnnouncementEventPrimer",
         event_id,
@@ -237,6 +243,7 @@ def announcement(
         lastEditedBy=author,
         draft=False,
         pinned=pinned,
+        **extra,
     )
 
 
@@ -503,6 +510,13 @@ NEWSLETTER = announcement(
     "Beste ouders en verzorgers,\n\nIn de bijlage vindt u nieuwsbrief nr. 3 met de agenda tot de "
     "kerstvakantie.\n\nMet vriendelijke groet,\nLotte Bakker\nadministratie\n",
     read=True,
+    rich_text=[
+        {"insert": "Beste ouders en verzorgers,\n\nIn de bijlage vindt u "},
+        {"insert": "nieuwsbrief nr. 3", "attributes": {"bold": True}},
+        {"insert": " met de agenda tot de "},
+        {"insert": "kerstvakantie", "attributes": {"underline": True}},
+        {"insert": ".\n\nMet vriendelijke groet,\nLotte Bakker\nadministratie\n"},
+    ],
     attachments=[
         document(
             6000000101,

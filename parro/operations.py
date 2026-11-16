@@ -484,6 +484,18 @@ def list_chat_members(
     return {"chatroom_id": room_id, **summaries.summarize_chat_members(response)}
 
 
+def unread_totals(client: ParroClient) -> dict[str, int]:
+    """How much is unread, added up over your identities: announcements, calendar items and
+    chats (`GET /identity/unreadcounts`). Reading the counts changes nothing."""
+    totals = {"announcements": 0, "calendar": 0, "chats": 0}
+    for counts in summaries.summarize_unread_counts(client.get_unread_counts()):
+        for name in totals:
+            value = counts.get(name)
+            if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+                totals[name] += value
+    return totals
+
+
 def own_identity_ids(client: ParroClient) -> frozenset[int]:
     """The ids you write chat messages under (`message.identity`): your account's identity and
     the guardian or teacher identities linked to it (live check 2026-11-14)."""

@@ -29,8 +29,9 @@ All in the spec; the important ones:
 - A calendar item can carry a web address the teacher added: `calendarItem.url`, only in
   `GET /event/{id}`, not in the list.
 - Some announcements also have `richTextContents`: a JSON string in Quill's "delta" form (`bold`,
-  `underline`, `blockquote`, `link`). `contents` holds the same words as plain text; the client
-  reads only that.
+  `underline`, `blockquote`, `link`; `blockquote` sits on the line break that ends the line).
+  `contents` holds the same words as plain text. The client shows the formatting when it can read
+  it and it says the same as `contents` (`parro/richtext.py`), else `contents`.
 - Calendar items of `type: VOLUNTEER` or `SCHOOLWIDE_VOLUNTEER` ask parents to help. The slots are in
   `calendarItem.resources[]` of `GET /event/{id}` (or `GET /calendaritem/{id}`): `amount` wanted,
   `amountCommitted`, and `commitedByMe` (the API's spelling). The list only carries the type.

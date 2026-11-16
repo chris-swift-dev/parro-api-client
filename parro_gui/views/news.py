@@ -5,12 +5,12 @@ from typing import Any
 
 from PySide6.QtWidgets import QCheckBox, QComboBox, QPushButton, QWidget
 
-from parro import operations
+from parro import operations, richtext
 from parro.api_client import ParroClient
 from parro.attachments import extract_html_text, tidy_whitespace
 from parro.rendering import format_date, format_timestamp, join_parts
 
-from ..text import document, heading, meta, paragraph
+from ..text import document, heading, meta, paragraph, rich_html
 from ..worker import Worker
 from .attachments import AttachmentBar
 from .base import ListDetailSection, fetched_text
@@ -27,13 +27,19 @@ def announcement_row(item: dict[str, Any]) -> str:
     return f"{title}\n{join_parts([format_date(item.get('date')), item.get('author')])}"
 
 
+def announcement_body(item: dict[str, Any]) -> str:
+    """The text with its formatting when it has any that can be read, else the plain text."""
+    lines = richtext.formatted(item.get("rich_text"), item.get("contents"))
+    return paragraph(item.get("contents")) if lines is None else rich_html(lines)
+
+
 def announcement_html(item: dict[str, Any], fetched: str = "") -> str:
     counts = item.get("readCount") or {}
     read = f"read by {counts['read']} of {counts['total']}" if counts.get("total") else ""
     return document(
         heading(item.get("title") or "(no title)"),
         meta(format_timestamp(item.get("date")), item.get("author"), read),
-        paragraph(item.get("contents")),
+        announcement_body(item),
         meta(fetched),
     )
 
@@ -126,6 +132,7 @@ class NewsSection(ListDetailSection):
                 client, group_id, confirmed=True
             ),
             lambda _result: self.reload_here("Marked as read."),
+            action="mark_group_read",
         )
 
     def show_item(self, item: dict[str, Any]) -> None:

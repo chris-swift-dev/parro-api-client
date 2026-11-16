@@ -7,8 +7,9 @@
 tools/build_site.sh runs this after it has put Swagger UI in _site/api/. The download buttons carry
 the latest release's version and file names, so the Pages workflow builds the site again when a
 release is published (Plan 16 §5.3). Only the version number is taken from GitHub's answer, and
-the file sizes of the installers it names: every link is built here, from that number and
-tools/build_release.installer_names. Without a release with all four installers, each button
+the file size and SHA-256 checksum of the installers it names: every link is built here, from that
+number and tools/build_release.installer_names. A checksum reaches the page only when it is exactly
+"sha256:" and 64 hex characters. Without a release with all four installers, each button
 goes to the releases page. Standard library only.
 """
 
@@ -33,6 +34,9 @@ REPOSITORY = "chris-swift-dev/parro-api-client"
 RELEASES = f"https://github.com/{REPOSITORY}/releases"
 LATEST_RELEASE_API = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
 _VERSION = re.compile(r"^v(\d{1,4}\.\d{1,4}\.\d{1,4})$")
+# What GitHub calls an asset's `digest`: the same value as in the release's SHA256SUMS.
+_DIGEST = re.compile(r"^sha256:([0-9a-f]{64})$")
+INSTALL_GUIDE = f"https://github.com/{REPOSITORY}/blob/main/docs/INSTALL-DESKTOP.md"
 
 # Copied next to index.html, under the same name: the page loads nothing from another site.
 PAGE_FILES = ("style.css", "landing.js")
@@ -75,6 +79,7 @@ class Download:
     key: str
     url: str
     size: int | None  # bytes; None when the button goes to the releases page
+    sha256: str | None = None  # 64 hex characters, when GitHub's answer named one
 
 
 def fetch_latest() -> dict[str, Any] | None:
@@ -105,14 +110,21 @@ def downloads(answer: dict[str, Any] | None) -> tuple[str | None, list[Download]
         return None, fallback
     version = found.group(1)
     sizes: dict[str, int] = {}
+    checksums: dict[str, str] = {}
     for asset in answer.get("assets") or []:
         if isinstance(asset, dict) and isinstance(asset.get("size"), int):
             sizes[str(asset.get("name"))] = asset["size"]
+            digest = asset.get("digest")
+            found_digest = _DIGEST.match(digest) if isinstance(digest, str) else None
+            if found_digest:
+                checksums[str(asset.get("name"))] = found_digest.group(1)
     names = build_release().installer_names(version)
     if not all(name in sizes for name in names):
         return None, fallback  # a release from before the installers (0.11.0 and older)
     return version, [
-        Download(s, n, k, f"{RELEASES}/download/v{version}/{name}", sizes[name])
+        Download(
+            s, n, k, f"{RELEASES}/download/v{version}/{name}", sizes[name], checksums.get(name)
+        )
         for (s, n, k), name in zip(SYSTEMS, names, strict=True)
     ]
 
@@ -137,6 +149,48 @@ def buttons(version: str | None, items: list[Download]) -> str:
     return "\n          ".join(rows)
 
 
+CHECK_COMMANDS = (
+    ("Windows (PowerShell)", "Get-FileHash {name}"),
+    ("macOS", "shasum -a 256 {name}"),
+    ("Linux", "sha256sum {name}"),
+)
+
+
+def checksums_block(version: str | None, items: list[Download]) -> str:
+    """A fold-out with a checksum per installer and how to compare it; a line with a link to
+    SHA256SUMS when GitHub named no checksum for one of them; nothing without a release."""
+    if not version:
+        return ""
+    sums = f"{RELEASES}/download/v{version}/SHA256SUMS"
+    if not all(item.sha256 for item in items):
+        return (
+            f'<p class="small">Checksums: <a href="{sums}">SHA256SUMS</a> of this release has one '
+            "for each file.</p>"
+        )
+    rows = "".join(
+        f'<tr><th scope="row">{html.escape(item.system)}<br>'
+        f'<span class="checksum-file">{html.escape(item.url.rsplit("/", 1)[-1])}</span></th>'
+        f"<td><code>{item.sha256}</code></td></tr>"
+        for item in items
+    )
+    example = html.escape(items[0].url.rsplit("/", 1)[-1])
+    commands = "".join(
+        f"<li>{html.escape(system)}: <code>{html.escape(command.format(name='FILE'))}</code></li>"
+        for system, command in CHECK_COMMANDS
+    )
+    return (
+        '<details class="checksums"><summary>Checksums (SHA-256)</summary>'
+        f'<table class="checksum-table"><tbody>{rows}</tbody></table>'
+        "<p>To check a download, let your computer work out the checksum of the file and compare "
+        f"it with the one above. With the file's name for FILE, for example <code>{example}</code>:"
+        f"</p><ul>{commands}</ul>"
+        f'<p>The same checksums are in <a href="{sums}">SHA256SUMS</a> of the release. A checksum '
+        "shows that the file arrived whole and is the one that was published; it does not show who "
+        f'made it. For that, the <a href="{INSTALL_GUIDE}">install guide</a> says how to check '
+        "GitHub's record of the build.</p></details>"
+    )
+
+
 def render(version: str | None, items: list[Download]) -> str:
     page = (TEMPLATE / "index.html").read_text(encoding="utf-8")
     if version:
@@ -146,6 +200,7 @@ def render(version: str | None, items: list[Download]) -> str:
     else:
         line = f'Each release has the installers: <a href="{RELEASES}/latest">latest release</a>'
     page = page.replace("{{version_line}}", line).replace("{{downloads}}", buttons(version, items))
+    page = page.replace("{{checksums}}", checksums_block(version, items))
     if "{{" in page:
         raise SystemExit("site/landing/index.html has a placeholder this script does not fill")
     return page
