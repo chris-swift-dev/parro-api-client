@@ -287,3 +287,14 @@ added (Plan 20). The limit itself is gone all the same. Reproduced and retested 
 | Checked a minute ago | (as three hours ago) | Asks; the button, and the dialog once |
 | A second start after the dialog | | Asks again; the button only, no second dialog |
 | Not checked live yet | | An installed 0.13.0 finding 0.14.0 (0.13.0 has the old once-a-day rule) |
+
+## Live check (2026-11-16, release 0.14.0: formatted announcements)
+
+By the account owner, against the real API, with the branch `release-0.14`. Personal data is left
+out.
+
+| Check | Result |
+| --- | --- |
+| An announcement with formatting (`richTextContents`) | OK: works as expected |
+| Not checked live yet | The unread counts in the sidebar against the Parro app's own; an action with its confirmation switched off; an installed 0.13.0 finding 0.14.0 |
+

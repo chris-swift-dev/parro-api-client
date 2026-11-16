@@ -1,8 +1,8 @@
 # Plan 19: Flathub, the update notice, and formatted announcements (0.14.0)
 
 *Status: parts 2 and 3 built (2026-11-14) on branch `release-0.14`, as version 0.14.0; the update
-notice is retested against GitHub's real answer (`docs/LIVE-CHECKS.md`). Still to check live: one
-formatted announcement (the login had expired). **Part 1, Flathub, is set aside for now** (decided
+notice is retested against GitHub's real answer (`docs/LIVE-CHECKS.md`). Formatted announcements are checked
+against the real API by the account owner (2026-11-16). **Part 1, Flathub, is set aside for now** (decided
 2026-11-14): nothing of it is built, and its decisions (section 1.3) are not taken.*
 
 **Goal:**
