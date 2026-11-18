@@ -11,6 +11,6 @@
   },
   "devDependencies": {
     "@redocly/cli": "2.76.0",
-    "swagger-ui-dist": "5.34.1"
+    "swagger-ui-dist": "5.35.0"
   }
 }
